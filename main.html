@@ -722,7 +722,7 @@
           authorUid: currentUser.uid,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        prompt(`ステージが公開されました！\nステージ名: ${data.name}\nステージID [ ${stageId} ]`, stageId);
+        alert(`ステージを公開しました！\n\nステージ名: ${data.name}\nステージID: ${stageId}\n\n※ステージIDをクリップボードにコピーしました。`);
       } catch (err) {
         alert("投稿エラー: " + err.message);
       }
