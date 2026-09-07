@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Cube Roll Game (オンライン・マリオメーカー風)</title>
+  <title>Cube Roll Game (完全版)</title>
   <style>
     body {
       margin: 0;
@@ -72,7 +72,7 @@
       font-size: 1rem;
     }
 
-    /* ユーザープロフバー（右上） */
+    /* ユーザープロフバー（右上・プレイ中とエディタ中は非表示） */
     #user-bar {
       position: absolute;
       top: 12px;
@@ -132,6 +132,7 @@
     .p-goal { background: #eab308; color: #000; }
     .p-start { background: #06b6d4; color: #000; }
     .p-mover { background: #a855f7; color: #fff; }
+    .p-checkpoint { background: #ec4899; color: #fff; }
 
     /* モーダル汎用 */
     .modal-dialog {
@@ -149,27 +150,27 @@
       flex-direction: column;
       gap: 12px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-      max-height: 80vh;
+      max-height: 85vh;
       overflow-y: auto;
-      min-width: 320px;
+      min-width: 360px;
     }
 
-    #stage-list-container {
+    .list-container {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      max-height: 240px;
+      max-height: 260px;
       overflow-y: auto;
       background: #0f172a;
       padding: 8px;
       border-radius: 6px;
     }
 
-    .stage-item {
+    .list-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 10px;
+      padding: 8px 10px;
       background: #1e293b;
       border-radius: 4px;
       font-size: 13px;
@@ -209,7 +210,7 @@
 </head>
 <body>
 
-  <!-- ユーザーログイン状態表示 -->
+  <!-- ユーザーログイン状態表示（右上） -->
   <div id="user-bar">
     <span id="user-status-text">未ログイン (ゲスト)</span>
     <button id="btn-auth" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">Googleログイン</button>
@@ -234,35 +235,58 @@
     <h1>MODE SELECT</h1>
     <div class="btn-group">
       <button id="btn-to-stages">ゲーム開始</button>
-      <button id="btn-to-editor">ステージエディタ</button>
+      <button id="btn-to-editor-slots">ステージエディタ</button>
       <button id="btn-back-to-title">スタート画面にもどる</button>
     </div>
   </div>
 
-  <!-- 3. ステージ選択画面 -->
+  <!-- 3. ステージ選択画面（基礎ステージ / カスタムステージ分離） -->
   <div id="screen-stages" class="screen hidden">
     <h1>STAGE SELECT</h1>
-    <div class="btn-group">
-      <button class="btn-stage" data-stage="1">ステージ 1 (基本クライム)</button>
-      <button class="btn-stage" data-stage="2">ステージ 2 (動く床)</button>
-      <button id="btn-play-custom" disabled>カスタムステージ (未作成)</button>
-      
-      <!-- オンライン機能 -->
-      <button id="btn-random-stage" style="background:#10b981; margin-top: 6px;">ランダムでプレイ</button>
-      
-      <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
-        <input type="text" id="input-search-id" placeholder="ステージIDを入力 (6桁)">
-        <button id="btn-search-stage" style="background:#0284c7;">IDで探してプレイ</button>
-      </div>
-
-      <button id="btn-back-to-modes" style="margin-top: 10px;">戻る</button>
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <button id="tab-official" style="background:#0284c7;">基礎ステージ</button>
+      <button id="tab-custom" style="background:#334155;">カスタムステージ</button>
     </div>
+
+    <!-- 基礎ステージリスト -->
+    <div id="stage-list-official" class="btn-group" style="width: 280px;">
+      <button class="btn-official-stage" data-stage="1">ステージ 1 (基本クライム)</button>
+      <button class="btn-official-stage" data-stage="2">ステージ 2 (動く床)</button>
+    </div>
+
+    <!-- カスタムステージ（オンライン一覧・検索）リスト -->
+    <div id="stage-list-custom" class="hidden" style="display: flex; flex-direction: column; gap: 10px; width: 280px;">
+      <button id="btn-random-stage" style="background:#10b981;">ランダムでプレイ</button>
+      <div style="display: flex; gap: 6px;">
+        <input type="text" id="input-search-id" placeholder="ステージID (6桁)" style="flex:1;">
+        <button id="btn-search-stage" style="background:#0284c7;">検索</button>
+      </div>
+      <div id="online-stages-container" class="list-container" style="max-height: 180px;">
+        <div style="color:#64748b; font-size:12px; text-align:center;">オンラインステージ読込中...</div>
+      </div>
+    </div>
+
+    <button id="btn-back-to-modes" style="margin-top: 15px; width: 280px;">モード画面にもどる</button>
   </div>
 
-  <!-- 4. ステージエディタUI -->
+  <!-- 4. エディタ前スロット管理モーダル -->
+  <div id="modal-editor-slots" class="modal-dialog hidden">
+    <h3 style="margin: 0;">エディタースロット (クラウド保存)</h3>
+    <div style="font-size: 12px; color: #94a3b8;">作成・編集するステージを選んでください（無限個保存可能）</div>
+    <div style="display: flex; gap: 8px;">
+      <input type="text" id="input-new-slot-name" placeholder="新しいステージ名" style="flex:1;">
+      <button id="btn-create-new-slot" style="background:#059669;">新規作成</button>
+    </div>
+    <div id="editor-slots-container" class="list-container">
+      <div style="color:#64748b; font-size:12px; text-align:center;">スロット読込中...</div>
+    </div>
+    <button id="btn-close-editor-slots" style="align-self: flex-end;">戻る</button>
+  </div>
+
+  <!-- 5. ステージエディタUI -->
   <div id="editor-ui-container" class="hidden">
     <div class="editor-bar">
-      <span style="font-weight: bold; color: #fff;">サイズ:</span>
+      <span style="font-weight: bold; color: #ffffff;">サイズ:</span>
       <select id="select-grid-size">
         <option value="16">16 × 16</option>
         <option value="32" selected>32 × 32</option>
@@ -270,15 +294,16 @@
         <option value="64">64 × 64</option>
       </select>
 
-      <span style="font-weight: bold; margin-left: 8px;">階層(Y):</span>
+      <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">階層(Y):</span>
       <button id="btn-layer-down">▼</button>
       <span id="label-layer" style="min-width: 45px; text-align: center; color: #38bdf8; font-weight: bold;">Y: 0</span>
       <button id="btn-layer-up">▲</button>
 
-      <span style="margin-left: 8px;">パーツ:</span>
+      <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">パーツ:</span>
       <button class="palette-btn p-floor active" data-type="1">薄い床</button>
       <button class="palette-btn p-full" data-type="5">直方体</button>
       <button class="palette-btn p-mover" data-type="4">動く床</button>
+      <button class="palette-btn p-checkpoint" data-type="6">セーブ</button>
       <button class="palette-btn p-start" data-type="3">スタート</button>
       <button class="palette-btn p-goal" data-type="2">ゴール</button>
       <button class="palette-btn p-empty" data-type="0">消去</button>
@@ -288,32 +313,16 @@
       <div id="editor-info" class="editor-bar">
         左ドラッグ: 配置 / 削除<br>
         右ドラッグ: 移動 / ホイール: ズーム<br>
-        「動く床」をクリックで移動設定
+        「動く床」クリックで移動設定
       </div>
       <div class="editor-bar">
-        <button id="btn-my-stages" style="background:#8b5cf6;">クラウド保存/呼出</button>
+        <button id="btn-save-current-slot" style="background:#059669;">スロット上書き保存</button>
         <button id="btn-online-publish" style="background:#e11d48;">ネットに投稿</button>
-        <button id="btn-download" style="background:#0284c7;">保存(DL)</button>
-        <button id="btn-upload-trigger" style="background:#059669;">読込(UP)</button>
-        <input type="file" id="file-upload" accept=".json" style="display:none;">
         <button id="btn-test-custom">テストプレイ</button>
         <button id="btn-clear-editor" style="background:#dc2626;">全消去</button>
-        <button id="btn-editor-back">戻る</button>
+        <button id="btn-editor-back">スロット選択へ戻る</button>
       </div>
     </div>
-  </div>
-
-  <!-- クラウドマイステージ管理モーダル -->
-  <div id="modal-my-stages" class="modal-dialog hidden">
-    <h3 style="margin: 0;">マイステージ (クラウド同期)</h3>
-    <div style="display: flex; gap: 8px;">
-      <input type="text" id="input-save-stage-name" placeholder="ステージ名" style="flex:1;">
-      <button id="btn-save-to-cloud" style="background:#059669;">新規保存</button>
-    </div>
-    <div id="stage-list-container">
-      <div style="color:#64748b; font-size:12px; text-align:center;">保存されたステージがありません</div>
-    </div>
-    <button id="btn-close-my-stages" style="align-self: flex-end;">閉じる</button>
   </div>
 
   <!-- 動く床設定ポップアップ -->
@@ -350,7 +359,7 @@
     </div>
   </div>
 
-  <!-- 5. プレイHUD -->
+  <!-- 6. プレイHUD -->
   <div id="hud" class="hidden">
     <span id="hud-author" style="color: #38bdf8; font-weight: bold;"></span><br>
     <strong>操作:</strong> 矢印キー（↑ ↓ ← →）長押しでダッシュ<br>
@@ -361,7 +370,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
     // ==========================================
-    // --- 1. Firebase 設定 & 認証システム ---
+    // --- 1. Firebase 初期化 & 認証 ---
     // ==========================================
     const firebaseConfig = {
   apiKey: "AIzaSyBq5Wqx7kwqQSf9spIfrgHjYdQ7qm-yPzs",
@@ -388,7 +397,6 @@
       console.warn("Firebase初期化失敗:", e);
     }
 
-    // ユーザー名管理
     const inputUsername = document.getElementById('input-username');
     let currentUsername = localStorage.getItem('cube_username') || "NoName";
     inputUsername.value = currentUsername;
@@ -400,7 +408,6 @@
       }
     };
 
-    // Google認証ハンドラ
     const userStatusText = document.getElementById('user-status-text');
     const btnAuth = document.getElementById('btn-auth');
     const userBar = document.getElementById('user-bar');
@@ -412,7 +419,6 @@
           userStatusText.textContent = `${user.displayName || "ログイン済"}`;
           btnAuth.textContent = "ログアウト";
           btnAuth.style.background = "#475569";
-
           const userDoc = await db.collection("users").doc(user.uid).get();
           if (userDoc.exists && userDoc.data().username) {
             currentUsername = userDoc.data().username;
@@ -442,6 +448,179 @@
       }
     };
 
+    // ==========================================
+    // --- 2. ステージ選択・タブ切替・オンライン一覧 ---
+    // ==========================================
+    const tabOfficial = document.getElementById('tab-official');
+    const tabCustom = document.getElementById('tab-custom');
+    const stageListOfficial = document.getElementById('stage-list-official');
+    const stageListCustom = document.getElementById('stage-list-custom');
+    const onlineStagesContainer = document.getElementById('online-stages-container');
+
+    tabOfficial.onclick = () => {
+      tabOfficial.style.background = "#0284c7";
+      tabCustom.style.background = "#334155";
+      stageListOfficial.classList.remove('hidden');
+      stageListCustom.classList.add('hidden');
+    };
+
+    tabCustom.onclick = () => {
+      tabCustom.style.background = "#0284c7";
+      tabOfficial.style.background = "#334155";
+      stageListCustom.classList.remove('hidden');
+      stageListOfficial.classList.add('hidden');
+      loadPublicStagesList();
+    };
+
+    async function loadPublicStagesList() {
+      if (!db) {
+        onlineStagesContainer.innerHTML = '<div style="color:#ef4444; font-size:12px; text-align:center;">Firebase未設定です</div>';
+        return;
+      }
+      onlineStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
+      try {
+        const snap = await db.collection("stages").orderBy("createdAt", "desc").limit(20).get();
+        if (snap.empty) {
+          onlineStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">投稿されたステージはありません</div>';
+          return;
+        }
+        onlineStagesContainer.innerHTML = '';
+        snap.forEach(doc => {
+          const s = doc.data();
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `
+            <span><strong>ID:${doc.id}</strong><br><span style="font-size:11px; color:#94a3b8;">作者: ${s.author || "不明"}</span></span>
+            <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
+          `;
+          item.querySelector('.btn-play-online').onclick = () => startPlay(s);
+          onlineStagesContainer.appendChild(item);
+        });
+      } catch (e) {
+        onlineStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    // ==========================================
+    // --- 3. エディタ前スロット管理 ---
+    // ==========================================
+    const modalEditorSlots = document.getElementById('modal-editor-slots');
+    const editorSlotsContainer = document.getElementById('editor-slots-container');
+    const inputNewSlotName = document.getElementById('input-new-slot-name');
+    let currentEditingSlotId = null;
+
+    document.getElementById('btn-to-editor-slots').onclick = () => {
+      if (!currentUser) {
+        alert("ステージエディタの利用（クラウド保存）にはGoogleログインが必要です。");
+        return;
+      }
+      modalEditorSlots.classList.remove('hidden');
+      loadEditorSlotsList();
+    };
+
+    document.getElementById('btn-close-editor-slots').onclick = () => {
+      modalEditorSlots.classList.add('hidden');
+    };
+
+    async function loadEditorSlotsList() {
+      editorSlotsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
+      try {
+        const snap = await db.collection("users").doc(currentUser.uid).collection("custom_stages").orderBy("updatedAt", "desc").get();
+        if (snap.empty) {
+          editorSlotsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">保存されたスロットはありません</div>';
+          return;
+        }
+        editorSlotsContainer.innerHTML = '';
+        snap.forEach(doc => {
+          const s = doc.data();
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `
+            <span><strong>${s.name || "名称未設定"}</strong> (${s.size}×${s.size})</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-open-slot" style="padding: 3px 8px; font-size: 11px; background: #059669;">編集</button>
+              <button class="btn-del-slot" style="padding: 3px 8px; font-size: 11px; background: #dc2626;">削除</button>
+            </div>
+          `;
+          item.querySelector('.btn-open-slot').onclick = () => {
+            currentEditingSlotId = doc.id;
+            loadStageIntoEditor(s);
+            modalEditorSlots.classList.add('hidden');
+            switchScreen('EDITOR');
+            pivot.visible = false;
+            tilesGroup.visible = false;
+            editorGroup.visible = true;
+            buildEditorGrid();
+            updateLayerDisplay();
+            editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
+            editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+          };
+          item.querySelector('.btn-del-slot').onclick = async () => {
+            if (confirm(`「${s.name}」を削除しますか？`)) {
+              await doc.ref.delete();
+              loadEditorSlotsList();
+            }
+          };
+          editorSlotsContainer.appendChild(item);
+        });
+      } catch (e) {
+        editorSlotsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    document.getElementById('btn-create-new-slot').onclick = async () => {
+      const name = inputNewSlotName.value.trim() || `ステージ_${new Date().toLocaleDateString()}`;
+      const defaultStage = {
+        size: 32,
+        spawn: { x: 0, y: 0, z: 0 },
+        blocks: [{ x: 0, y: 0, z: 0, type: 3 }, { x: 1, y: 0, z: 0, type: 2 }],
+        movers: []
+      };
+      try {
+        const ref = await db.collection("users").doc(currentUser.uid).collection("custom_stages").add({
+          ...defaultStage,
+          name: name,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        currentEditingSlotId = ref.id;
+        inputNewSlotName.value = '';
+        loadStageIntoEditor(defaultStage);
+        modalEditorSlots.classList.add('hidden');
+        switchScreen('EDITOR');
+        pivot.visible = false;
+        tilesGroup.visible = false;
+        editorGroup.visible = true;
+        gridSize = 32;
+        document.getElementById('select-grid-size').value = 32;
+        buildEditorGrid();
+        updateLayerDisplay();
+      } catch (e) {
+        alert("作成エラー: " + e.message);
+      }
+    };
+
+    // エディタ内の上書き保存
+    document.getElementById('btn-save-current-slot').onclick = async () => {
+      if (!currentEditingSlotId) { alert("スロットが選択されていません。"); return; }
+      const data = exportStageData();
+      try {
+        await db.collection("users").doc(currentUser.uid).collection("custom_stages").doc(currentEditingSlotId).update({
+          ...data,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert("現在のスロットに上書き保存しました！");
+      } catch (e) {
+        alert("保存エラー: " + e.message);
+      }
+    };
+
+    document.getElementById('btn-editor-back').onclick = () => {
+      editorGroup.visible = false;
+      modalEditorSlots.classList.remove('hidden');
+      loadEditorSlotsList();
+      switchScreen('MODES');
+    };
+
     // --- 定数・初期設定 ---
     const MAX_HEIGHT = 8;
     let gridSize = 32;
@@ -455,10 +634,11 @@
         blocks: [
           { x: 0, y: 0, z: 0, type: 3 },
           { x: 1, y: 0, z: 0, type: 1 },
-          { x: 2, y: 0, z: 0, type: 5 },
-          { x: 3, y: 1, z: 0, type: 5 },
-          { x: 4, y: 2, z: 0, type: 1 },
-          { x: 4, y: 2, z: 1, type: 2 }
+          { x: 2, y: 0, z: 0, type: 6 }, // チェックポイント
+          { x: 3, y: 0, z: 0, type: 5 },
+          { x: 4, y: 1, z: 0, type: 5 },
+          { x: 5, y: 2, z: 0, type: 1 },
+          { x: 5, y: 2, z: 1, type: 2 }
         ],
         movers: []
       },
@@ -478,7 +658,6 @@
       }
     };
 
-    let customStageData = null;
     let activeStage = null;
     let gameState = 'TITLE';
 
@@ -489,26 +668,23 @@
     const hud = document.getElementById('hud');
     const hudAuthor = document.getElementById('hud-author');
     const hudQuit = document.getElementById('hud-quit');
-    const btnPlayCustom = document.getElementById('btn-play-custom');
 
-    // 画面切り替え（プレイ中以外でのみ userBar を表示）
     function switchScreen(screen) {
       [screenTitle, screenModes, screenStages].forEach(s => s.classList.add('hidden'));
       editorUiContainer.classList.add('hidden');
 
       if (screen === 'PLAYING') {
-        userBar.classList.add('hidden'); // プレイ中は右上のログインバーを隠す
+        userBar.classList.add('hidden');
         hud.classList.remove('hidden');
         hudQuit.classList.remove('hidden');
+      } else if (screen === 'EDITOR') {
+        userBar.classList.add('hidden'); // エディタ中も右上ユーザー表示を隠す
+        editorUiContainer.classList.remove('hidden');
       } else {
-        userBar.classList.remove('hidden'); // プレイ時以外（メニュー・エディタ等）は表示
+        userBar.classList.remove('hidden');
         hud.classList.add('hidden');
         hudQuit.classList.add('hidden');
-        if (screen === 'EDITOR') {
-          editorUiContainer.classList.remove('hidden');
-        } else if (screen) {
-          screen.classList.remove('hidden');
-        }
+        if (screen) screen.classList.remove('hidden');
       }
     }
 
@@ -517,41 +693,28 @@
     document.getElementById('btn-to-stages').onclick = () => switchScreen(screenStages);
     document.getElementById('btn-back-to-modes').onclick = () => switchScreen(screenModes);
 
-    document.querySelectorAll('.btn-stage').forEach(btn => {
+    document.querySelectorAll('.btn-official-stage').forEach(btn => {
       btn.onclick = () => startPlay(STAGES[btn.getAttribute('data-stage')]);
     });
-    btnPlayCustom.onclick = () => { if (customStageData) startPlay(customStageData); };
 
     hudQuit.onclick = () => {
       gameState = 'STAGES';
       switchScreen(screenStages);
     };
 
-    // ==========================================
-    // --- 2. オンライン投稿 & ランダムプレイ ---
-    // ==========================================
-    function generateStageId() {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let res = '';
-      for (let i = 0; i < 6; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
-      return res;
-    }
-
+    // ネット投稿
     document.getElementById('btn-online-publish').onclick = async () => {
-      if (!db || !auth) {
-        alert("Firebaseが設定されていません。");
-        return;
-      }
-      if (!currentUser) {
-        alert("ステージを投稿するにはGoogleアカウントでログインしてください。");
-        return;
-      }
+      if (!db || !auth) { alert("Firebaseが設定されていません。"); return; }
+      if (!currentUser) { alert("ステージを投稿するにはGoogleログインが必要です。"); return; }
 
       const data = exportStageData();
       if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
       if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
 
-      const stageId = generateStageId();
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let stageId = '';
+      for (let i = 0; i < 6; i++) stageId += chars.charAt(Math.floor(Math.random() * chars.length));
+
       try {
         await db.collection("stages").doc(stageId).set({
           ...data,
@@ -559,7 +722,7 @@
           authorUid: currentUser.uid,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        prompt(`ステージが公開されました！\nステージID [ ${stageId} ]\n作者: ${currentUsername}`, stageId);
+        prompt(`ステージが公開されました！\nステージID [ ${stageId} ]`, stageId);
       } catch (err) {
         alert("投稿エラー: " + err.message);
       }
@@ -569,15 +732,10 @@
       if (!db) { alert("Firebaseが設定されていません。"); return; }
       const stageId = document.getElementById('input-search-id').value.trim().toUpperCase();
       if (!stageId) { alert("ステージIDを入力してください。"); return; }
-
       try {
         const doc = await db.collection("stages").doc(stageId).get();
         if (!doc.exists) { alert("ステージが見つかりませんでした。"); return; }
-        const stageData = doc.data();
-        customStageData = stageData;
-        btnPlayCustom.disabled = false;
-        btnPlayCustom.textContent = `オンライン (${stageId})`;
-        startPlay(stageData);
+        startPlay(doc.data());
       } catch (err) {
         alert("検索エラー: " + err.message);
       }
@@ -585,118 +743,15 @@
 
     document.getElementById('btn-random-stage').onclick = async () => {
       if (!db) { alert("Firebaseが設定されていません。"); return; }
-
       try {
-        const snapshot = await db.collection("stages").limit(30).get();
-        if (snapshot.empty) {
-          alert("公開されているステージがまだありません。最初のステージを投稿してみてください！");
-          return;
-        }
-
-        const docs = snapshot.docs;
-        const randomDoc = docs[Math.floor(Math.random() * docs.length)];
-        const stageData = randomDoc.data();
-        customStageData = stageData;
-        btnPlayCustom.disabled = false;
-        btnPlayCustom.textContent = `ランダム (${randomDoc.id})`;
-        startPlay(stageData);
+        const snap = await db.collection("stages").limit(30).get();
+        if (snap.empty) { alert("公開ステージがまだありません。"); return; }
+        const docs = snap.docs;
+        startPlay(docs[Math.floor(Math.random() * docs.length)].data());
       } catch (err) {
         alert("ランダム取得エラー: " + err.message);
       }
     };
-
-    // ==========================================
-    // --- 3. マイステージ（クラウド保存・呼出） ---
-    // ==========================================
-    const modalMyStages = document.getElementById('modal-my-stages');
-    const stageListContainer = document.getElementById('stage-list-container');
-    const inputSaveStageName = document.getElementById('input-save-stage-name');
-
-    document.getElementById('btn-my-stages').onclick = () => {
-      if (!currentUser) {
-        alert("カスタムステージのクラウド保存・読み込みにはログインが必要です。");
-        return;
-      }
-      modalMyStages.classList.remove('hidden');
-      loadMyStagesList();
-    };
-
-    document.getElementById('btn-close-my-stages').onclick = () => {
-      modalMyStages.classList.add('hidden');
-    };
-
-    async function loadMyStagesList() {
-      stageListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
-      try {
-        const snap = await db.collection("users").doc(currentUser.uid).collection("custom_stages").orderBy("updatedAt", "desc").get();
-        if (snap.empty) {
-          stageListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">保存されたステージはありません</div>';
-          return;
-        }
-        stageListContainer.innerHTML = '';
-        snap.forEach(doc => {
-          const s = doc.data();
-          const item = document.createElement('div');
-          item.className = 'stage-item';
-          item.innerHTML = `
-            <span><strong>${s.name || "名称未設定"}</strong> (${s.size}×${s.size})</span>
-            <div style="display: flex; gap: 6px;">
-              <button class="btn-load-slot" style="padding: 3px 8px; font-size: 11px; background: #0284c7;">読込</button>
-              <button class="btn-del-slot" style="padding: 3px 8px; font-size: 11px; background: #dc2626;">削除</button>
-            </div>
-          `;
-          item.querySelector('.btn-load-slot').onclick = () => {
-            loadStageIntoEditor(s);
-            modalMyStages.classList.add('hidden');
-            alert(`「${s.name}」をエディタに読み込みました。`);
-          };
-          item.querySelector('.btn-del-slot').onclick = async () => {
-            if (confirm(`「${s.name}」を削除しますか？`)) {
-              await doc.ref.delete();
-              loadMyStagesList();
-            }
-          };
-          stageListContainer.appendChild(item);
-        });
-      } catch (e) {
-        stageListContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
-      }
-    }
-
-    document.getElementById('btn-save-to-cloud').onclick = async () => {
-      const name = inputSaveStageName.value.trim() || `ステージ_${new Date().toLocaleDateString()}`;
-      const data = exportStageData();
-      try {
-        await db.collection("users").doc(currentUser.uid).collection("custom_stages").add({
-          ...data,
-          name: name,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        inputSaveStageName.value = '';
-        loadMyStagesList();
-        alert(`「${name}」をクラウドに保存しました！`);
-      } catch (e) {
-        alert("保存エラー: " + e.message);
-      }
-    };
-
-    function loadStageIntoEditor(stage) {
-      editorBlocks.forEach((_, k) => {
-        const [x, y, z] = k.split(',').map(Number);
-        setEditorTile(x, y, z, 0);
-      });
-
-      gridSize = stage.size;
-      document.getElementById('select-grid-size').value = gridSize;
-      buildEditorGrid();
-
-      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type));
-      if (stage.movers) {
-        stage.movers.forEach(m => setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }));
-      }
-      if (stage.spawn) setEditorTile(stage.spawn.x, stage.spawn.y, stage.spawn.z, 3);
-      updateLayerDisplay();
-    }
 
     // ==========================================
     // --- 4. 3D描画 & ゲームエンジン ---
@@ -726,6 +781,7 @@
     const matGoal = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
     const matStart = new THREE.MeshLambertMaterial({ color: 0x06b6d4 });
     const matMover = new THREE.MeshLambertMaterial({ color: 0xa855f7 });
+    const matCheckpoint = new THREE.MeshLambertMaterial({ color: 0xec4899 });
 
     let cubePos = { x: 0, y: 0, z: 0 };
     const cubeMesh = new THREE.Mesh(
@@ -743,7 +799,6 @@
     scene.add(tilesGroup);
     let activeMovers = [];
 
-    // エディタ設定
     const editorGroup = new THREE.Group();
     scene.add(editorGroup);
     editorGroup.visible = false;
@@ -800,9 +855,9 @@
     function setEditorTile(x, y, z, type, moverConfig = null) {
       const key = `${x},${y},${z}`;
 
-      if (type === 2 || type === 3) {
+      if (type === 3) {
         editorBlocks.forEach((val, k) => {
-          if (val.type === type) {
+          if (val.type === 3) {
             const [cx, cy, cz] = k.split(',').map(Number);
             setEditorTile(cx, cy, cz, 0);
           }
@@ -819,9 +874,7 @@
         const data = { type, moverConfig: moverConfig || (type === 4 ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null) };
         editorBlocks.set(key, data);
 
-        if (editorMeshMap.has(key)) {
-          editorGroup.remove(editorMeshMap.get(key));
-        }
+        if (editorMeshMap.has(key)) editorGroup.remove(editorMeshMap.get(key));
 
         let geo = (type === 5) ? fullBlockGeo : thinTileGeo;
         let m = matFloor.clone();
@@ -829,6 +882,7 @@
         if (type === 2) m = matGoal.clone();
         if (type === 3) m = matStart.clone();
         if (type === 4) m = matMover.clone();
+        if (type === 6) m = matCheckpoint.clone();
 
         const mesh = new THREE.Mesh(geo, m);
         const yOffset = (type === 5) ? 0.5 : -0.1;
@@ -855,25 +909,6 @@
       });
     };
 
-    document.getElementById('btn-editor-back').onclick = () => {
-      editorGroup.visible = false;
-      gameState = 'MODES';
-      switchScreen(screenModes);
-    };
-
-    document.getElementById('btn-to-editor').onclick = () => {
-      gameState = 'EDITOR';
-      switchScreen('EDITOR');
-      pivot.visible = false;
-      tilesGroup.visible = false;
-      editorGroup.visible = true;
-
-      buildEditorGrid();
-      updateLayerDisplay();
-      editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
-      editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
-    };
-
     function exportStageData() {
       let spawn = null;
       let hasGoal = false;
@@ -894,39 +929,6 @@
 
       return { size: gridSize, spawn, hasGoal, blocks, movers };
     }
-
-    document.getElementById('btn-download').onclick = () => {
-      const data = exportStageData();
-      const jsonStr = JSON.stringify(data, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `stage_${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    const fileUpload = document.getElementById('file-upload');
-    document.getElementById('btn-upload-trigger').onclick = () => fileUpload.click();
-    fileUpload.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const loaded = JSON.parse(event.target.result);
-          if (!loaded.blocks || !loaded.size) throw new Error("無効なステージデータです。");
-          loadStageIntoEditor(loaded);
-          alert("ステージを読み込みました！");
-        } catch (err) {
-          alert("ファイルの読み込みに失敗しました: " + err.message);
-        }
-      };
-      reader.readAsText(file);
-      fileUpload.value = '';
-    };
 
     let editingMoverKey = null;
     const modal = document.getElementById('editor-modal');
@@ -955,13 +957,8 @@
       const data = exportStageData();
       if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
       if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
-
-      customStageData = { ...data, author: currentUsername };
-      btnPlayCustom.disabled = false;
-      btnPlayCustom.textContent = "カスタムステージ (作成済)";
-
       editorGroup.visible = false;
-      startPlay(customStageData);
+      startPlay({ ...data, author: currentUsername });
     };
 
     const raycaster = new THREE.Raycaster();
@@ -974,12 +971,8 @@
 
     window.addEventListener('mousedown', (e) => {
       if (gameState !== 'EDITOR' || e.target.closest('#editor-ui-container, .modal-dialog')) return;
-      if (e.button === 0) {
-        isLeftDown = true;
-        handleEditorClick(e);
-      } else if (e.button === 2) {
-        isRightDown = true;
-      }
+      if (e.button === 0) { isLeftDown = true; handleEditorClick(e); }
+      else if (e.button === 2) { isRightDown = true; }
       prevMouse = { x: e.clientX, y: e.clientY };
     });
 
@@ -988,10 +981,7 @@
       const dx = e.clientX - prevMouse.x;
       const dy = e.clientY - prevMouse.y;
       prevMouse = { x: e.clientX, y: e.clientY };
-
-      if (isLeftDown && !e.target.closest('#editor-ui-container, .modal-dialog')) {
-        handleEditorClick(e);
-      }
+      if (isLeftDown && !e.target.closest('#editor-ui-container, .modal-dialog')) handleEditorClick(e);
       if (isRightDown) {
         const panSpeed = editorCamPos.y * 0.0016;
         editorCamPos.x -= dx * panSpeed;
@@ -1014,7 +1004,6 @@
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
-
       const intersects = raycaster.intersectObject(raycastPlane);
       if (intersects.length > 0) {
         const pt = intersects[0].point;
@@ -1031,9 +1020,29 @@
       }
     }
 
-    // ゲームプレイ開始
+    function loadStageIntoEditor(stage) {
+      editorBlocks.forEach((_, k) => {
+        const [x, y, z] = k.split(',').map(Number);
+        setEditorTile(x, y, z, 0);
+      });
+      gridSize = stage.size || 32;
+      document.getElementById('select-grid-size').value = gridSize;
+      buildEditorGrid();
+
+      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type));
+      if (stage.movers) {
+        stage.movers.forEach(m => setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }));
+      }
+      if (stage.spawn) setEditorTile(stage.spawn.x, stage.spawn.y, stage.spawn.z, 3);
+      updateLayerDisplay();
+    }
+
+    // --- ゲームプレイシステム ---
+    let currentCheckpoint = null; // チェックポイント位置記憶用
+
     function startPlay(stageData) {
       activeStage = stageData;
+      currentCheckpoint = null; // ステージ開始時はチェックポイント初期化
       switchScreen('PLAYING');
       gameState = 'PLAYING';
       editorGroup.visible = false;
@@ -1058,6 +1067,7 @@
         if (b.type === 5) m = matFull;
         if (b.type === 2) m = matGoal;
         if (b.type === 3) m = matStart;
+        if (b.type === 6) m = matCheckpoint;
 
         const mesh = new THREE.Mesh(geo, m);
         const yOffset = (b.type === 5) ? 0.5 : -0.1;
@@ -1080,16 +1090,9 @@
           if (m.dir === 'RIGHT') vecX = 1;
 
           activeMovers.push({
-            originX: m.x,
-            originY: m.y,
-            originZ: m.z,
-            vecX: vecX,
-            vecZ: vecZ,
-            dist: m.dist,
-            speed: m.speed,
-            mesh: mesh,
-            currentOffset: 0,
-            direction: 1
+            originX: m.x, originY: m.y, originZ: m.z,
+            vecX: vecX, vecZ: vecZ, dist: m.dist, speed: m.speed,
+            mesh: mesh, currentOffset: 0, direction: 1
           });
         });
       }
@@ -1116,6 +1119,15 @@
 
       camera.position.set(cubePos.x + 6, cubePos.y + 7.5, cubePos.z + 8);
       cameraTarget.set(cubePos.x, cubePos.y + 0.5, cubePos.z);
+    }
+
+    function respawnPlayer() {
+      if (currentCheckpoint) {
+        resetCubePosition(currentCheckpoint.x, currentCheckpoint.y, currentCheckpoint.z);
+      } else {
+        const spawnSurf = getTopSurfaceAt(activeStage.spawn.x, activeStage.spawn.z, activeStage.spawn.y);
+        resetCubePosition(activeStage.spawn.x, spawnSurf ? spawnSurf.surfaceY : activeStage.spawn.y, activeStage.spawn.z);
+      }
     }
 
     function isSolidAt(x, z, yLevel) {
@@ -1175,7 +1187,6 @@
 
     function processInput() {
       if (isRolling || isFallingDown || gameState !== 'PLAYING') return;
-
       if (keysPressed['ArrowUp']) roll(0, -1);
       else if (keysPressed['ArrowDown']) roll(0, 1);
       else if (keysPressed['ArrowLeft']) roll(-1, 0);
@@ -1234,6 +1245,11 @@
 
           isRolling = false;
 
+          // チェックポイント(6)踏んだか判定
+          if (surface.type === 6) {
+            currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
+          }
+
           if (surface.isFall) {
             isFallingDown = true;
             fallVelocity = 0.05;
@@ -1264,8 +1280,7 @@
           pivot.position.y = cubePos.y;
 
           if (cubePos.y <= -5) {
-            const spawnSurf = getTopSurfaceAt(activeStage.spawn.x, activeStage.spawn.z, activeStage.spawn.y);
-            resetCubePosition(activeStage.spawn.x, spawnSurf ? spawnSurf.surfaceY : activeStage.spawn.y, activeStage.spawn.z);
+            respawnPlayer();
           }
         }
 
