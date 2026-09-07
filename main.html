@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Cube Roll Game (完全版)</title>
   <style>
     body {
@@ -10,6 +11,8 @@
       background-color: #111118;
       font-family: 'Segoe UI', Meiryo, sans-serif;
       user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
     }
 
     .screen {
@@ -56,6 +59,7 @@
       cursor: pointer;
       box-sizing: border-box;
       transition: all 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
     }
 
     button:hover {
@@ -192,11 +196,47 @@
       border-radius: 6px;
       line-height: 1.5;
     }
-    #hud-quit {
+
+    .hud-control-btn {
       position: absolute;
       top: 15px;
       right: 15px;
       z-index: 5;
+    }
+
+    /* モバイル専用 D-PAD (仮想十字キー) */
+    #dpad {
+      position: absolute;
+      bottom: 25px;
+      left: 25px;
+      width: 140px;
+      height: 140px;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 5px;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    .dpad-btn {
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      color: #fff;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    .dpad-btn:active, .dpad-btn.active {
+      background: rgba(56, 189, 248, 0.5);
+      transform: scale(0.92);
     }
   </style>
 
@@ -214,12 +254,10 @@
   <!-- 1. スタート画面 -->
   <div id="screen-title" class="screen">
     <h1>CUBE EDGE</h1>
-    
     <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; align-items: center;">
       <label style="font-size: 13px; color: #94a3b8;">プレイヤー名（投稿・プレイ時に表示）</label>
       <input type="text" id="input-username" placeholder="プレイヤー名" style="width: 220px;" maxlength="12">
     </div>
-
     <div class="btn-group">
       <button id="btn-to-modes">PRESS START</button>
     </div>
@@ -314,14 +352,14 @@
       <div class="editor-bar">
         <button id="btn-save-current-slot" style="background:#059669;">スロット上書き保存</button>
         <button id="btn-online-publish" style="background:#e11d48;">ネットに投稿</button>
-        <button id="btn-test-custom">テストプレイ</button>
+        <button id="btn-test-custom" style="background:#2563eb;">テストプレイ</button>
         <button id="btn-clear-editor" style="background:#dc2626;">全消去</button>
         <button id="btn-editor-back">スロット選択へ戻る</button>
       </div>
     </div>
   </div>
 
-  <!-- 動く床設定ポップアップ（上下を追加） -->
+  <!-- 動く床設定ポップアップ -->
   <div id="editor-modal" class="modal-dialog hidden">
     <h3 style="margin: 0;">動く床の設定</h3>
     <label>進行方向:
@@ -361,22 +399,35 @@
   <div id="hud" class="hidden">
     <span id="hud-stage-name" style="color: #facc15; font-weight: bold; font-size: 15px;"></span><br>
     <span id="hud-author" style="color: #38bdf8; font-size: 12px;"></span><br>
-    <strong>操作:</strong> 矢印キー（↑ ↓ ← →）長押しでダッシュ
+    <strong>操作:</strong> 矢印キー（↑ ↓ ← →）またはD-PADでダッシュ
   </div>
-  <button id="hud-quit" class="hidden">ステージ選択に戻る</button>
+  <button id="hud-quit" class="hud-control-btn hidden">ステージ選択に戻る</button>
+  <button id="hud-back-editor" class="hud-control-btn hidden" style="background: #e11d48;">エディタに戻る</button>
+
+  <!-- 7. モバイル・タブレット専用 D-PAD -->
+  <div id="dpad" class="hidden">
+    <div></div>
+    <div class="dpad-btn" id="dpad-up">▲</div>
+    <div></div>
+    <div class="dpad-btn" id="dpad-left">◀</div>
+    <div></div>
+    <div class="dpad-btn" id="dpad-right">▶</div>
+    <div></div>
+    <div class="dpad-btn" id="dpad-down">▼</div>
+    <div></div>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
     const firebaseConfig = {
-  apiKey: "AIzaSyBq5Wqx7kwqQSf9spIfrgHjYdQ7qm-yPzs",
-  authDomain: "cubemaze-65594.firebaseapp.com",
-  projectId: "cubemaze-65594",
-  storageBucket: "cubemaze-65594.firebasestorage.app",
-  messagingSenderId: "94155316782",
-  appId: "1:94155316782:web:9dc3320c9e938ee16689bf",
-  measurementId: "G-NJTJ4DJ6JY"
-};
-
+      apiKey: "AIzaSyBq5Wqx7kwqQSf9spIfrgHjYdQ7qm-yPzs",
+      authDomain: "cubemaze-65594.firebaseapp.com",
+      projectId: "cubemaze-65594",
+      storageBucket: "cubemaze-65594.firebasestorage.app",
+      messagingSenderId: "94155316782",
+      appId: "1:94155316782:web:9dc3320c9e938ee16689bf",
+      measurementId: "G-NJTJ4DJ6JY"
+    };
 
     let db = null;
     let auth = null;
@@ -431,10 +482,7 @@
     }
 
     btnAuth.onclick = () => {
-      if (!auth) {
-        alert("Firebaseが設定されていません。コード先頭の firebaseConfig を設定してください。");
-        return;
-      }
+      if (!auth) { alert("Firebaseが設定されていません。"); return; }
       if (currentUser) {
         auth.signOut();
       } else {
@@ -488,7 +536,7 @@
             </div>
             <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
           `;
-          item.querySelector('.btn-play-online').onclick = () => startPlay(s);
+          item.querySelector('.btn-play-online').onclick = () => startPlay(s, false);
           onlineStagesContainer.appendChild(item);
         });
       } catch (e) {
@@ -529,6 +577,17 @@
 
       editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
       editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+      camera.position.copy(editorCamPos);
+      camera.lookAt(editorCamTarget);
+    }
+
+    function returnToEditorView() {
+      switchScreen('EDITOR');
+      gameState = 'EDITOR';
+      pivot.visible = false;
+      tilesGroup.visible = false;
+      editorGroup.visible = true;
+
       camera.position.copy(editorCamPos);
       camera.lookAt(editorCamTarget);
     }
@@ -647,13 +706,18 @@
           { x: 7, y: 0, z: 0, type: 2 }
         ],
         movers: [
-          { x: 2, y: 0, z: 0, dir: 'RIGHT', dist: 3, speed: 0.03 }
+          { x: 2, y: 0, z: 0, dir: 'Y_UP', dist: 3, speed: 0.03 }
         ]
       }
     };
 
     let activeStage = null;
     let gameState = 'TITLE';
+    let isTestPlay = false;
+
+    // モバイル・タブレット自動判別 (タッチ対応かつポインタ精度粗い端末)
+    const isMobileDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const dpad = document.getElementById('dpad');
 
     const screenTitle = document.getElementById('screen-title');
     const screenModes = document.getElementById('screen-modes');
@@ -663,6 +727,7 @@
     const hudStageName = document.getElementById('hud-stage-name');
     const hudAuthor = document.getElementById('hud-author');
     const hudQuit = document.getElementById('hud-quit');
+    const hudBackEditor = document.getElementById('hud-back-editor');
 
     function switchScreen(screen) {
       [screenTitle, screenModes, screenStages].forEach(s => s.classList.add('hidden'));
@@ -671,23 +736,53 @@
       if (screen === 'PLAYING') {
         userBar.classList.add('hidden');
         hud.classList.remove('hidden');
-        hudQuit.classList.remove('hidden');
-      } else if (screen === 'EDITOR') {
-        userBar.classList.add('hidden');
-        editorUiContainer.classList.remove('hidden');
+
+        // タッチ端末のみプレイ画面でD-PADを表示
+        if (isMobileDevice) {
+          dpad.classList.remove('hidden');
+        }
+
+        if (isTestPlay) {
+          hudQuit.classList.add('hidden');
+          hudBackEditor.classList.remove('hidden');
+        } else {
+          hudQuit.classList.remove('hidden');
+          hudBackEditor.classList.add('hidden');
+        }
       } else {
-        userBar.classList.remove('hidden');
-        hud.classList.add('hidden');
-        hudQuit.classList.add('hidden');
-        if (screen === 'MODES') {
-          screenModes.classList.remove('hidden');
-        } else if (screen === 'TITLE') {
-          screenTitle.classList.remove('hidden');
-        } else if (screen === 'STAGES') {
-          screenStages.classList.remove('hidden');
+        dpad.classList.add('hidden');
+
+        if (screen === 'EDITOR') {
+          userBar.classList.add('hidden');
+          hud.classList.add('hidden');
+          hudQuit.classList.add('hidden');
+          hudBackEditor.classList.add('hidden');
+          editorUiContainer.classList.remove('hidden');
+        } else {
+          userBar.classList.remove('hidden');
+          hud.classList.add('hidden');
+          hudQuit.classList.add('hidden');
+          hudBackEditor.classList.add('hidden');
+          if (screen === 'MODES') screenModes.classList.remove('hidden');
+          else if (screen === 'TITLE') screenTitle.classList.remove('hidden');
+          else if (screen === 'STAGES') screenStages.classList.remove('hidden');
         }
       }
     }
+
+    // プレイ画面におけるコンテキストメニューおよびコピペ・選択無効化
+    window.addEventListener('contextmenu', (e) => {
+      if (gameState === 'PLAYING') e.preventDefault();
+    });
+    window.addEventListener('copy', (e) => {
+      if (gameState === 'PLAYING') e.preventDefault();
+    });
+    window.addEventListener('cut', (e) => {
+      if (gameState === 'PLAYING') e.preventDefault();
+    });
+    window.addEventListener('paste', (e) => {
+      if (gameState === 'PLAYING') e.preventDefault();
+    });
 
     document.getElementById('btn-to-modes').onclick = () => switchScreen('MODES');
     document.getElementById('btn-back-to-title').onclick = () => switchScreen('TITLE');
@@ -695,12 +790,16 @@
     document.getElementById('btn-back-to-modes').onclick = () => switchScreen('MODES');
 
     document.querySelectorAll('.btn-official-stage').forEach(btn => {
-      btn.onclick = () => startPlay(STAGES[btn.getAttribute('data-stage')]);
+      btn.onclick = () => startPlay(STAGES[btn.getAttribute('data-stage')], false);
     });
 
     hudQuit.onclick = () => {
       gameState = 'STAGES';
       switchScreen('STAGES');
+    };
+
+    hudBackEditor.onclick = () => {
+      returnToEditorView();
     };
 
     document.getElementById('btn-online-publish').onclick = async () => {
@@ -722,7 +821,7 @@
           authorUid: currentUser.uid,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        alert(`ステージを公開しました！\n\nステージ名: ${data.name}\nステージID: ${stageId}\n\n※ステージIDをクリップボードにコピーしました。`);
+        alert(`ステージを公開しました！\n\nステージ名: ${data.name}\nステージID: ${stageId}`);
       } catch (err) {
         alert("投稿エラー: " + err.message);
       }
@@ -735,7 +834,7 @@
       try {
         const doc = await db.collection("stages").doc(stageId).get();
         if (!doc.exists) { alert("ステージが見つかりませんでした。"); return; }
-        startPlay(doc.data());
+        startPlay(doc.data(), false);
       } catch (err) {
         alert("検索エラー: " + err.message);
       }
@@ -747,7 +846,7 @@
         const snap = await db.collection("stages").limit(30).get();
         if (snap.empty) { alert("公開ステージがまだありません。"); return; }
         const docs = snap.docs;
-        startPlay(docs[Math.floor(Math.random() * docs.length)].data());
+        startPlay(docs[Math.floor(Math.random() * docs.length)].data(), false);
       } catch (err) {
         alert("ランダム取得エラー: " + err.message);
       }
@@ -968,7 +1067,7 @@
       if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
       if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
       editorGroup.visible = false;
-      startPlay({ ...data, author: currentUsername });
+      startPlay({ ...data, author: currentUsername }, true);
     };
 
     const raycaster = new THREE.Raycaster();
@@ -1008,7 +1107,6 @@
       editorCamPos.y = THREE.MathUtils.clamp(editorCamPos.y * factor, 4, 120);
       editorCamPos.z = editorCamTarget.z + (editorCamPos.y * 0.6);
     });
-    window.addEventListener('contextmenu', e => { if (gameState === 'EDITOR') e.preventDefault(); });
 
     function handleEditorClick(e) {
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -1050,8 +1148,9 @@
 
     let currentCheckpoint = null;
 
-    function startPlay(stageData) {
+    function startPlay(stageData, testPlayMode = false) {
       activeStage = stageData;
+      isTestPlay = testPlayMode;
       currentCheckpoint = null;
       switchScreen('PLAYING');
       gameState = 'PLAYING';
@@ -1059,7 +1158,7 @@
       tilesGroup.visible = true;
       pivot.visible = true;
 
-      hudStageName.textContent = stageData.name || "ステージ";
+      hudStageName.textContent = isTestPlay ? `[TEST] ${stageData.name || "ステージ"}` : (stageData.name || "ステージ");
       hudAuthor.textContent = stageData.author ? `作: ${stageData.author}` : "";
 
       buildPlayStage(stageData);
@@ -1159,7 +1258,7 @@
       activeMovers.forEach(m => {
         const dx = Math.abs(m.mesh.position.x - x);
         const dz = Math.abs(m.mesh.position.z - z);
-        if (dx <= 0.75 && dz <= 0.75) {
+        if (dx <= 0.85 && dz <= 0.85) {
           surfaces.push({ type: 4, mover: m, surfaceY: m.mesh.position.y + 0.1 });
         }
       });
@@ -1168,26 +1267,42 @@
 
     function getTopSurfaceAt(x, z, nearY) {
       const list = getAllSurfacesAt(x, z);
-      return list.find(s => Math.abs(s.surfaceY - nearY) <= 0.5) || list[0] || null;
+      return list.find(s => Math.abs(s.surfaceY - nearY) <= 0.6) || list[0] || null;
     }
 
     function findTargetSurface(tx, tz, curY) {
       const surfaces = getAllSurfacesAt(tx, tz);
+      let best = null;
+      let minDiff = 999;
 
-      const surfUp = surfaces.find(s => Math.abs(s.surfaceY - (curY + 1)) < 0.25);
-      if (surfUp && !isSolidAt(tx, tz, Math.round(curY + 1))) return { dy: 1, targetY: surfUp.surfaceY, ...surfUp };
+      for (const s of surfaces) {
+        const diff = s.surfaceY - curY;
+        if (diff >= -1.4 && diff <= 1.25) {
+          const solidCheckY = Math.round(s.surfaceY);
+          if (!isSolidAt(tx, tz, solidCheckY)) {
+            if (Math.abs(diff) < minDiff) {
+              minDiff = Math.abs(diff);
+              best = s;
+            }
+          }
+        }
+      }
 
-      const surfFlat = surfaces.find(s => Math.abs(s.surfaceY - curY) < 0.25);
-      if (surfFlat && !isSolidAt(tx, tz, Math.round(curY))) return { dy: 0, targetY: surfFlat.surfaceY, ...surfFlat };
-
-      const surfDown = surfaces.find(s => Math.abs(s.surfaceY - (curY - 1)) < 0.25);
-      if (surfDown && !isSolidAt(tx, tz, Math.round(curY - 1))) return { dy: -1, targetY: surfDown.surfaceY, ...surfDown };
+      if (best) {
+        const diff = best.surfaceY - curY;
+        return {
+          dy: diff,
+          targetY: best.surfaceY,
+          ...best
+        };
+      }
 
       if (isSolidAt(tx, tz, Math.round(curY))) return { blocked: true };
 
       return { dy: 0, targetY: curY, type: 0, mover: null, surfaceY: curY, isFall: true };
     }
 
+    // キーボード入力 & D-PAD共通入力バッファ
     const keysPressed = {};
     window.addEventListener('keydown', (e) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -1198,6 +1313,32 @@
     window.addEventListener('keyup', (e) => {
       if (keysPressed[e.key]) keysPressed[e.key] = false;
     });
+
+    // D-PAD タッチ操作のバインド
+    function bindDpadButton(elementId, keyName) {
+      const el = document.getElementById(elementId);
+      el.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        keysPressed[keyName] = true;
+        el.classList.add('active');
+      }, { passive: false });
+
+      el.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        keysPressed[keyName] = false;
+        el.classList.remove('active');
+      }, { passive: false });
+
+      el.addEventListener('touchcancel', (e) => {
+        keysPressed[keyName] = false;
+        el.classList.remove('active');
+      });
+    }
+
+    bindDpadButton('dpad-up', 'ArrowUp');
+    bindDpadButton('dpad-down', 'ArrowDown');
+    bindDpadButton('dpad-left', 'ArrowLeft');
+    bindDpadButton('dpad-right', 'ArrowRight');
 
     let isRolling = false;
 
@@ -1223,37 +1364,46 @@
         return;
       }
 
-      const dy = surface.dy;
+      const startY = cubePos.y;
       const targetY = surface.targetY;
+      const dy = targetY - startY;
 
       let pivotX = currentX + dx * 0.5;
-      let pivotY = cubePos.y;
+      let pivotY = (dy > 0.15) ? (startY + dy) : startY;
       let pivotZ = currentZ + dz * 0.5;
 
-      if (dy === 1) pivotY = cubePos.y + 1;
-
       pivot.position.set(pivotX, pivotY, pivotZ);
-      cubeMesh.position.set(currentX - pivotX, cubePos.y + 0.5 - pivotY, currentZ - pivotZ);
+      cubeMesh.position.set(currentX - pivotX, startY + 0.5 - pivotY, currentZ - pivotZ);
 
-      const targetAngle = (dy !== 0) ? Math.PI : (Math.PI / 2);
-      const rollSpeed = (dy !== 0) ? 0.20 : 0.16;
+      const targetAngle = (Math.abs(dy) > 0.25) ? Math.PI : (Math.PI / 2);
+      const rollSpeed = (Math.abs(dy) > 0.25) ? 0.20 : 0.16;
       let currentAngle = 0;
       const axis = new THREE.Vector3(dz, 0, -dx).normalize();
 
       function animateRoll() {
         currentAngle += rollSpeed;
+
+        if (surface.type === 4 && surface.mover) {
+          const liveMoverY = surface.mover.mesh.position.y + 0.1;
+          const liveDy = liveMoverY - startY;
+          if (liveDy > 0.15) {
+            pivot.position.y = startY + liveDy;
+          }
+        }
+
         if (currentAngle < targetAngle) {
           pivot.rotateOnAxis(axis, rollSpeed);
           requestAnimationFrame(animateRoll);
         } else {
           cubePos.x = tx;
-          cubePos.y = targetY;
           cubePos.z = tz;
 
           if (surface.type === 4 && surface.mover) {
             cubePos.x = surface.mover.mesh.position.x;
             cubePos.z = surface.mover.mesh.position.z;
             cubePos.y = surface.mover.mesh.position.y + 0.1;
+          } else {
+            cubePos.y = targetY;
           }
 
           pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
@@ -1272,8 +1422,12 @@
           } else if (surface.type === 2) {
             resetInputBuffer();
             alert("ステージクリア！おめでとうございます！");
-            gameState = 'STAGES';
-            switchScreen('STAGES');
+            if (isTestPlay) {
+              returnToEditorView();
+            } else {
+              gameState = 'STAGES';
+              switchScreen('STAGES');
+            }
           }
         }
       }
@@ -1320,9 +1474,10 @@
           if (!isRolling && !isFallingDown) {
             const dx = Math.abs(m.mesh.position.x - cubePos.x);
             const dz = Math.abs(m.mesh.position.z - cubePos.z);
-            const dy = Math.abs((m.mesh.position.y + 0.1) - cubePos.y);
+            const moverSurfaceY = m.mesh.position.y + 0.1;
+            const dy = Math.abs(moverSurfaceY - cubePos.y);
 
-            if (dx <= 0.75 && dz <= 0.75 && dy <= 0.4) {
+            if (dx <= 0.85 && dz <= 0.85 && dy <= 0.75) {
               cubePos.x += stepX;
               cubePos.y += stepY;
               cubePos.z += stepZ;
