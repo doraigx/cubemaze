@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Cube Roll Game (オンライン・マリオメーカー風)</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #111118;
+      font-family: 'Segoe UI', Meiryo, sans-serif;
+      user-select: none;
+    }
+
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(15, 15, 22, 0.92);
+      color: #ffffff;
+      z-index: 10;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      letter-spacing: 0.15rem;
+      margin-bottom: 1.5rem;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 260px;
+    }
+
+    button, select, input {
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: #334155;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background-color: #475569;
+      transform: translateY(-1px);
+    }
+
+    input[type="text"] {
+      cursor: text;
+      background-color: #1e293b;
+      border: 1px solid #38bdf8;
+      outline: none;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    /* ユーザープロフバー（右上） */
+    #user-bar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 15;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    /* エディタUI */
+    #editor-ui-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
+      padding: 12px;
+    }
+
+    .editor-bar {
+      display: flex;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(4px);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      pointer-events: auto;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .palette-btn {
+      border: 2px solid transparent;
+      border-radius: 4px;
+    }
+    .palette-btn.active {
+      border-color: #38bdf8;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+    .p-empty { background: #334155; }
+    .p-floor { background: #64748b; }
+    .p-full { background: #475569; border: 1px dashed #94a3b8; }
+    .p-goal { background: #eab308; color: #000; }
+    .p-start { background: #06b6d4; color: #000; }
+    .p-mover { background: #a855f7; color: #fff; }
+
+    /* モーダル汎用 */
+    .modal-dialog {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e293b;
+      border: 2px solid #38bdf8;
+      padding: 20px;
+      border-radius: 8px;
+      color: #fff;
+      z-index: 25;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      max-height: 80vh;
+      overflow-y: auto;
+      min-width: 320px;
+    }
+
+    #stage-list-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 240px;
+      overflow-y: auto;
+      background: #0f172a;
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .stage-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      background: #1e293b;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    #editor-info {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      color: #fff;
+      font-size: 13px;
+      pointer-events: none;
+      z-index: 5;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px 14px;
+      border-radius: 6px;
+      line-height: 1.5;
+    }
+    #hud-quit {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 5;
+    }
+  </style>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- ユーザーログイン状態表示 -->
+  <div id="user-bar">
+    <span id="user-status-text">未ログイン (ゲスト)</span>
+    <button id="btn-auth" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">Googleログイン</button>
+  </div>
+
+  <!-- 1. スタート画面 -->
+  <div id="screen-title" class="screen">
+    <h1>CUBE EDGE</h1>
+    
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; align-items: center;">
+      <label style="font-size: 13px; color: #94a3b8;">プレイヤー名（投稿・プレイ時に表示）</label>
+      <input type="text" id="input-username" placeholder="プレイヤー名" style="width: 220px;" maxlength="12">
+    </div>
+
+    <div class="btn-group">
+      <button id="btn-to-modes">PRESS START</button>
+    </div>
+  </div>
+
+  <!-- 2. モード選択画面 -->
+  <div id="screen-modes" class="screen hidden">
+    <h1>MODE SELECT</h1>
+    <div class="btn-group">
+      <button id="btn-to-stages">ゲーム開始</button>
+      <button id="btn-to-editor">ステージエディタ</button>
+      <button id="btn-back-to-title">スタート画面にもどる</button>
+    </div>
+  </div>
+
+  <!-- 3. ステージ選択画面 -->
+  <div id="screen-stages" class="screen hidden">
+    <h1>STAGE SELECT</h1>
+    <div class="btn-group">
+      <button class="btn-stage" data-stage="1">ステージ 1 (基本クライム)</button>
+      <button class="btn-stage" data-stage="2">ステージ 2 (動く床)</button>
+      <button id="btn-play-custom" disabled>カスタムステージ (未作成)</button>
+      
+      <!-- オンライン機能 -->
+      <button id="btn-random-stage" style="background:#10b981; margin-top: 6px;">ランダムでプレイ</button>
+      
+      <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
+        <input type="text" id="input-search-id" placeholder="ステージIDを入力 (6桁)">
+        <button id="btn-search-stage" style="background:#0284c7;">IDで探してプレイ</button>
+      </div>
+
+      <button id="btn-back-to-modes" style="margin-top: 10px;">戻る</button>
+    </div>
+  </div>
+
+  <!-- 4. ステージエディタUI -->
+  <div id="editor-ui-container" class="hidden">
+    <div class="editor-bar">
+      <span style="font-weight: bold; color: #fff;">サイズ:</span>
+      <select id="select-grid-size">
+        <option value="16">16 × 16</option>
+        <option value="32" selected>32 × 32</option>
+        <option value="48">48 × 48</option>
+        <option value="64">64 × 64</option>
+      </select>
+
+      <span style="font-weight: bold; margin-left: 8px;">階層(Y):</span>
+      <button id="btn-layer-down">▼</button>
+      <span id="label-layer" style="min-width: 45px; text-align: center; color: #38bdf8; font-weight: bold;">Y: 0</span>
+      <button id="btn-layer-up">▲</button>
+
+      <span style="margin-left: 8px;">パーツ:</span>
+      <button class="palette-btn p-floor active" data-type="1">薄い床</button>
+      <button class="palette-btn p-full" data-type="5">直方体</button>
+      <button class="palette-btn p-mover" data-type="4">動く床</button>
+      <button class="palette-btn p-start" data-type="3">スタート</button>
+      <button class="palette-btn p-goal" data-type="2">ゴール</button>
+      <button class="palette-btn p-empty" data-type="0">消去</button>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <div id="editor-info" class="editor-bar">
+        左ドラッグ: 配置 / 削除<br>
+        右ドラッグ: 移動 / ホイール: ズーム<br>
+        「動く床」をクリックで移動設定
+      </div>
+      <div class="editor-bar">
+        <button id="btn-my-stages" style="background:#8b5cf6;">クラウド保存/呼出</button>
+        <button id="btn-online-publish" style="background:#e11d48;">ネットに投稿</button>
+        <button id="btn-download" style="background:#0284c7;">保存(DL)</button>
+        <button id="btn-upload-trigger" style="background:#059669;">読込(UP)</button>
+        <input type="file" id="file-upload" accept=".json" style="display:none;">
+        <button id="btn-test-custom">テストプレイ</button>
+        <button id="btn-clear-editor" style="background:#dc2626;">全消去</button>
+        <button id="btn-editor-back">戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- クラウドマイステージ管理モーダル -->
+  <div id="modal-my-stages" class="modal-dialog hidden">
+    <h3 style="margin: 0;">マイステージ (クラウド同期)</h3>
+    <div style="display: flex; gap: 8px;">
+      <input type="text" id="input-save-stage-name" placeholder="ステージ名" style="flex:1;">
+      <button id="btn-save-to-cloud" style="background:#059669;">新規保存</button>
+    </div>
+    <div id="stage-list-container">
+      <div style="color:#64748b; font-size:12px; text-align:center;">保存されたステージがありません</div>
+    </div>
+    <button id="btn-close-my-stages" style="align-self: flex-end;">閉じる</button>
+  </div>
+
+  <!-- 動く床設定ポップアップ -->
+  <div id="editor-modal" class="modal-dialog hidden">
+    <h3 style="margin: 0;">動く床の設定</h3>
+    <label>進行方向:
+      <select id="modal-dir">
+        <option value="UP">↑ (奥へ移動)</option>
+        <option value="DOWN">↓ (手前へ移動)</option>
+        <option value="LEFT">← (左へ移動)</option>
+        <option value="RIGHT">→ (右へ移動)</option>
+      </select>
+    </label>
+    <label>往復距離:
+      <select id="modal-dist">
+        <option value="1">1マス</option>
+        <option value="2">2マス</option>
+        <option value="3" selected>3マス</option>
+        <option value="4">4マス</option>
+        <option value="5">5マス</option>
+        <option value="6">6マス</option>
+      </select>
+    </label>
+    <label>速度:
+      <select id="modal-speed">
+        <option value="0.02">遅い</option>
+        <option value="0.035" selected>普通</option>
+        <option value="0.06">速い</option>
+      </select>
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="modal-save" style="background: #0284c7;">決定</button>
+      <button id="modal-cancel">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 5. プレイHUD -->
+  <div id="hud" class="hidden">
+    <span id="hud-author" style="color: #38bdf8; font-weight: bold;"></span><br>
+    <strong>操作:</strong> 矢印キー（↑ ↓ ← →）長押しでダッシュ<br>
+    黄色のゴールを目指してください
+  </div>
+  <button id="hud-quit" class="hidden">ステージ選択に戻る</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // ==========================================
+    // --- 1. Firebase 設定 & 認証システム ---
+    // ==========================================
+    const firebaseConfig = {
+  apiKey: "AIzaSyBq5Wqx7kwqQSf9spIfrgHjYdQ7qm-yPzs",
+  authDomain: "cubemaze-65594.firebaseapp.com",
+  projectId: "cubemaze-65594",
+  storageBucket: "cubemaze-65594.firebasestorage.app",
+  messagingSenderId: "94155316782",
+  appId: "1:94155316782:web:9dc3320c9e938ee16689bf",
+  measurementId: "G-NJTJ4DJ6JY"
+};
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+
+    try {
+      if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+      }
+    } catch(e) {
+      console.warn("Firebase初期化失敗:", e);
+    }
+
+    // ユーザー名管理（ローカル記憶）
+    const inputUsername = document.getElementById('input-username');
+    let currentUsername = localStorage.getItem('cube_username') || "NoName";
+    inputUsername.value = currentUsername;
+    inputUsername.onchange = () => {
+      currentUsername = inputUsername.value.trim() || "NoName";
+      localStorage.setItem('cube_username', currentUsername);
+      if (currentUser && db) {
+        db.collection("users").doc(currentUser.uid).set({ username: currentUsername }, { merge: true });
+      }
+    };
+
+    // Google認証ハンドラ
+    const userStatusText = document.getElementById('user-status-text');
+    const btnAuth = document.getElementById('btn-auth');
+
+    if (auth) {
+      auth.onAuthStateChanged(async (user) => {
+        currentUser = user;
+        if (user) {
+          userStatusText.textContent = `${user.displayName || "ログイン済"}`;
+          btnAuth.textContent = "ログアウト";
+          btnAuth.style.background = "#475569";
+
+          // Firestoreから名前を同期
+          const userDoc = await db.collection("users").doc(user.uid).get();
+          if (userDoc.exists && userDoc.data().username) {
+            currentUsername = userDoc.data().username;
+            inputUsername.value = currentUsername;
+            localStorage.setItem('cube_username', currentUsername);
+          } else {
+            db.collection("users").doc(user.uid).set({ username: currentUsername }, { merge: true });
+          }
+        } else {
+          userStatusText.textContent = "未ログイン (ゲスト)";
+          btnAuth.textContent = "Googleログイン";
+          btnAuth.style.background = "#0284c7";
+        }
+      });
+    }
+
+    btnAuth.onclick = () => {
+      if (!auth) {
+        alert("Firebaseが設定されていません。コード先頭の firebaseConfig を設定してください。");
+        return;
+      }
+      if (currentUser) {
+        auth.signOut();
+      } else {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(err => alert("ログインエラー: " + err.message));
+      }
+    };
+
+    // --- 定数・初期設定 ---
+    const MAX_HEIGHT = 8;
+    let gridSize = 32;
+    let currentLayer = 0;
+
+    const STAGES = {
+      1: {
+        author: "Official",
+        size: 16,
+        spawn: { x: 0, y: 0, z: 0 },
+        blocks: [
+          { x: 0, y: 0, z: 0, type: 3 },
+          { x: 1, y: 0, z: 0, type: 1 },
+          { x: 2, y: 0, z: 0, type: 5 },
+          { x: 3, y: 1, z: 0, type: 5 },
+          { x: 4, y: 2, z: 0, type: 1 },
+          { x: 4, y: 2, z: 1, type: 2 }
+        ],
+        movers: []
+      },
+      2: {
+        author: "Official",
+        size: 16,
+        spawn: { x: 0, y: 0, z: 0 },
+        blocks: [
+          { x: 0, y: 0, z: 0, type: 3 },
+          { x: 1, y: 0, z: 0, type: 1 },
+          { x: 6, y: 0, z: 0, type: 1 },
+          { x: 7, y: 0, z: 0, type: 2 }
+        ],
+        movers: [
+          { x: 2, y: 0, z: 0, dir: 'RIGHT', dist: 3, speed: 0.03 }
+        ]
+      }
+    };
+
+    let customStageData = null;
+    let activeStage = null;
+    let gameState = 'TITLE';
+
+    const screenTitle = document.getElementById('screen-title');
+    const screenModes = document.getElementById('screen-modes');
+    const screenStages = document.getElementById('screen-stages');
+    const editorUiContainer = document.getElementById('editor-ui-container');
+    const hud = document.getElementById('hud');
+    const hudAuthor = document.getElementById('hud-author');
+    const hudQuit = document.getElementById('hud-quit');
+    const btnPlayCustom = document.getElementById('btn-play-custom');
+
+    function switchScreen(screen) {
+      [screenTitle, screenModes, screenStages].forEach(s => s.classList.add('hidden'));
+      editorUiContainer.classList.add('hidden');
+
+      if (screen === 'PLAYING') {
+        hud.classList.remove('hidden');
+        hudQuit.classList.remove('hidden');
+      } else {
+        hud.classList.add('hidden');
+        hudQuit.classList.add('hidden');
+        if (screen === 'EDITOR') {
+          editorUiContainer.classList.remove('hidden');
+        } else if (screen) {
+          screen.classList.remove('hidden');
+        }
+      }
+    }
+
+    document.getElementById('btn-to-modes').onclick = () => switchScreen(screenModes);
+    document.getElementById('btn-back-to-title').onclick = () => switchScreen(screenTitle);
+    document.getElementById('btn-to-stages').onclick = () => switchScreen(screenStages);
+    document.getElementById('btn-back-to-modes').onclick = () => switchScreen(screenModes);
+
+    document.querySelectorAll('.btn-stage').forEach(btn => {
+      btn.onclick = () => startPlay(STAGES[btn.getAttribute('data-stage')]);
+    });
+    btnPlayCustom.onclick = () => { if (customStageData) startPlay(customStageData); };
+
+    hudQuit.onclick = () => {
+      gameState = 'STAGES';
+      switchScreen(screenStages);
+    };
+
+    // ==========================================
+    // --- 2. オンライン投稿 & ランダムプレイ ---
+    // ==========================================
+    function generateStageId() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let res = '';
+      for (let i = 0; i < 6; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+      return res;
+    }
+
+    // ネットに全体公開投稿（ログイン必須）
+    document.getElementById('btn-online-publish').onclick = async () => {
+      if (!db || !auth) {
+        alert("Firebaseが設定されていません。");
+        return;
+      }
+      if (!currentUser) {
+        alert("ステージを投稿するにはGoogleアカウントでログインしてください。");
+        return;
+      }
+
+      const data = exportStageData();
+      if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
+      if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
+
+      const stageId = generateStageId();
+      try {
+        await db.collection("stages").doc(stageId).set({
+          ...data,
+          author: currentUsername,
+          authorUid: currentUser.uid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        prompt(`ステージが公開されました！\nステージID [ ${stageId} ]\n作者: ${currentUsername}`, stageId);
+      } catch (err) {
+        alert("投稿エラー: " + err.message);
+      }
+    };
+
+    // ID検索プレイ
+    document.getElementById('btn-search-stage').onclick = async () => {
+      if (!db) { alert("Firebaseが設定されていません。"); return; }
+      const stageId = document.getElementById('input-search-id').value.trim().toUpperCase();
+      if (!stageId) { alert("ステージIDを入力してください。"); return; }
+
+      try {
+        const doc = await db.collection("stages").doc(stageId).get();
+        if (!doc.exists) { alert("ステージが見つかりませんでした。"); return; }
+        const stageData = doc.data();
+        customStageData = stageData;
+        btnPlayCustom.disabled = false;
+        btnPlayCustom.textContent = `オンライン (${stageId})`;
+        startPlay(stageData);
+      } catch (err) {
+        alert("検索エラー: " + err.message);
+      }
+    };
+
+    // ランダムプレイ（マリオメーカー風）
+    document.getElementById('btn-random-stage').onclick = async () => {
+      if (!db) { alert("Firebaseが設定されていません。"); return; }
+
+      try {
+        const snapshot = await db.collection("stages").limit(30).get();
+        if (snapshot.empty) {
+          alert("公開されているステージがまだありません。最初のステージを投稿してみてください！");
+          return;
+        }
+
+        const docs = snapshot.docs;
+        const randomDoc = docs[Math.floor(Math.random() * docs.length)];
+        const stageData = randomDoc.data();
+        customStageData = stageData;
+        btnPlayCustom.disabled = false;
+        btnPlayCustom.textContent = `ランダム (${randomDoc.id})`;
+        startPlay(stageData);
+      } catch (err) {
+        alert("ランダム取得エラー: " + err.message);
+      }
+    };
+
+    // ==========================================
+    // --- 3. マイステージ（クラウド複数保存機能） ---
+    // ==========================================
+    const modalMyStages = document.getElementById('modal-my-stages');
+    const stageListContainer = document.getElementById('stage-list-container');
+    const inputSaveStageName = document.getElementById('input-save-stage-name');
+
+    document.getElementById('btn-my-stages').onclick = () => {
+      if (!currentUser) {
+        alert("カスタムステージのクラウド保存・読み込みにはログインが必要です。");
+        return;
+      }
+      modalMyStages.classList.remove('hidden');
+      loadMyStagesList();
+    };
+
+    document.getElementById('btn-close-my-stages').onclick = () => {
+      modalMyStages.classList.add('hidden');
+    };
+
+    // マイステージ一覧取得
+    async function loadMyStagesList() {
+      stageListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
+      try {
+        const snap = await db.collection("users").doc(currentUser.uid).collection("custom_stages").orderBy("updatedAt", "desc").get();
+        if (snap.empty) {
+          stageListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">保存されたステージはありません</div>';
+          return;
+        }
+        stageListContainer.innerHTML = '';
+        snap.forEach(doc => {
+          const s = doc.data();
+          const item = document.createElement('div');
+          item.className = 'stage-item';
+          item.innerHTML = `
+            <span><strong>${s.name || "名称未設定"}</strong> (${s.size}×${s.size})</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-load-slot" style="padding: 3px 8px; font-size: 11px; background: #0284c7;">読込</button>
+              <button class="btn-del-slot" style="padding: 3px 8px; font-size: 11px; background: #dc2626;">削除</button>
+            </div>
+          `;
+          item.querySelector('.btn-load-slot').onclick = () => {
+            loadStageIntoEditor(s);
+            modalMyStages.classList.add('hidden');
+            alert(`「${s.name}」をエディタに読み込みました。`);
+          };
+          item.querySelector('.btn-del-slot').onclick = async () => {
+            if (confirm(`「${s.name}」を削除しますか？`)) {
+              await doc.ref.delete();
+              loadMyStagesList();
+            }
+          };
+          stageListContainer.appendChild(item);
+        });
+      } catch (e) {
+        stageListContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    // クラウドへの新規・上書き保存
+    document.getElementById('btn-save-to-cloud').onclick = async () => {
+      const name = inputSaveStageName.value.trim() || `ステージ_${new Date().toLocaleDateString()}`;
+      const data = exportStageData();
+      try {
+        await db.collection("users").doc(currentUser.uid).collection("custom_stages").add({
+          ...data,
+          name: name,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        inputSaveStageName.value = '';
+        loadMyStagesList();
+        alert(`「${name}」をクラウドに保存しました！`);
+      } catch (e) {
+        alert("保存エラー: " + e.message);
+      }
+    };
+
+    function loadStageIntoEditor(stage) {
+      editorBlocks.forEach((_, k) => {
+        const [x, y, z] = k.split(',').map(Number);
+        setEditorTile(x, y, z, 0);
+      });
+
+      gridSize = stage.size;
+      document.getElementById('select-grid-size').value = gridSize;
+      buildEditorGrid();
+
+      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type));
+      if (stage.movers) {
+        stage.movers.forEach(m => setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }));
+      }
+      if (stage.spawn) setEditorTile(stage.spawn.x, stage.spawn.y, stage.spawn.z, 3);
+      updateLayerDisplay();
+    }
+
+    // ==========================================
+    // --- 4. 3D描画 & ゲームエンジン ---
+    // ==========================================
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111118);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(50, 100, 50);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    const thinTileGeo = new THREE.BoxGeometry(1, 0.2, 1);
+    const fullBlockGeo = new THREE.BoxGeometry(1, 1, 1);
+
+    const matFloor = new THREE.MeshLambertMaterial({ color: 0x64748b });
+    const matFull = new THREE.MeshLambertMaterial({ color: 0x475569 });
+    const matGoal = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
+    const matStart = new THREE.MeshLambertMaterial({ color: 0x06b6d4 });
+    const matMover = new THREE.MeshLambertMaterial({ color: 0xa855f7 });
+
+    let cubePos = { x: 0, y: 0, z: 0 };
+    const cubeMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15, metalness: 0.1 })
+    );
+    cubeMesh.castShadow = true;
+
+    const pivot = new THREE.Group();
+    scene.add(pivot);
+    pivot.add(cubeMesh);
+
+    const cameraTarget = new THREE.Vector3();
+    const tilesGroup = new THREE.Group();
+    scene.add(tilesGroup);
+    let activeMovers = [];
+
+    // エディタ設定
+    const editorGroup = new THREE.Group();
+    scene.add(editorGroup);
+    editorGroup.visible = false;
+
+    let gridHelper = null;
+    let raycastPlane = null;
+    let editorBlocks = new Map();
+    let editorMeshMap = new Map();
+    let selectedPalette = 1;
+
+    function buildEditorGrid() {
+      if (gridHelper) editorGroup.remove(gridHelper);
+      if (raycastPlane) editorGroup.remove(raycastPlane);
+
+      gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x0ea5e9, 0x334155);
+      gridHelper.position.set(gridSize / 2 - 0.5, currentLayer - 0.01, gridSize / 2 - 0.5);
+      editorGroup.add(gridHelper);
+
+      const planeGeo = new THREE.PlaneGeometry(gridSize, gridSize);
+      const planeMat = new THREE.MeshBasicMaterial({ visible: false });
+      raycastPlane = new THREE.Mesh(planeGeo, planeMat);
+      raycastPlane.rotation.x = -Math.PI / 2;
+      raycastPlane.position.set(gridSize / 2 - 0.5, currentLayer, gridSize / 2 - 0.5);
+      editorGroup.add(raycastPlane);
+    }
+
+    function updateLayerDisplay() {
+      document.getElementById('label-layer').textContent = `Y: ${currentLayer}`;
+      if (gridHelper && raycastPlane) {
+        gridHelper.position.y = currentLayer - 0.01;
+        raycastPlane.position.y = currentLayer;
+      }
+      editorMeshMap.forEach((mesh, key) => {
+        const y = parseInt(key.split(',')[1], 10);
+        mesh.material.transparent = true;
+        mesh.material.opacity = (y === currentLayer) ? 1.0 : 0.35;
+      });
+    }
+
+    document.getElementById('btn-layer-up').onclick = () => {
+      if (currentLayer < MAX_HEIGHT - 1) { currentLayer++; updateLayerDisplay(); }
+    };
+    document.getElementById('btn-layer-down').onclick = () => {
+      if (currentLayer > 0) { currentLayer--; updateLayerDisplay(); }
+    };
+
+    document.getElementById('select-grid-size').onchange = (e) => {
+      gridSize = parseInt(e.target.value, 10);
+      buildEditorGrid();
+      editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
+      editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+    };
+
+    function setEditorTile(x, y, z, type, moverConfig = null) {
+      const key = `${x},${y},${z}`;
+
+      if (type === 2 || type === 3) {
+        editorBlocks.forEach((val, k) => {
+          if (val.type === type) {
+            const [cx, cy, cz] = k.split(',').map(Number);
+            setEditorTile(cx, cy, cz, 0);
+          }
+        });
+      }
+
+      if (type === 0) {
+        editorBlocks.delete(key);
+        if (editorMeshMap.has(key)) {
+          editorGroup.remove(editorMeshMap.get(key));
+          editorMeshMap.delete(key);
+        }
+      } else {
+        const data = { type, moverConfig: moverConfig || (type === 4 ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null) };
+        editorBlocks.set(key, data);
+
+        if (editorMeshMap.has(key)) {
+          editorGroup.remove(editorMeshMap.get(key));
+        }
+
+        let geo = (type === 5) ? fullBlockGeo : thinTileGeo;
+        let m = matFloor.clone();
+        if (type === 5) m = matFull.clone();
+        if (type === 2) m = matGoal.clone();
+        if (type === 3) m = matStart.clone();
+        if (type === 4) m = matMover.clone();
+
+        const mesh = new THREE.Mesh(geo, m);
+        const yOffset = (type === 5) ? 0.5 : -0.1;
+        mesh.position.set(x, y + yOffset, z);
+        mesh.material.transparent = true;
+        mesh.material.opacity = (y === currentLayer) ? 1.0 : 0.35;
+        editorGroup.add(mesh);
+        editorMeshMap.set(key, mesh);
+      }
+    }
+
+    document.querySelectorAll('.palette-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedPalette = parseInt(btn.dataset.type, 10);
+      };
+    });
+
+    document.getElementById('btn-clear-editor').onclick = () => {
+      editorBlocks.forEach((_, k) => {
+        const [x, y, z] = k.split(',').map(Number);
+        setEditorTile(x, y, z, 0);
+      });
+    };
+
+    document.getElementById('btn-editor-back').onclick = () => {
+      editorGroup.visible = false;
+      gameState = 'MODES';
+      switchScreen(screenModes);
+    };
+
+    document.getElementById('btn-to-editor').onclick = () => {
+      gameState = 'EDITOR';
+      switchScreen('EDITOR');
+      pivot.visible = false;
+      tilesGroup.visible = false;
+      editorGroup.visible = true;
+
+      buildEditorGrid();
+      updateLayerDisplay();
+      editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
+      editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+    };
+
+    function exportStageData() {
+      let spawn = null;
+      let hasGoal = false;
+      const blocks = [];
+      const movers = [];
+
+      editorBlocks.forEach((val, key) => {
+        const [x, y, z] = key.split(',').map(Number);
+        if (val.type === 3) spawn = { x, y, z };
+        if (val.type === 2) hasGoal = true;
+
+        if (val.type === 4) {
+          movers.push({ x, y, z, ...val.moverConfig });
+        } else {
+          blocks.push({ x, y, z, type: val.type });
+        }
+      });
+
+      return { size: gridSize, spawn, hasGoal, blocks, movers };
+    }
+
+    document.getElementById('btn-download').onclick = () => {
+      const data = exportStageData();
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stage_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    const fileUpload = document.getElementById('file-upload');
+    document.getElementById('btn-upload-trigger').onclick = () => fileUpload.click();
+    fileUpload.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const loaded = JSON.parse(event.target.result);
+          if (!loaded.blocks || !loaded.size) throw new Error("無効なステージデータです。");
+          loadStageIntoEditor(loaded);
+          alert("ステージを読み込みました！");
+        } catch (err) {
+          alert("ファイルの読み込みに失敗しました: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+      fileUpload.value = '';
+    };
+
+    let editingMoverKey = null;
+    const modal = document.getElementById('editor-modal');
+    function openMoverModal(key) {
+      editingMoverKey = key;
+      const b = editorBlocks.get(key);
+      if (b && b.moverConfig) {
+        document.getElementById('modal-dir').value = b.moverConfig.dir;
+        document.getElementById('modal-dist').value = b.moverConfig.dist;
+        document.getElementById('modal-speed').value = b.moverConfig.speed;
+        modal.classList.remove('hidden');
+      }
+    }
+    document.getElementById('modal-save').onclick = () => {
+      if (editingMoverKey && editorBlocks.has(editingMoverKey)) {
+        const b = editorBlocks.get(editingMoverKey);
+        b.moverConfig.dir = document.getElementById('modal-dir').value;
+        b.moverConfig.dist = parseInt(document.getElementById('modal-dist').value, 10);
+        b.moverConfig.speed = parseFloat(document.getElementById('modal-speed').value);
+      }
+      modal.classList.add('hidden');
+    };
+    document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
+
+    document.getElementById('btn-test-custom').onclick = () => {
+      const data = exportStageData();
+      if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
+      if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
+
+      customStageData = { ...data, author: currentUsername };
+      btnPlayCustom.disabled = false;
+      btnPlayCustom.textContent = "カスタムステージ (作成済)";
+
+      editorGroup.visible = false;
+      startPlay(customStageData);
+    };
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isLeftDown = false;
+    let isRightDown = false;
+    let prevMouse = { x: 0, y: 0 };
+    const editorCamPos = new THREE.Vector3();
+    const editorCamTarget = new THREE.Vector3();
+
+    window.addEventListener('mousedown', (e) => {
+      if (gameState !== 'EDITOR' || e.target.closest('#editor-ui-container, .modal-dialog')) return;
+      if (e.button === 0) {
+        isLeftDown = true;
+        handleEditorClick(e);
+      } else if (e.button === 2) {
+        isRightDown = true;
+      }
+      prevMouse = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (gameState !== 'EDITOR') return;
+      const dx = e.clientX - prevMouse.x;
+      const dy = e.clientY - prevMouse.y;
+      prevMouse = { x: e.clientX, y: e.clientY };
+
+      if (isLeftDown && !e.target.closest('#editor-ui-container, .modal-dialog')) {
+        handleEditorClick(e);
+      }
+      if (isRightDown) {
+        const panSpeed = editorCamPos.y * 0.0016;
+        editorCamPos.x -= dx * panSpeed;
+        editorCamPos.z -= dy * panSpeed;
+        editorCamTarget.x -= dx * panSpeed;
+        editorCamTarget.z -= dy * panSpeed;
+      }
+    });
+
+    window.addEventListener('mouseup', () => { isLeftDown = false; isRightDown = false; });
+    window.addEventListener('wheel', (e) => {
+      if (gameState !== 'EDITOR') return;
+      const factor = e.deltaY > 0 ? 1.08 : 0.92;
+      editorCamPos.y = THREE.MathUtils.clamp(editorCamPos.y * factor, 4, 120);
+      editorCamPos.z = editorCamTarget.z + (editorCamPos.y * 0.6);
+    });
+    window.addEventListener('contextmenu', e => { if (gameState === 'EDITOR') e.preventDefault(); });
+
+    function handleEditorClick(e) {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const intersects = raycaster.intersectObject(raycastPlane);
+      if (intersects.length > 0) {
+        const pt = intersects[0].point;
+        const tx = Math.floor(pt.x + 0.5);
+        const tz = Math.floor(pt.z + 0.5);
+        if (tx >= 0 && tx < gridSize && tz >= 0 && tz < gridSize) {
+          const key = `${tx},${currentLayer},${tz}`;
+          if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) {
+            openMoverModal(key);
+          } else {
+            setEditorTile(tx, currentLayer, tz, selectedPalette);
+          }
+        }
+      }
+    }
+
+    // ゲームプレイ開始
+    function startPlay(stageData) {
+      activeStage = stageData;
+      switchScreen('PLAYING');
+      gameState = 'PLAYING';
+      editorGroup.visible = false;
+      tilesGroup.visible = true;
+      pivot.visible = true;
+
+      hudAuthor.textContent = stageData.author ? `作: ${stageData.author}` : "";
+
+      buildPlayStage(stageData);
+      const spawnSurf = getTopSurfaceAt(stageData.spawn.x, stageData.spawn.z, stageData.spawn.y);
+      const startY = spawnSurf ? spawnSurf.surfaceY : stageData.spawn.y;
+      resetCubePosition(stageData.spawn.x, startY, stageData.spawn.z);
+    }
+
+    function buildPlayStage(stage) {
+      while (tilesGroup.children.length > 0) tilesGroup.remove(tilesGroup.children[0]);
+      activeMovers = [];
+
+      stage.blocks.forEach(b => {
+        let geo = (b.type === 5) ? fullBlockGeo : thinTileGeo;
+        let m = matFloor;
+        if (b.type === 5) m = matFull;
+        if (b.type === 2) m = matGoal;
+        if (b.type === 3) m = matStart;
+
+        const mesh = new THREE.Mesh(geo, m);
+        const yOffset = (b.type === 5) ? 0.5 : -0.1;
+        mesh.position.set(b.x, b.y + yOffset, b.z);
+        mesh.receiveShadow = true;
+        tilesGroup.add(mesh);
+      });
+
+      if (stage.movers) {
+        stage.movers.forEach(m => {
+          const mesh = new THREE.Mesh(thinTileGeo, matMover);
+          mesh.position.set(m.x, m.y - 0.1, m.z);
+          mesh.receiveShadow = true;
+          tilesGroup.add(mesh);
+
+          let vecX = 0, vecZ = 0;
+          if (m.dir === 'UP')    vecZ = -1;
+          if (m.dir === 'DOWN')  vecZ = 1;
+          if (m.dir === 'LEFT')  vecX = -1;
+          if (m.dir === 'RIGHT') vecX = 1;
+
+          activeMovers.push({
+            originX: m.x,
+            originY: m.y,
+            originZ: m.z,
+            vecX: vecX,
+            vecZ: vecZ,
+            dist: m.dist,
+            speed: m.speed,
+            mesh: mesh,
+            currentOffset: 0,
+            direction: 1
+          });
+        });
+      }
+    }
+
+    function resetInputBuffer() {
+      for (let k in keysPressed) keysPressed[k] = false;
+    }
+
+    let isFallingDown = false;
+    let fallVelocity = 0;
+
+    function resetCubePosition(x, y, z) {
+      resetInputBuffer();
+      isRolling = false;
+      isFallingDown = false;
+      fallVelocity = 0;
+
+      cubePos = { x, y, z };
+      pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
+      pivot.rotation.set(0, 0, 0);
+      cubeMesh.position.set(0, 0.5, 0);
+      cubeMesh.rotation.set(0, 0, 0);
+
+      camera.position.set(cubePos.x + 6, cubePos.y + 7.5, cubePos.z + 8);
+      cameraTarget.set(cubePos.x, cubePos.y + 0.5, cubePos.z);
+    }
+
+    function isSolidAt(x, z, yLevel) {
+      return activeStage.blocks.some(b => b.x === x && b.z === z && b.type === 5 && b.y === yLevel);
+    }
+
+    function getAllSurfacesAt(x, z) {
+      const surfaces = [];
+      activeStage.blocks.forEach(b => {
+        if (b.x === x && b.z === z) {
+          if (b.type === 5) surfaces.push({ type: 5, mover: null, surfaceY: b.y + 1 });
+          else surfaces.push({ type: b.type, mover: null, surfaceY: b.y });
+        }
+      });
+      activeMovers.forEach(m => {
+        const dx = Math.abs(m.mesh.position.x - x);
+        const dz = Math.abs(m.mesh.position.z - z);
+        if (dx <= 0.75 && dz <= 0.75) surfaces.push({ type: 4, mover: m, surfaceY: m.originY });
+      });
+      return surfaces.sort((a, b) => b.surfaceY - a.surfaceY);
+    }
+
+    function getTopSurfaceAt(x, z, nearY) {
+      const list = getAllSurfacesAt(x, z);
+      return list.find(s => Math.abs(s.surfaceY - nearY) <= 0.5) || list[0] || null;
+    }
+
+    function findTargetSurface(tx, tz, curY) {
+      const surfaces = getAllSurfacesAt(tx, tz);
+
+      const surfUp = surfaces.find(s => s.surfaceY === curY + 1);
+      if (surfUp && !isSolidAt(tx, tz, curY + 1)) return { dy: 1, targetY: curY + 1, ...surfUp };
+
+      const surfFlat = surfaces.find(s => s.surfaceY === curY);
+      if (surfFlat && !isSolidAt(tx, tz, curY)) return { dy: 0, targetY: curY, ...surfFlat };
+
+      const surfDown = surfaces.find(s => s.surfaceY === curY - 1);
+      if (surfDown && !isSolidAt(tx, tz, curY - 1)) return { dy: -1, targetY: curY - 1, ...surfDown };
+
+      if (isSolidAt(tx, tz, curY)) return { blocked: true };
+
+      return { dy: 0, targetY: curY, type: 0, mover: null, surfaceY: curY, isFall: true };
+    }
+
+    const keysPressed = {};
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        keysPressed[e.key] = true;
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (keysPressed[e.key]) keysPressed[e.key] = false;
+    });
+
+    let isRolling = false;
+
+    function processInput() {
+      if (isRolling || isFallingDown || gameState !== 'PLAYING') return;
+
+      if (keysPressed['ArrowUp']) roll(0, -1);
+      else if (keysPressed['ArrowDown']) roll(0, 1);
+      else if (keysPressed['ArrowLeft']) roll(-1, 0);
+      else if (keysPressed['ArrowRight']) roll(1, 0);
+    }
+
+    function roll(dx, dz) {
+      isRolling = true;
+
+      const currentX = Math.round(cubePos.x);
+      const currentZ = Math.round(cubePos.z);
+      const tx = currentX + dx;
+      const tz = currentZ + dz;
+
+      const surface = findTargetSurface(tx, tz, cubePos.y);
+      if (surface.blocked) {
+        isRolling = false;
+        return;
+      }
+
+      const dy = surface.dy;
+      const targetY = surface.targetY;
+
+      let pivotX = currentX + dx * 0.5;
+      let pivotY = cubePos.y;
+      let pivotZ = currentZ + dz * 0.5;
+
+      if (dy === 1) pivotY = cubePos.y + 1;
+
+      pivot.position.set(pivotX, pivotY, pivotZ);
+      cubeMesh.position.set(currentX - pivotX, cubePos.y + 0.5 - pivotY, currentZ - pivotZ);
+
+      const targetAngle = (dy !== 0) ? Math.PI : (Math.PI / 2);
+      const rollSpeed = (dy !== 0) ? 0.20 : 0.16;
+      let currentAngle = 0;
+      const axis = new THREE.Vector3(dz, 0, -dx).normalize();
+
+      function animateRoll() {
+        currentAngle += rollSpeed;
+        if (currentAngle < targetAngle) {
+          pivot.rotateOnAxis(axis, rollSpeed);
+          requestAnimationFrame(animateRoll);
+        } else {
+          cubePos.x = tx;
+          cubePos.y = targetY;
+          cubePos.z = tz;
+
+          if (surface.type === 4 && surface.mover) {
+            cubePos.x = surface.mover.mesh.position.x;
+            cubePos.z = surface.mover.mesh.position.z;
+          }
+
+          pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
+          pivot.rotation.set(0, 0, 0);
+          cubeMesh.position.set(0, 0.5, 0);
+
+          isRolling = false;
+
+          if (surface.isFall) {
+            isFallingDown = true;
+            fallVelocity = 0.05;
+          } else if (surface.type === 2) {
+            resetInputBuffer();
+            alert("ステージクリア！おめでとうございます！");
+            gameState = 'STAGES';
+            switchScreen(screenStages);
+          }
+        }
+      }
+      animateRoll();
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function loop() {
+      requestAnimationFrame(loop);
+
+      if (gameState === 'PLAYING') {
+        if (isFallingDown) {
+          fallVelocity += 0.03;
+          cubePos.y -= fallVelocity;
+          pivot.position.y = cubePos.y;
+
+          if (cubePos.y <= -5) {
+            const spawnSurf = getTopSurfaceAt(activeStage.spawn.x, activeStage.spawn.z, activeStage.spawn.y);
+            resetCubePosition(activeStage.spawn.x, spawnSurf ? spawnSurf.surfaceY : activeStage.spawn.y, activeStage.spawn.z);
+          }
+        }
+
+        activeMovers.forEach(m => {
+          const delta = m.speed * m.direction;
+          m.currentOffset += Math.abs(delta);
+
+          const stepX = m.vecX * delta;
+          const stepZ = m.vecZ * delta;
+
+          m.mesh.position.x += stepX;
+          m.mesh.position.z += stepZ;
+
+          if (m.currentOffset >= m.dist) {
+            m.direction *= -1;
+            m.currentOffset = 0;
+          }
+
+          if (!isRolling && !isFallingDown && cubePos.y === m.originY) {
+            const dx = Math.abs(m.mesh.position.x - cubePos.x);
+            const dz = Math.abs(m.mesh.position.z - cubePos.z);
+            if (dx <= 0.75 && dz <= 0.75) {
+              cubePos.x += stepX;
+              cubePos.z += stepZ;
+              pivot.position.x = cubePos.x;
+              pivot.position.z = cubePos.z;
+            }
+          }
+        });
+
+        processInput();
+
+        const cubeWorldPos = new THREE.Vector3();
+        cubeMesh.getWorldPosition(cubeWorldPos);
+
+        const targetCamX = cubeWorldPos.x + 6;
+        const targetCamY = cubeWorldPos.y + 7.5;
+        const targetCamZ = cubeWorldPos.z + 8;
+
+        camera.position.x += (targetCamX - camera.position.x) * 0.06;
+        camera.position.y += (targetCamY - camera.position.y) * 0.06;
+        camera.position.z += (targetCamZ - camera.position.z) * 0.06;
+
+        cameraTarget.x += (cubeWorldPos.x - cameraTarget.x) * 0.06;
+        cameraTarget.y += (cubeWorldPos.y + 0.5 - cameraTarget.y) * 0.06;
+        cameraTarget.z += (cubeWorldPos.z - cameraTarget.z) * 0.06;
+        camera.lookAt(cameraTarget);
+
+      } else if (gameState === 'EDITOR') {
+        camera.position.lerp(editorCamPos, 0.1);
+        cameraTarget.lerp(editorCamTarget, 0.1);
+        camera.lookAt(cameraTarget);
+      }
+
+      renderer.render(scene, camera);
+    }
+    loop();
+  </script>
+</body>
+</html>
