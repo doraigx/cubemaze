@@ -190,7 +190,6 @@
       z-index: 5;
     }
 
-    /* BGM クイックトグルボタン（プレイ画面左上） */
     #btn-bgm-trigger {
       position: absolute;
       top: 15px;
@@ -209,7 +208,6 @@
       min-width: 280px;
     }
 
-    /* モバイル専用 D-PAD */
     #dpad {
       position: absolute;
       z-index: 10;
@@ -275,7 +273,7 @@
     </div>
   </div>
 
-  <!-- オプション画面（D-PAD調整など） -->
+  <!-- オプション画面 -->
   <div id="modal-options" class="modal-dialog hidden">
     <h3 style="margin: 0;">オプション設定</h3>
     <label style="font-size: 13px;">D-PADの配置位置:
@@ -362,6 +360,11 @@
       <span id="label-layer" style="min-width: 45px; text-align: center; color: #38bdf8; font-weight: bold;">Y: 0</span>
       <button id="btn-layer-up">▲</button>
 
+      <!-- 視点回転コントロール -->
+      <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">視点回転:</span>
+      <button id="btn-rot-left" style="background:#475569;">⟲ 90°</button>
+      <button id="btn-rot-right" style="background:#475569;">90° ⟳</button>
+
       <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">パーツ:</span>
       <button class="palette-btn p-floor active" data-type="1">薄い床</button>
       <button class="palette-btn p-full" data-type="5">直方体</button>
@@ -375,8 +378,8 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
         左ドラッグ: 配置 / 削除<br>
-        右ドラッグ: 移動 / ホイール: ズーム<br>
-        「動く床」クリックで移動設定
+        右ドラッグ: 移動 / ホイール回転・Shift+右: 自由視点回転<br>
+        ホイール前後: ズーム / 「動く床」クリックで移動設定
       </div>
       <div class="editor-bar">
         <button id="btn-save-current-slot" style="background:#059669;">スロット上書き保存</button>
@@ -452,7 +455,7 @@
   <button id="hud-quit" class="hud-control-btn hidden">ステージ選択に戻る</button>
   <button id="hud-back-editor" class="hud-control-btn hidden" style="background: #e11d48;">エディタに戻る</button>
 
-  <!-- 6. モバイル・タブレット専用 D-PAD -->
+  <!-- 6. モバイル専用 D-PAD -->
   <div id="dpad" class="hidden">
     <div></div>
     <div class="dpad-btn" id="dpad-up">▲</div>
@@ -539,7 +542,6 @@
       }
     };
 
-    // --- BGM 管理 ---
     let currentAudio = new Audio();
     currentAudio.loop = true;
     currentAudio.volume = 0.5;
@@ -574,7 +576,6 @@
       modalBgmPicker.classList.add('hidden');
     }
 
-    // --- オプション・D-PAD設定管理 ---
     const modalOptions = document.getElementById('modal-options');
     const optDpadPos = document.getElementById('opt-dpad-pos');
     const optDpadBottom = document.getElementById('opt-dpad-bottom');
@@ -634,7 +635,6 @@
       modalOptions.classList.add('hidden');
     };
 
-    // --- ステージ選択・タブ切替 ---
     const tabOfficial = document.getElementById('tab-official');
     const tabCustom = document.getElementById('tab-custom');
     const stageListOfficial = document.getElementById('stage-list-official');
@@ -719,8 +719,12 @@
       inputEditorStageName.value = stageData.name || "マイステージ";
       loadStageIntoEditor(stageData);
 
-      editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
+      // エディタ視点初期化
+      editorCamRadius = gridSize * 1.05;
+      editorCamTheta = Math.PI / 4;
+      editorCamPhi = Math.PI / 3;
       editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+      updateEditorCamPos();
       camera.position.copy(editorCamPos);
       camera.lookAt(editorCamTarget);
     }
@@ -878,7 +882,7 @@
 
         if (isMobileDevice) {
           dpad.classList.remove('hidden');
-          applyDpadSettings(); // D-PADのスタイルを確実に再適用
+          applyDpadSettings();
         }
 
         if (isTestPlay) {
@@ -1043,6 +1047,29 @@
     let editorMeshMap = new Map();
     let selectedPalette = 1;
 
+    // --- エディタ視点（周回軌道カメラパラメータ） ---
+    let editorCamRadius = 35;
+    let editorCamTheta = Math.PI / 4; // 水平角度
+    let editorCamPhi = Math.PI / 3;   // 仰角
+    const editorCamPos = new THREE.Vector3();
+    const editorCamTarget = new THREE.Vector3();
+
+    function updateEditorCamPos() {
+      editorCamPos.x = editorCamTarget.x + editorCamRadius * Math.sin(editorCamPhi) * Math.sin(editorCamTheta);
+      editorCamPos.y = editorCamTarget.y + editorCamRadius * Math.cos(editorCamPhi);
+      editorCamPos.z = editorCamTarget.z + editorCamRadius * Math.sin(editorCamPhi) * Math.cos(editorCamTheta);
+    }
+
+    // 90度回転ボタン
+    document.getElementById('btn-rot-left').onclick = () => {
+      editorCamTheta += Math.PI / 2;
+      updateEditorCamPos();
+    };
+    document.getElementById('btn-rot-right').onclick = () => {
+      editorCamTheta -= Math.PI / 2;
+      updateEditorCamPos();
+    };
+
     function buildEditorGrid() {
       if (gridHelper) {
         editorGroup.remove(gridHelper);
@@ -1088,8 +1115,9 @@
     document.getElementById('select-grid-size').onchange = (e) => {
       gridSize = parseInt(e.target.value, 10);
       buildEditorGrid();
-      editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
       editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+      editorCamRadius = gridSize * 1.05;
+      updateEditorCamPos();
     };
 
     function setEditorTile(x, y, z, type, moverConfig = null) {
@@ -1212,14 +1240,23 @@
     const mouse = new THREE.Vector2();
     let isLeftDown = false;
     let isRightDown = false;
+    let isMiddleDown = false;
     let prevMouse = { x: 0, y: 0 };
-    const editorCamPos = new THREE.Vector3();
-    const editorCamTarget = new THREE.Vector3();
 
     window.addEventListener('mousedown', (e) => {
       if (gameState !== 'EDITOR' || e.target.closest('#editor-ui-container, .modal-dialog')) return;
-      if (e.button === 0) { isLeftDown = true; handleEditorClick(e); }
-      else if (e.button === 2) { isRightDown = true; }
+      if (e.button === 0) {
+        isLeftDown = true;
+        handleEditorClick(e);
+      } else if (e.button === 1) {
+        isMiddleDown = true; // ホイールボタンドラッグによる回転
+      } else if (e.button === 2) {
+        if (e.shiftKey) {
+          isMiddleDown = true; // Shift+右クリックでも回転可能
+        } else {
+          isRightDown = true;  // 通常右クリックは平行移動
+        }
+      }
       prevMouse = { x: e.clientX, y: e.clientY };
     });
 
@@ -1228,22 +1265,44 @@
       const dx = e.clientX - prevMouse.x;
       const dy = e.clientY - prevMouse.y;
       prevMouse = { x: e.clientX, y: e.clientY };
-      if (isLeftDown && !e.target.closest('#editor-ui-container, .modal-dialog')) handleEditorClick(e);
+
+      if (isLeftDown && !e.target.closest('#editor-ui-container, .modal-dialog')) {
+        handleEditorClick(e);
+      }
+
+      // 自由周回回転 (ホイールドラッグ or Shift+右ドラッグ)
+      if (isMiddleDown) {
+        editorCamTheta -= dx * 0.008;
+        editorCamPhi = THREE.MathUtils.clamp(editorCamPhi - dy * 0.008, 0.1, Math.PI / 2 - 0.05);
+        updateEditorCamPos();
+      }
+
+      // 平行移動 (右ドラッグ)
       if (isRightDown) {
-        const panSpeed = editorCamPos.y * 0.0016;
-        editorCamPos.x -= dx * panSpeed;
-        editorCamPos.z -= dy * panSpeed;
-        editorCamTarget.x -= dx * panSpeed;
-        editorCamTarget.z -= dy * panSpeed;
+        const panSpeed = editorCamRadius * 0.0016;
+        // カメラの水平向きに応じてパンの方向を回転
+        const forward = new THREE.Vector3().subVectors(editorCamTarget, camera.position);
+        forward.y = 0;
+        forward.normalize();
+        const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+
+        editorCamTarget.addScaledVector(right, -dx * panSpeed);
+        editorCamTarget.addScaledVector(forward, dy * panSpeed);
+        updateEditorCamPos();
       }
     });
 
-    window.addEventListener('mouseup', () => { isLeftDown = false; isRightDown = false; });
+    window.addEventListener('mouseup', () => {
+      isLeftDown = false;
+      isRightDown = false;
+      isMiddleDown = false;
+    });
+
     window.addEventListener('wheel', (e) => {
       if (gameState !== 'EDITOR') return;
       const factor = e.deltaY > 0 ? 1.08 : 0.92;
-      editorCamPos.y = THREE.MathUtils.clamp(editorCamPos.y * factor, 4, 120);
-      editorCamTarget.z += (e.deltaY > 0 ? 1 : -1) * 0.5;
+      editorCamRadius = THREE.MathUtils.clamp(editorCamRadius * factor, 8, 160);
+      updateEditorCamPos();
     });
 
     function handleEditorClick(e) {
@@ -1640,8 +1699,9 @@
         camera.lookAt(cameraTarget);
 
       } else if (gameState === 'EDITOR') {
-        camera.position.lerp(editorCamPos, 0.1);
-        cameraTarget.lerp(editorCamTarget, 0.1);
+        // エディタ用カメラの滑らかな追従
+        camera.position.lerp(editorCamPos, 0.15);
+        cameraTarget.lerp(editorCamTarget, 0.15);
         camera.lookAt(cameraTarget);
       }
 
