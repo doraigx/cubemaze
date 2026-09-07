@@ -183,26 +183,6 @@
       line-height: 1.4;
     }
 
-    #hud {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      color: #fff;
-      font-size: 13px;
-      pointer-events: none;
-      z-index: 5;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 10px 14px;
-      border-radius: 6px;
-      line-height: 1.5;
-    }
-
-    #hud-tutorial {
-      transition: opacity 0.4s ease;
-      color: #94a3b8;
-      font-size: 12px;
-    }
-
     .hud-control-btn {
       position: absolute;
       top: 15px;
@@ -210,16 +190,15 @@
       z-index: 5;
     }
 
-    /* BGM クイックトグルボタン（プレイ画面上部中央） */
+    /* BGM クイックトグルボタン（プレイ画面左上） */
     #btn-bgm-trigger {
       position: absolute;
       top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 15px;
       z-index: 5;
-      background: rgba(15, 23, 42, 0.7);
+      background: rgba(15, 23, 42, 0.75);
       border: 1px solid rgba(56, 189, 248, 0.4);
-      padding: 6px 12px;
+      padding: 6px 14px;
       font-size: 12px;
       border-radius: 20px;
       backdrop-filter: blur(4px);
@@ -233,10 +212,6 @@
     /* モバイル専用 D-PAD */
     #dpad {
       position: absolute;
-      bottom: 25px;
-      left: 25px;
-      width: 140px;
-      height: 140px;
       z-index: 10;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -312,14 +287,14 @@
     </label>
     <label style="font-size: 13px;">下端からの余白:
       <div style="display:flex; align-items:center; gap:8px;">
-        <input type="range" id="opt-dpad-bottom" min="10" max="100" value="25" style="flex:1;">
-        <span id="opt-dpad-bottom-val" style="width:35px; text-align:right;">25px</span>
+        <input type="range" id="opt-dpad-bottom" min="10" max="120" value="25" style="flex:1;">
+        <span id="opt-dpad-bottom-val" style="width:45px; text-align:right;">25px</span>
       </div>
     </label>
     <label style="font-size: 13px;">ボタンのサイズ:
       <div style="display:flex; align-items:center; gap:8px;">
-        <input type="range" id="opt-dpad-scale" min="100" max="180" value="140" style="flex:1;">
-        <span id="opt-dpad-scale-val" style="width:35px; text-align:right;">140px</span>
+        <input type="range" id="opt-dpad-scale" min="100" max="200" value="140" style="flex:1;">
+        <span id="opt-dpad-scale-val" style="width:45px; text-align:right;">140px</span>
       </div>
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
@@ -449,14 +424,7 @@
     </div>
   </div>
 
-  <!-- 6. プレイHUD -->
-  <div id="hud" class="hidden">
-    <span id="hud-stage-name" style="color: #facc15; font-weight: bold; font-size: 15px;"></span><br>
-    <span id="hud-author" style="color: #38bdf8; font-size: 12px;"></span>
-    <div id="hud-tutorial" style="margin-top: 4px;"><strong>操作:</strong> 矢印キー（↑ ↓ ← →）またはD-PADでダッシュ</div>
-  </div>
-
-  <!-- BGM トグル & ピッカー -->
+  <!-- BGM トグル & ピッカー（左上常設） -->
   <button id="btn-bgm-trigger" class="hidden">▶️ BGM: 停止中</button>
   <div id="modal-bgm-picker" class="modal-dialog hidden">
     <h3 style="margin: 0; font-size: 1.1rem;">BGM 選択</h3>
@@ -484,7 +452,7 @@
   <button id="hud-quit" class="hud-control-btn hidden">ステージ選択に戻る</button>
   <button id="hud-back-editor" class="hud-control-btn hidden" style="background: #e11d48;">エディタに戻る</button>
 
-  <!-- 7. モバイル・タブレット専用 D-PAD -->
+  <!-- 6. モバイル・タブレット専用 D-PAD -->
   <div id="dpad" class="hidden">
     <div></div>
     <div class="dpad-btn" id="dpad-up">▲</div>
@@ -571,7 +539,7 @@
       }
     };
 
-    // --- BGM 管理システム ---
+    // --- BGM 管理 ---
     let currentAudio = new Audio();
     currentAudio.loop = true;
     currentAudio.volume = 0.5;
@@ -626,9 +594,9 @@
       dpad.style.width = `${dpadSettings.size}px`;
       dpad.style.height = `${dpadSettings.size}px`;
 
-      dpad.style.left = '';
-      dpad.style.right = '';
-      dpad.style.transform = '';
+      dpad.style.left = 'auto';
+      dpad.style.right = 'auto';
+      dpad.style.transform = 'none';
 
       if (dpadSettings.pos === 'left') {
         dpad.style.left = '25px';
@@ -897,10 +865,6 @@
     const screenModes = document.getElementById('screen-modes');
     const screenStages = document.getElementById('screen-stages');
     const editorUiContainer = document.getElementById('editor-ui-container');
-    const hud = document.getElementById('hud');
-    const hudStageName = document.getElementById('hud-stage-name');
-    const hudAuthor = document.getElementById('hud-author');
-    const hudTutorial = document.getElementById('hud-tutorial');
     const hudQuit = document.getElementById('hud-quit');
     const hudBackEditor = document.getElementById('hud-back-editor');
 
@@ -910,11 +874,11 @@
 
       if (screen === 'PLAYING') {
         userBar.classList.add('hidden');
-        hud.classList.remove('hidden');
         btnBgmTrigger.classList.remove('hidden');
 
         if (isMobileDevice) {
           dpad.classList.remove('hidden');
+          applyDpadSettings(); // D-PADのスタイルを確実に再適用
         }
 
         if (isTestPlay) {
@@ -931,13 +895,11 @@
 
         if (screen === 'EDITOR') {
           userBar.classList.add('hidden');
-          hud.classList.add('hidden');
           hudQuit.classList.add('hidden');
           hudBackEditor.classList.add('hidden');
           editorUiContainer.classList.remove('hidden');
         } else {
           userBar.classList.remove('hidden');
-          hud.classList.add('hidden');
           hudQuit.classList.add('hidden');
           hudBackEditor.classList.add('hidden');
           if (screen === 'MODES') screenModes.classList.remove('hidden');
@@ -1334,12 +1296,6 @@
       tilesGroup.visible = true;
       pivot.visible = true;
 
-      hudStageName.textContent = isTestPlay ? `[TEST] ${stageData.name || "ステージ"}` : (stageData.name || "ステージ");
-      hudAuthor.textContent = stageData.author ? `作: ${stageData.author}` : "";
-
-      // チュートリアルテキストを再表示
-      hudTutorial.style.opacity = '1';
-
       buildPlayStage(stageData);
       const spawnSurf = getTopSurfaceAt(stageData.spawn.x, stageData.spawn.z, stageData.spawn.y);
       const startY = spawnSurf ? spawnSurf.surfaceY : stageData.spawn.y;
@@ -1588,14 +1544,6 @@
           cubeMesh.position.set(0, 0.5, 0);
 
           isRolling = false;
-
-          // スタート地点から1マスでも離れたらチュートリアル非表示
-          if (activeStage && activeStage.spawn) {
-            const distFromSpawn = Math.hypot(cubePos.x - activeStage.spawn.x, cubePos.z - activeStage.spawn.z);
-            if (distFromSpawn >= 1.0) {
-              hudTutorial.style.opacity = '0';
-            }
-          }
 
           if (surface.type === 6) {
             currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
