@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Cube Roll Game (完全版・グリッド修正)</title>
+  <title>Cube Roll Game (完全版)</title>
   <style>
     body {
       margin: 0;
@@ -72,7 +72,6 @@
       font-size: 1rem;
     }
 
-    /* ユーザープロフバー（右上・プレイ中とエディタ中は非表示） */
     #user-bar {
       position: absolute;
       top: 12px;
@@ -89,7 +88,6 @@
       color: #cbd5e1;
     }
 
-    /* エディタUI */
     #editor-ui-container {
       position: absolute;
       top: 0;
@@ -134,7 +132,6 @@
     .p-mover { background: #a855f7; color: #fff; }
     .p-checkpoint { background: #ec4899; color: #fff; }
 
-    /* モーダル汎用 */
     .modal-dialog {
       position: absolute;
       top: 50%;
@@ -203,14 +200,12 @@
     }
   </style>
 
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-  <!-- ユーザーログイン状態表示（右上） -->
   <div id="user-bar">
     <span id="user-status-text">未ログイン (ゲスト)</span>
     <button id="btn-auth" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">Googleログイン</button>
@@ -248,20 +243,18 @@
       <button id="tab-custom" style="background:#334155;">カスタムステージ</button>
     </div>
 
-    <!-- 基礎ステージリスト -->
     <div id="stage-list-official" class="btn-group" style="width: 280px;">
       <button class="btn-official-stage" data-stage="1">ステージ 1 (基本クライム)</button>
       <button class="btn-official-stage" data-stage="2">ステージ 2 (動く床)</button>
     </div>
 
-    <!-- カスタムステージリスト -->
-    <div id="stage-list-custom" class="hidden" style="display: flex; flex-direction: column; gap: 10px; width: 280px;">
+    <div id="stage-list-custom" class="hidden" style="display: flex; flex-direction: column; gap: 10px; width: 320px;">
       <button id="btn-random-stage" style="background:#10b981;">ランダムでプレイ</button>
       <div style="display: flex; gap: 6px;">
         <input type="text" id="input-search-id" placeholder="ステージID (6桁)" style="flex:1;">
         <button id="btn-search-stage" style="background:#0284c7;">検索</button>
       </div>
-      <div id="online-stages-container" class="list-container" style="max-height: 180px;">
+      <div id="online-stages-container" class="list-container" style="max-height: 220px;">
         <div style="color:#64748b; font-size:12px; text-align:center;">オンラインステージ読込中...</div>
       </div>
     </div>
@@ -286,7 +279,10 @@
   <!-- 5. ステージエディタUI -->
   <div id="editor-ui-container" class="hidden">
     <div class="editor-bar">
-      <span style="font-weight: bold; color: #ffffff;">サイズ:</span>
+      <span style="font-weight: bold; color: #ffffff;">ステージ名:</span>
+      <input type="text" id="input-editor-stage-name" placeholder="ステージ名" style="width: 140px; text-align: left; padding: 4px 8px; font-size: 0.85rem;" maxlength="20">
+
+      <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">サイズ:</span>
       <select id="select-grid-size">
         <option value="16">16 × 16</option>
         <option value="32" selected>32 × 32</option>
@@ -325,7 +321,7 @@
     </div>
   </div>
 
-  <!-- 動く床設定ポップアップ -->
+  <!-- 動く床設定ポップアップ（上下を追加） -->
   <div id="editor-modal" class="modal-dialog hidden">
     <h3 style="margin: 0;">動く床の設定</h3>
     <label>進行方向:
@@ -334,6 +330,8 @@
         <option value="DOWN">↓ (手前へ移動)</option>
         <option value="LEFT">← (左へ移動)</option>
         <option value="RIGHT">→ (右へ移動)</option>
+        <option value="Y_UP">▲ (上へ上昇)</option>
+        <option value="Y_DOWN">▼ (下へ下降)</option>
       </select>
     </label>
     <label>往復距離:
@@ -361,17 +359,14 @@
 
   <!-- 6. プレイHUD -->
   <div id="hud" class="hidden">
-    <span id="hud-author" style="color: #38bdf8; font-weight: bold;"></span><br>
-    <strong>操作:</strong> 矢印キー（↑ ↓ ← →）長押しでダッシュ<br>
-    黄色のゴールを目指してください
+    <span id="hud-stage-name" style="color: #facc15; font-weight: bold; font-size: 15px;"></span><br>
+    <span id="hud-author" style="color: #38bdf8; font-size: 12px;"></span><br>
+    <strong>操作:</strong> 矢印キー（↑ ↓ ← →）長押しでダッシュ
   </div>
   <button id="hud-quit" class="hidden">ステージ選択に戻る</button>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
-    // ==========================================
-    // --- 1. Firebase 初期化 & 認証 ---
-    // ==========================================
     const firebaseConfig = {
   apiKey: "AIzaSyBq5Wqx7kwqQSf9spIfrgHjYdQ7qm-yPzs",
   authDomain: "cubemaze-65594.firebaseapp.com",
@@ -448,9 +443,6 @@
       }
     };
 
-    // ==========================================
-    // --- 2. ステージ選択・タブ切替・オンライン一覧 ---
-    // ==========================================
     const tabOfficial = document.getElementById('tab-official');
     const tabCustom = document.getElementById('tab-custom');
     const stageListOfficial = document.getElementById('stage-list-official');
@@ -479,7 +471,7 @@
       }
       onlineStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
       try {
-        const snap = await db.collection("stages").orderBy("createdAt", "desc").limit(20).get();
+        const snap = await db.collection("stages").orderBy("createdAt", "desc").limit(25).get();
         if (snap.empty) {
           onlineStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">投稿されたステージはありません</div>';
           return;
@@ -490,7 +482,10 @@
           const item = document.createElement('div');
           item.className = 'list-item';
           item.innerHTML = `
-            <span><strong>ID:${doc.id}</strong><br><span style="font-size:11px; color:#94a3b8;">作者: ${s.author || "不明"}</span></span>
+            <div>
+              <strong style="color:#facc15;">${s.name || "名称未設定"}</strong><br>
+              <span style="font-size:11px; color:#94a3b8;">作者: ${s.author || "不明"} / ID: ${doc.id}</span>
+            </div>
             <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
           `;
           item.querySelector('.btn-play-online').onclick = () => startPlay(s);
@@ -501,12 +496,10 @@
       }
     }
 
-    // ==========================================
-    // --- 3. エディタ前スロット管理 ---
-    // ==========================================
     const modalEditorSlots = document.getElementById('modal-editor-slots');
     const editorSlotsContainer = document.getElementById('editor-slots-container');
     const inputNewSlotName = document.getElementById('input-new-slot-name');
+    const inputEditorStageName = document.getElementById('input-editor-stage-name');
     let currentEditingSlotId = null;
 
     document.getElementById('btn-to-editor-slots').onclick = () => {
@@ -520,19 +513,20 @@
 
     document.getElementById('btn-close-editor-slots').onclick = () => {
       modalEditorSlots.classList.add('hidden');
+      switchScreen('MODES');
     };
 
     function openEditorWithStage(stageData) {
       modalEditorSlots.classList.add('hidden');
       switchScreen('EDITOR');
-      gameState = 'EDITOR'; // エディタモードフラグを設定
+      gameState = 'EDITOR';
       pivot.visible = false;
       tilesGroup.visible = false;
       editorGroup.visible = true;
 
+      inputEditorStageName.value = stageData.name || "マイステージ";
       loadStageIntoEditor(stageData);
 
-      // エディタカメラの視点をマップ中央上空にリセット
       editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
       editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
       camera.position.copy(editorCamPos);
@@ -579,6 +573,7 @@
     document.getElementById('btn-create-new-slot').onclick = async () => {
       const name = inputNewSlotName.value.trim() || `ステージ_${new Date().toLocaleDateString()}`;
       const defaultStage = {
+        name: name,
         size: 32,
         spawn: { x: 0, y: 0, z: 0 },
         blocks: [{ x: 0, y: 0, z: 0, type: 3 }, { x: 1, y: 0, z: 0, type: 2 }],
@@ -587,7 +582,6 @@
       try {
         const ref = await db.collection("users").doc(currentUser.uid).collection("custom_stages").add({
           ...defaultStage,
-          name: name,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         currentEditingSlotId = ref.id;
@@ -620,13 +614,13 @@
       switchScreen('MODES');
     };
 
-    // --- 定数・初期設定 ---
     const MAX_HEIGHT = 8;
     let gridSize = 32;
     let currentLayer = 0;
 
     const STAGES = {
       1: {
+        name: "ステージ 1",
         author: "Official",
         size: 16,
         spawn: { x: 0, y: 0, z: 0 },
@@ -642,6 +636,7 @@
         movers: []
       },
       2: {
+        name: "ステージ 2",
         author: "Official",
         size: 16,
         spawn: { x: 0, y: 0, z: 0 },
@@ -665,6 +660,7 @@
     const screenStages = document.getElementById('screen-stages');
     const editorUiContainer = document.getElementById('editor-ui-container');
     const hud = document.getElementById('hud');
+    const hudStageName = document.getElementById('hud-stage-name');
     const hudAuthor = document.getElementById('hud-author');
     const hudQuit = document.getElementById('hud-quit');
 
@@ -683,14 +679,20 @@
         userBar.classList.remove('hidden');
         hud.classList.add('hidden');
         hudQuit.classList.add('hidden');
-        if (screen) screen.classList.remove('hidden');
+        if (screen === 'MODES') {
+          screenModes.classList.remove('hidden');
+        } else if (screen === 'TITLE') {
+          screenTitle.classList.remove('hidden');
+        } else if (screen === 'STAGES') {
+          screenStages.classList.remove('hidden');
+        }
       }
     }
 
-    document.getElementById('btn-to-modes').onclick = () => switchScreen(screenModes);
-    document.getElementById('btn-back-to-title').onclick = () => switchScreen(screenTitle);
-    document.getElementById('btn-to-stages').onclick = () => switchScreen(screenStages);
-    document.getElementById('btn-back-to-modes').onclick = () => switchScreen(screenModes);
+    document.getElementById('btn-to-modes').onclick = () => switchScreen('MODES');
+    document.getElementById('btn-back-to-title').onclick = () => switchScreen('TITLE');
+    document.getElementById('btn-to-stages').onclick = () => switchScreen('STAGES');
+    document.getElementById('btn-back-to-modes').onclick = () => switchScreen('MODES');
 
     document.querySelectorAll('.btn-official-stage').forEach(btn => {
       btn.onclick = () => startPlay(STAGES[btn.getAttribute('data-stage')]);
@@ -698,7 +700,7 @@
 
     hudQuit.onclick = () => {
       gameState = 'STAGES';
-      switchScreen(screenStages);
+      switchScreen('STAGES');
     };
 
     document.getElementById('btn-online-publish').onclick = async () => {
@@ -720,7 +722,7 @@
           authorUid: currentUser.uid,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        prompt(`ステージが公開されました！\nステージID [ ${stageId} ]`, stageId);
+        prompt(`ステージが公開されました！\nステージ名: ${data.name}\nステージID [ ${stageId} ]`, stageId);
       } catch (err) {
         alert("投稿エラー: " + err.message);
       }
@@ -751,9 +753,6 @@
       }
     };
 
-    // ==========================================
-    // --- 4. 3D描画 & ゲームエンジン ---
-    // ==========================================
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111118);
 
@@ -931,7 +930,14 @@
         }
       });
 
-      return { size: gridSize, spawn, hasGoal, blocks, movers };
+      return {
+        name: inputEditorStageName.value.trim() || "マイステージ",
+        size: gridSize,
+        spawn,
+        hasGoal,
+        blocks,
+        movers
+      };
     }
 
     let editingMoverKey = null;
@@ -1042,7 +1048,6 @@
       updateLayerDisplay();
     }
 
-    // --- ゲームプレイシステム ---
     let currentCheckpoint = null;
 
     function startPlay(stageData) {
@@ -1054,6 +1059,7 @@
       tilesGroup.visible = true;
       pivot.visible = true;
 
+      hudStageName.textContent = stageData.name || "ステージ";
       hudAuthor.textContent = stageData.author ? `作: ${stageData.author}` : "";
 
       buildPlayStage(stageData);
@@ -1088,15 +1094,18 @@
           mesh.receiveShadow = true;
           tilesGroup.add(mesh);
 
-          let vecX = 0, vecZ = 0;
-          if (m.dir === 'UP')    vecZ = -1;
-          if (m.dir === 'DOWN')  vecZ = 1;
-          if (m.dir === 'LEFT')  vecX = -1;
-          if (m.dir === 'RIGHT') vecX = 1;
+          let vecX = 0, vecY = 0, vecZ = 0;
+          if (m.dir === 'UP')     vecZ = -1;
+          if (m.dir === 'DOWN')   vecZ = 1;
+          if (m.dir === 'LEFT')   vecX = -1;
+          if (m.dir === 'RIGHT')  vecX = 1;
+          if (m.dir === 'Y_UP')   vecY = 1;
+          if (m.dir === 'Y_DOWN') vecY = -1;
 
           activeMovers.push({
             originX: m.x, originY: m.y, originZ: m.z,
-            vecX: vecX, vecZ: vecZ, dist: m.dist, speed: m.speed,
+            vecX: vecX, vecY: vecY, vecZ: vecZ,
+            dist: m.dist, speed: m.speed,
             mesh: mesh, currentOffset: 0, direction: 1
           });
         });
@@ -1150,7 +1159,9 @@
       activeMovers.forEach(m => {
         const dx = Math.abs(m.mesh.position.x - x);
         const dz = Math.abs(m.mesh.position.z - z);
-        if (dx <= 0.75 && dz <= 0.75) surfaces.push({ type: 4, mover: m, surfaceY: m.originY });
+        if (dx <= 0.75 && dz <= 0.75) {
+          surfaces.push({ type: 4, mover: m, surfaceY: m.mesh.position.y + 0.1 });
+        }
       });
       return surfaces.sort((a, b) => b.surfaceY - a.surfaceY);
     }
@@ -1163,16 +1174,16 @@
     function findTargetSurface(tx, tz, curY) {
       const surfaces = getAllSurfacesAt(tx, tz);
 
-      const surfUp = surfaces.find(s => s.surfaceY === curY + 1);
-      if (surfUp && !isSolidAt(tx, tz, curY + 1)) return { dy: 1, targetY: curY + 1, ...surfUp };
+      const surfUp = surfaces.find(s => Math.abs(s.surfaceY - (curY + 1)) < 0.25);
+      if (surfUp && !isSolidAt(tx, tz, Math.round(curY + 1))) return { dy: 1, targetY: surfUp.surfaceY, ...surfUp };
 
-      const surfFlat = surfaces.find(s => s.surfaceY === curY);
-      if (surfFlat && !isSolidAt(tx, tz, curY)) return { dy: 0, targetY: curY, ...surfFlat };
+      const surfFlat = surfaces.find(s => Math.abs(s.surfaceY - curY) < 0.25);
+      if (surfFlat && !isSolidAt(tx, tz, Math.round(curY))) return { dy: 0, targetY: surfFlat.surfaceY, ...surfFlat };
 
-      const surfDown = surfaces.find(s => s.surfaceY === curY - 1);
-      if (surfDown && !isSolidAt(tx, tz, curY - 1)) return { dy: -1, targetY: curY - 1, ...surfDown };
+      const surfDown = surfaces.find(s => Math.abs(s.surfaceY - (curY - 1)) < 0.25);
+      if (surfDown && !isSolidAt(tx, tz, Math.round(curY - 1))) return { dy: -1, targetY: surfDown.surfaceY, ...surfDown };
 
-      if (isSolidAt(tx, tz, curY)) return { blocked: true };
+      if (isSolidAt(tx, tz, Math.round(curY))) return { blocked: true };
 
       return { dy: 0, targetY: curY, type: 0, mover: null, surfaceY: curY, isFall: true };
     }
@@ -1242,6 +1253,7 @@
           if (surface.type === 4 && surface.mover) {
             cubePos.x = surface.mover.mesh.position.x;
             cubePos.z = surface.mover.mesh.position.z;
+            cubePos.y = surface.mover.mesh.position.y + 0.1;
           }
 
           pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
@@ -1261,7 +1273,7 @@
             resetInputBuffer();
             alert("ステージクリア！おめでとうございます！");
             gameState = 'STAGES';
-            switchScreen(screenStages);
+            switchScreen('STAGES');
           }
         }
       }
@@ -1293,9 +1305,11 @@
           m.currentOffset += Math.abs(delta);
 
           const stepX = m.vecX * delta;
+          const stepY = m.vecY * delta;
           const stepZ = m.vecZ * delta;
 
           m.mesh.position.x += stepX;
+          m.mesh.position.y += stepY;
           m.mesh.position.z += stepZ;
 
           if (m.currentOffset >= m.dist) {
@@ -1303,13 +1317,17 @@
             m.currentOffset = 0;
           }
 
-          if (!isRolling && !isFallingDown && cubePos.y === m.originY) {
+          if (!isRolling && !isFallingDown) {
             const dx = Math.abs(m.mesh.position.x - cubePos.x);
             const dz = Math.abs(m.mesh.position.z - cubePos.z);
-            if (dx <= 0.75 && dz <= 0.75) {
+            const dy = Math.abs((m.mesh.position.y + 0.1) - cubePos.y);
+
+            if (dx <= 0.75 && dz <= 0.75 && dy <= 0.4) {
               cubePos.x += stepX;
+              cubePos.y += stepY;
               cubePos.z += stepZ;
               pivot.position.x = cubePos.x;
+              pivot.position.y = cubePos.y;
               pivot.position.z = cubePos.z;
             }
           }
