@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Cube Roll Game (完全版)</title>
+  <title>Cube Roll Game (完全版・グリッド修正)</title>
   <style>
     body {
       margin: 0;
@@ -240,7 +240,7 @@
     </div>
   </div>
 
-  <!-- 3. ステージ選択画面（基礎ステージ / カスタムステージ分離） -->
+  <!-- 3. ステージ選択画面 -->
   <div id="screen-stages" class="screen hidden">
     <h1>STAGE SELECT</h1>
     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
@@ -254,7 +254,7 @@
       <button class="btn-official-stage" data-stage="2">ステージ 2 (動く床)</button>
     </div>
 
-    <!-- カスタムステージ（オンライン一覧・検索）リスト -->
+    <!-- カスタムステージリスト -->
     <div id="stage-list-custom" class="hidden" style="display: flex; flex-direction: column; gap: 10px; width: 280px;">
       <button id="btn-random-stage" style="background:#10b981;">ランダムでプレイ</button>
       <div style="display: flex; gap: 6px;">
@@ -272,7 +272,7 @@
   <!-- 4. エディタ前スロット管理モーダル -->
   <div id="modal-editor-slots" class="modal-dialog hidden">
     <h3 style="margin: 0;">エディタースロット (クラウド保存)</h3>
-    <div style="font-size: 12px; color: #94a3b8;">作成・編集するステージを選んでください（無限個保存可能）</div>
+    <div style="font-size: 12px; color: #94a3b8;">作成・編集するステージを選んでください</div>
     <div style="display: flex; gap: 8px;">
       <input type="text" id="input-new-slot-name" placeholder="新しいステージ名" style="flex:1;">
       <button id="btn-create-new-slot" style="background:#059669;">新規作成</button>
@@ -522,6 +522,23 @@
       modalEditorSlots.classList.add('hidden');
     };
 
+    function openEditorWithStage(stageData) {
+      modalEditorSlots.classList.add('hidden');
+      switchScreen('EDITOR');
+      gameState = 'EDITOR'; // エディタモードフラグを設定
+      pivot.visible = false;
+      tilesGroup.visible = false;
+      editorGroup.visible = true;
+
+      loadStageIntoEditor(stageData);
+
+      // エディタカメラの視点をマップ中央上空にリセット
+      editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
+      editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+      camera.position.copy(editorCamPos);
+      camera.lookAt(editorCamTarget);
+    }
+
     async function loadEditorSlotsList() {
       editorSlotsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
       try {
@@ -544,16 +561,7 @@
           `;
           item.querySelector('.btn-open-slot').onclick = () => {
             currentEditingSlotId = doc.id;
-            loadStageIntoEditor(s);
-            modalEditorSlots.classList.add('hidden');
-            switchScreen('EDITOR');
-            pivot.visible = false;
-            tilesGroup.visible = false;
-            editorGroup.visible = true;
-            buildEditorGrid();
-            updateLayerDisplay();
-            editorCamPos.set(gridSize / 2, gridSize * 0.9, gridSize / 2 + gridSize * 0.5);
-            editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+            openEditorWithStage(s);
           };
           item.querySelector('.btn-del-slot').onclick = async () => {
             if (confirm(`「${s.name}」を削除しますか？`)) {
@@ -584,22 +592,12 @@
         });
         currentEditingSlotId = ref.id;
         inputNewSlotName.value = '';
-        loadStageIntoEditor(defaultStage);
-        modalEditorSlots.classList.add('hidden');
-        switchScreen('EDITOR');
-        pivot.visible = false;
-        tilesGroup.visible = false;
-        editorGroup.visible = true;
-        gridSize = 32;
-        document.getElementById('select-grid-size').value = 32;
-        buildEditorGrid();
-        updateLayerDisplay();
+        openEditorWithStage(defaultStage);
       } catch (e) {
         alert("作成エラー: " + e.message);
       }
     };
 
-    // エディタ内の上書き保存
     document.getElementById('btn-save-current-slot').onclick = async () => {
       if (!currentEditingSlotId) { alert("スロットが選択されていません。"); return; }
       const data = exportStageData();
@@ -618,6 +616,7 @@
       editorGroup.visible = false;
       modalEditorSlots.classList.remove('hidden');
       loadEditorSlotsList();
+      gameState = 'MODES';
       switchScreen('MODES');
     };
 
@@ -634,7 +633,7 @@
         blocks: [
           { x: 0, y: 0, z: 0, type: 3 },
           { x: 1, y: 0, z: 0, type: 1 },
-          { x: 2, y: 0, z: 0, type: 6 }, // チェックポイント
+          { x: 2, y: 0, z: 0, type: 6 },
           { x: 3, y: 0, z: 0, type: 5 },
           { x: 4, y: 1, z: 0, type: 5 },
           { x: 5, y: 2, z: 0, type: 1 },
@@ -678,7 +677,7 @@
         hud.classList.remove('hidden');
         hudQuit.classList.remove('hidden');
       } else if (screen === 'EDITOR') {
-        userBar.classList.add('hidden'); // エディタ中も右上ユーザー表示を隠す
+        userBar.classList.add('hidden');
         editorUiContainer.classList.remove('hidden');
       } else {
         userBar.classList.remove('hidden');
@@ -702,7 +701,6 @@
       switchScreen(screenStages);
     };
 
-    // ネット投稿
     document.getElementById('btn-online-publish').onclick = async () => {
       if (!db || !auth) { alert("Firebaseが設定されていません。"); return; }
       if (!currentUser) { alert("ステージを投稿するにはGoogleログインが必要です。"); return; }
@@ -810,8 +808,14 @@
     let selectedPalette = 1;
 
     function buildEditorGrid() {
-      if (gridHelper) editorGroup.remove(gridHelper);
-      if (raycastPlane) editorGroup.remove(raycastPlane);
+      if (gridHelper) {
+        editorGroup.remove(gridHelper);
+        gridHelper.geometry.dispose();
+      }
+      if (raycastPlane) {
+        editorGroup.remove(raycastPlane);
+        raycastPlane.geometry.dispose();
+      }
 
       gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x0ea5e9, 0x334155);
       gridHelper.position.set(gridSize / 2 - 0.5, currentLayer - 0.01, gridSize / 2 - 0.5);
@@ -1004,6 +1008,7 @@
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
+      if (!raycastPlane) return;
       const intersects = raycaster.intersectObject(raycastPlane);
       if (intersects.length > 0) {
         const pt = intersects[0].point;
@@ -1038,11 +1043,11 @@
     }
 
     // --- ゲームプレイシステム ---
-    let currentCheckpoint = null; // チェックポイント位置記憶用
+    let currentCheckpoint = null;
 
     function startPlay(stageData) {
       activeStage = stageData;
-      currentCheckpoint = null; // ステージ開始時はチェックポイント初期化
+      currentCheckpoint = null;
       switchScreen('PLAYING');
       gameState = 'PLAYING';
       editorGroup.visible = false;
@@ -1245,7 +1250,6 @@
 
           isRolling = false;
 
-          // チェックポイント(6)踏んだか判定
           if (surface.type === 6) {
             currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
           }
