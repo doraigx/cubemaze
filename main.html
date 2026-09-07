@@ -5,14 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Cube Roll Game (完全版)</title>
   <style>
+    * {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
     body {
       margin: 0;
       overflow: hidden;
       background-color: #111118;
       font-family: 'Segoe UI', Meiryo, sans-serif;
-      user-select: none;
-      -webkit-user-select: none;
       touch-action: manipulation;
+    }
+
+    canvas {
+      pointer-events: auto;
+      -webkit-touch-callout: none;
     }
 
     .screen {
@@ -74,6 +83,8 @@
       outline: none;
       text-align: center;
       font-size: 1rem;
+      -webkit-user-select: text;
+      user-select: text;
     }
 
     #user-bar {
@@ -215,8 +226,6 @@
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
       gap: 5px;
-      user-select: none;
-      -webkit-user-select: none;
       touch-action: none;
     }
 
@@ -360,7 +369,6 @@
       <span id="label-layer" style="min-width: 45px; text-align: center; color: #38bdf8; font-weight: bold;">Y: 0</span>
       <button id="btn-layer-up">▲</button>
 
-      <!-- 視点回転コントロール -->
       <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">視点回転:</span>
       <button id="btn-rot-left" style="background:#475569;">⟲ 90°</button>
       <button id="btn-rot-right" style="background:#475569;">90° ⟳</button>
@@ -378,8 +386,8 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
         左ドラッグ: 配置 / 削除<br>
-        右ドラッグ: 移動 / ホイール回転・Shift+右: 自由視点回転<br>
-        ホイール前後: ズーム / 「動く床」クリックで移動設定
+        右ドラッグ: 平行移動 / ホイール回転(中ボタン): 自由視点回転<br>
+        ホイールスクロール: ズーム / 「動く床」クリックで設定
       </div>
       <div class="editor-bar">
         <button id="btn-save-current-slot" style="background:#059669;">スロット上書き保存</button>
@@ -427,7 +435,7 @@
     </div>
   </div>
 
-  <!-- BGM トグル & ピッカー（左上常設） -->
+  <!-- BGM トグル & ピッカー -->
   <button id="btn-bgm-trigger" class="hidden">▶️ BGM: 停止中</button>
   <div id="modal-bgm-picker" class="modal-dialog hidden">
     <h3 style="margin: 0; font-size: 1.1rem;">BGM 選択</h3>
@@ -470,6 +478,18 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
+    // 右クリックメニューの無効化
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    }, { passive: false });
+
+    // 不要なドラッグ・コピペ防止
+    window.addEventListener('dragstart', (e) => { e.preventDefault(); });
+    window.addEventListener('copy', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+    window.addEventListener('cut', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+    window.addEventListener('paste', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+
     const firebaseConfig = {
       apiKey: "AIzaSyBq5Wqx7kwqQSf9spIfrgHjYdQ7qm-yPzs",
       authDomain: "cubemaze-65594.firebaseapp.com",
@@ -719,7 +739,6 @@
       inputEditorStageName.value = stageData.name || "マイステージ";
       loadStageIntoEditor(stageData);
 
-      // エディタ視点初期化
       editorCamRadius = gridSize * 1.05;
       editorCamTheta = Math.PI / 4;
       editorCamPhi = Math.PI / 3;
@@ -913,19 +932,6 @@
       }
     }
 
-    window.addEventListener('contextmenu', (e) => {
-      if (gameState === 'PLAYING') e.preventDefault();
-    });
-    window.addEventListener('copy', (e) => {
-      if (gameState === 'PLAYING') e.preventDefault();
-    });
-    window.addEventListener('cut', (e) => {
-      if (gameState === 'PLAYING') e.preventDefault();
-    });
-    window.addEventListener('paste', (e) => {
-      if (gameState === 'PLAYING') e.preventDefault();
-    });
-
     document.getElementById('btn-to-modes').onclick = () => switchScreen('MODES');
     document.getElementById('btn-back-to-title').onclick = () => switchScreen('TITLE');
     document.getElementById('btn-to-stages').onclick = () => switchScreen('STAGES');
@@ -1047,10 +1053,9 @@
     let editorMeshMap = new Map();
     let selectedPalette = 1;
 
-    // --- エディタ視点（周回軌道カメラパラメータ） ---
     let editorCamRadius = 35;
-    let editorCamTheta = Math.PI / 4; // 水平角度
-    let editorCamPhi = Math.PI / 3;   // 仰角
+    let editorCamTheta = Math.PI / 4;
+    let editorCamPhi = Math.PI / 3;
     const editorCamPos = new THREE.Vector3();
     const editorCamTarget = new THREE.Vector3();
 
@@ -1060,7 +1065,6 @@
       editorCamPos.z = editorCamTarget.z + editorCamRadius * Math.sin(editorCamPhi) * Math.cos(editorCamTheta);
     }
 
-    // 90度回転ボタン
     document.getElementById('btn-rot-left').onclick = () => {
       editorCamTheta += Math.PI / 2;
       updateEditorCamPos();
@@ -1249,12 +1253,12 @@
         isLeftDown = true;
         handleEditorClick(e);
       } else if (e.button === 1) {
-        isMiddleDown = true; // ホイールボタンドラッグによる回転
+        isMiddleDown = true; // ホイールクリックによる視点回転
       } else if (e.button === 2) {
         if (e.shiftKey) {
-          isMiddleDown = true; // Shift+右クリックでも回転可能
+          isMiddleDown = true; // Shift+右クリックでも回転
         } else {
-          isRightDown = true;  // 通常右クリックは平行移動
+          isRightDown = true;  // 右クリックドラッグで平行移動
         }
       }
       prevMouse = { x: e.clientX, y: e.clientY };
@@ -1270,17 +1274,14 @@
         handleEditorClick(e);
       }
 
-      // 自由周回回転 (ホイールドラッグ or Shift+右ドラッグ)
       if (isMiddleDown) {
         editorCamTheta -= dx * 0.008;
         editorCamPhi = THREE.MathUtils.clamp(editorCamPhi - dy * 0.008, 0.1, Math.PI / 2 - 0.05);
         updateEditorCamPos();
       }
 
-      // 平行移動 (右ドラッグ)
       if (isRightDown) {
         const panSpeed = editorCamRadius * 0.0016;
-        // カメラの水平向きに応じてパンの方向を回転
         const forward = new THREE.Vector3().subVectors(editorCamTarget, camera.position);
         forward.y = 0;
         forward.normalize();
@@ -1298,12 +1299,15 @@
       isMiddleDown = false;
     });
 
+    // 通常のマウスホイール操作のみ（エディタ時のズームイン・ズームアウト）
     window.addEventListener('wheel', (e) => {
-      if (gameState !== 'EDITOR') return;
-      const factor = e.deltaY > 0 ? 1.08 : 0.92;
-      editorCamRadius = THREE.MathUtils.clamp(editorCamRadius * factor, 8, 160);
-      updateEditorCamPos();
-    });
+      if (gameState === 'EDITOR') {
+        e.preventDefault();
+        const factor = e.deltaY > 0 ? 1.08 : 0.92;
+        editorCamRadius = THREE.MathUtils.clamp(editorCamRadius * factor, 8, 160);
+        updateEditorCamPos();
+      }
+    }, { passive: false });
 
     function handleEditorClick(e) {
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -1699,7 +1703,6 @@
         camera.lookAt(cameraTarget);
 
       } else if (gameState === 'EDITOR') {
-        // エディタ用カメラの滑らかな追従
         camera.position.lerp(editorCamPos, 0.15);
         cameraTarget.lerp(editorCamTarget, 0.15);
         camera.lookAt(cameraTarget);
