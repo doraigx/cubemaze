@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Cube Roll Game</title>
+  <title>Cube Roll Game (オンライン・マリオメーカー風)</title>
   <style>
     body {
       margin: 0;
@@ -373,6 +373,7 @@
   measurementId: "G-NJTJ4DJ6JY"
 };
 
+
     let db = null;
     let auth = null;
     let currentUser = null;
@@ -387,7 +388,7 @@
       console.warn("Firebase初期化失敗:", e);
     }
 
-    // ユーザー名管理（ローカル記憶）
+    // ユーザー名管理
     const inputUsername = document.getElementById('input-username');
     let currentUsername = localStorage.getItem('cube_username') || "NoName";
     inputUsername.value = currentUsername;
@@ -402,6 +403,7 @@
     // Google認証ハンドラ
     const userStatusText = document.getElementById('user-status-text');
     const btnAuth = document.getElementById('btn-auth');
+    const userBar = document.getElementById('user-bar');
 
     if (auth) {
       auth.onAuthStateChanged(async (user) => {
@@ -411,7 +413,6 @@
           btnAuth.textContent = "ログアウト";
           btnAuth.style.background = "#475569";
 
-          // Firestoreから名前を同期
           const userDoc = await db.collection("users").doc(user.uid).get();
           if (userDoc.exists && userDoc.data().username) {
             currentUsername = userDoc.data().username;
@@ -490,14 +491,17 @@
     const hudQuit = document.getElementById('hud-quit');
     const btnPlayCustom = document.getElementById('btn-play-custom');
 
+    // 画面切り替え（プレイ中以外でのみ userBar を表示）
     function switchScreen(screen) {
       [screenTitle, screenModes, screenStages].forEach(s => s.classList.add('hidden'));
       editorUiContainer.classList.add('hidden');
 
       if (screen === 'PLAYING') {
+        userBar.classList.add('hidden'); // プレイ中は右上のログインバーを隠す
         hud.classList.remove('hidden');
         hudQuit.classList.remove('hidden');
       } else {
+        userBar.classList.remove('hidden'); // プレイ時以外（メニュー・エディタ等）は表示
         hud.classList.add('hidden');
         hudQuit.classList.add('hidden');
         if (screen === 'EDITOR') {
@@ -533,7 +537,6 @@
       return res;
     }
 
-    // ネットに全体公開投稿（ログイン必須）
     document.getElementById('btn-online-publish').onclick = async () => {
       if (!db || !auth) {
         alert("Firebaseが設定されていません。");
@@ -562,7 +565,6 @@
       }
     };
 
-    // ID検索プレイ
     document.getElementById('btn-search-stage').onclick = async () => {
       if (!db) { alert("Firebaseが設定されていません。"); return; }
       const stageId = document.getElementById('input-search-id').value.trim().toUpperCase();
@@ -581,7 +583,6 @@
       }
     };
 
-    // ランダムプレイ（マリオメーカー風）
     document.getElementById('btn-random-stage').onclick = async () => {
       if (!db) { alert("Firebaseが設定されていません。"); return; }
 
@@ -605,7 +606,7 @@
     };
 
     // ==========================================
-    // --- 3. マイステージ（クラウド複数保存機能） ---
+    // --- 3. マイステージ（クラウド保存・呼出） ---
     // ==========================================
     const modalMyStages = document.getElementById('modal-my-stages');
     const stageListContainer = document.getElementById('stage-list-container');
@@ -624,7 +625,6 @@
       modalMyStages.classList.add('hidden');
     };
 
-    // マイステージ一覧取得
     async function loadMyStagesList() {
       stageListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
       try {
@@ -663,7 +663,6 @@
       }
     }
 
-    // クラウドへの新規・上書き保存
     document.getElementById('btn-save-to-cloud').onclick = async () => {
       const name = inputSaveStageName.value.trim() || `ステージ_${new Date().toLocaleDateString()}`;
       const data = exportStageData();
