@@ -153,7 +153,7 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.8);
       max-height: 85vh;
       overflow-y: auto;
-      min-width: 360px;
+      min-width: 340px;
     }
 
     .list-container {
@@ -197,6 +197,12 @@
       line-height: 1.5;
     }
 
+    #hud-tutorial {
+      transition: opacity 0.4s ease;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+
     .hud-control-btn {
       position: absolute;
       top: 15px;
@@ -204,7 +210,27 @@
       z-index: 5;
     }
 
-    /* モバイル専用 D-PAD (仮想十字キー) */
+    /* BGM クイックトグルボタン（プレイ画面上部中央） */
+    #btn-bgm-trigger {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+
+    #modal-bgm-picker {
+      z-index: 30;
+      min-width: 280px;
+    }
+
+    /* モバイル専用 D-PAD */
     #dpad {
       position: absolute;
       bottom: 25px;
@@ -269,7 +295,35 @@
     <div class="btn-group">
       <button id="btn-to-stages">ゲーム開始</button>
       <button id="btn-to-editor-slots">ステージエディタ</button>
+      <button id="btn-to-options" style="background:#475569;">オプション</button>
       <button id="btn-back-to-title">スタート画面にもどる</button>
+    </div>
+  </div>
+
+  <!-- オプション画面（D-PAD調整など） -->
+  <div id="modal-options" class="modal-dialog hidden">
+    <h3 style="margin: 0;">オプション設定</h3>
+    <label style="font-size: 13px;">D-PADの配置位置:
+      <select id="opt-dpad-pos" style="width: 100%; margin-top: 4px;">
+        <option value="left">画面の左下</option>
+        <option value="right">画面の右下</option>
+        <option value="center">画面の中央下</option>
+      </select>
+    </label>
+    <label style="font-size: 13px;">下端からの余白:
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="range" id="opt-dpad-bottom" min="10" max="100" value="25" style="flex:1;">
+        <span id="opt-dpad-bottom-val" style="width:35px; text-align:right;">25px</span>
+      </div>
+    </label>
+    <label style="font-size: 13px;">ボタンのサイズ:
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="range" id="opt-dpad-scale" min="100" max="180" value="140" style="flex:1;">
+        <span id="opt-dpad-scale-val" style="width:35px; text-align:right;">140px</span>
+      </div>
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="btn-save-options" style="background: #0284c7;">保存して戻る</button>
     </div>
   </div>
 
@@ -398,9 +452,35 @@
   <!-- 6. プレイHUD -->
   <div id="hud" class="hidden">
     <span id="hud-stage-name" style="color: #facc15; font-weight: bold; font-size: 15px;"></span><br>
-    <span id="hud-author" style="color: #38bdf8; font-size: 12px;"></span><br>
-    <strong>操作:</strong> 矢印キー（↑ ↓ ← →）またはD-PADでダッシュ
+    <span id="hud-author" style="color: #38bdf8; font-size: 12px;"></span>
+    <div id="hud-tutorial" style="margin-top: 4px;"><strong>操作:</strong> 矢印キー（↑ ↓ ← →）またはD-PADでダッシュ</div>
   </div>
+
+  <!-- BGM トグル & ピッカー -->
+  <button id="btn-bgm-trigger" class="hidden">▶️ BGM: 停止中</button>
+  <div id="modal-bgm-picker" class="modal-dialog hidden">
+    <h3 style="margin: 0; font-size: 1.1rem;">BGM 選択</h3>
+    <div class="list-container">
+      <div class="list-item" style="cursor:pointer;" onclick="playBGM('tombi.mp3', 'tombi.mp3')">
+        <span>🎵 tombi.mp3</span>
+        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+      </div>
+      <div class="list-item" style="cursor:pointer;" onclick="playBGM('tsuiraku.mp3', 'tsuiraku.mp3')">
+        <span>🎵 tsuiraku.mp3</span>
+        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+      </div>
+      <div class="list-item" style="cursor:pointer;" onclick="stopBGM()">
+        <span style="color:#ef4444;">⏹ 再生停止</span>
+        <button style="padding:3px 8px; font-size:11px; background:#475569;">停止</button>
+      </div>
+    </div>
+    <label style="font-size:12px; display:flex; align-items:center; gap:8px;">
+      音量:
+      <input type="range" id="bgm-volume" min="0" max="1" step="0.05" value="0.5" style="flex:1;">
+    </label>
+    <button id="btn-close-bgm" style="align-self: flex-end; padding:4px 12px; font-size:12px;">閉じる</button>
+  </div>
+
   <button id="hud-quit" class="hud-control-btn hidden">ステージ選択に戻る</button>
   <button id="hud-back-editor" class="hud-control-btn hidden" style="background: #e11d48;">エディタに戻る</button>
 
@@ -491,6 +571,102 @@
       }
     };
 
+    // --- BGM 管理システム ---
+    let currentAudio = new Audio();
+    currentAudio.loop = true;
+    currentAudio.volume = 0.5;
+
+    const btnBgmTrigger = document.getElementById('btn-bgm-trigger');
+    const modalBgmPicker = document.getElementById('modal-bgm-picker');
+    const bgmVolume = document.getElementById('bgm-volume');
+
+    btnBgmTrigger.onclick = () => {
+      modalBgmPicker.classList.toggle('hidden');
+    };
+
+    document.getElementById('btn-close-bgm').onclick = () => {
+      modalBgmPicker.classList.add('hidden');
+    };
+
+    bgmVolume.oninput = (e) => {
+      currentAudio.volume = parseFloat(e.target.value);
+    };
+
+    function playBGM(src, title) {
+      currentAudio.src = src;
+      currentAudio.play().catch(e => console.warn("BGM再生ブロック:", e));
+      btnBgmTrigger.textContent = `▶️ BGM: ${title}`;
+      modalBgmPicker.classList.add('hidden');
+    }
+
+    function stopBGM() {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      btnBgmTrigger.textContent = "▶️ BGM: 停止中";
+      modalBgmPicker.classList.add('hidden');
+    }
+
+    // --- オプション・D-PAD設定管理 ---
+    const modalOptions = document.getElementById('modal-options');
+    const optDpadPos = document.getElementById('opt-dpad-pos');
+    const optDpadBottom = document.getElementById('opt-dpad-bottom');
+    const optDpadBottomVal = document.getElementById('opt-dpad-bottom-val');
+    const optDpadScale = document.getElementById('opt-dpad-scale');
+    const optDpadScaleVal = document.getElementById('opt-dpad-scale-val');
+    const dpad = document.getElementById('dpad');
+
+    let dpadSettings = JSON.parse(localStorage.getItem('cube_dpad_settings')) || {
+      pos: 'left',
+      bottom: 25,
+      size: 140
+    };
+
+    function applyDpadSettings() {
+      dpad.style.bottom = `${dpadSettings.bottom}px`;
+      dpad.style.width = `${dpadSettings.size}px`;
+      dpad.style.height = `${dpadSettings.size}px`;
+
+      dpad.style.left = '';
+      dpad.style.right = '';
+      dpad.style.transform = '';
+
+      if (dpadSettings.pos === 'left') {
+        dpad.style.left = '25px';
+      } else if (dpadSettings.pos === 'right') {
+        dpad.style.right = '25px';
+      } else if (dpadSettings.pos === 'center') {
+        dpad.style.left = '50%';
+        dpad.style.transform = 'translateX(-50%)';
+      }
+    }
+    applyDpadSettings();
+
+    document.getElementById('btn-to-options').onclick = () => {
+      optDpadPos.value = dpadSettings.pos;
+      optDpadBottom.value = dpadSettings.bottom;
+      optDpadBottomVal.textContent = `${dpadSettings.bottom}px`;
+      optDpadScale.value = dpadSettings.size;
+      optDpadScaleVal.textContent = `${dpadSettings.size}px`;
+      modalOptions.classList.remove('hidden');
+    };
+
+    optDpadBottom.oninput = (e) => {
+      optDpadBottomVal.textContent = `${e.target.value}px`;
+    };
+    optDpadScale.oninput = (e) => {
+      optDpadScaleVal.textContent = `${e.target.value}px`;
+    };
+
+    document.getElementById('btn-save-options').onclick = () => {
+      dpadSettings.pos = optDpadPos.value;
+      dpadSettings.bottom = parseInt(optDpadBottom.value, 10);
+      dpadSettings.size = parseInt(optDpadScale.value, 10);
+      localStorage.setItem('cube_dpad_settings', JSON.stringify(dpadSettings));
+      applyDpadSettings();
+      modalOptions.classList.add('hidden');
+    };
+
+    // --- ステージ選択・タブ切替 ---
     const tabOfficial = document.getElementById('tab-official');
     const tabCustom = document.getElementById('tab-custom');
     const stageListOfficial = document.getElementById('stage-list-official');
@@ -715,9 +891,7 @@
     let gameState = 'TITLE';
     let isTestPlay = false;
 
-    // モバイル・タブレット自動判別 (タッチ対応かつポインタ精度粗い端末)
     const isMobileDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    const dpad = document.getElementById('dpad');
 
     const screenTitle = document.getElementById('screen-title');
     const screenModes = document.getElementById('screen-modes');
@@ -726,6 +900,7 @@
     const hud = document.getElementById('hud');
     const hudStageName = document.getElementById('hud-stage-name');
     const hudAuthor = document.getElementById('hud-author');
+    const hudTutorial = document.getElementById('hud-tutorial');
     const hudQuit = document.getElementById('hud-quit');
     const hudBackEditor = document.getElementById('hud-back-editor');
 
@@ -736,8 +911,8 @@
       if (screen === 'PLAYING') {
         userBar.classList.add('hidden');
         hud.classList.remove('hidden');
+        btnBgmTrigger.classList.remove('hidden');
 
-        // タッチ端末のみプレイ画面でD-PADを表示
         if (isMobileDevice) {
           dpad.classList.remove('hidden');
         }
@@ -751,6 +926,8 @@
         }
       } else {
         dpad.classList.add('hidden');
+        btnBgmTrigger.classList.add('hidden');
+        modalBgmPicker.classList.add('hidden');
 
         if (screen === 'EDITOR') {
           userBar.classList.add('hidden');
@@ -770,7 +947,6 @@
       }
     }
 
-    // プレイ画面におけるコンテキストメニューおよびコピペ・選択無効化
     window.addEventListener('contextmenu', (e) => {
       if (gameState === 'PLAYING') e.preventDefault();
     });
@@ -1105,7 +1281,7 @@
       if (gameState !== 'EDITOR') return;
       const factor = e.deltaY > 0 ? 1.08 : 0.92;
       editorCamPos.y = THREE.MathUtils.clamp(editorCamPos.y * factor, 4, 120);
-      editorCamPos.z = editorCamTarget.z + (editorCamPos.y * 0.6);
+      editorCamTarget.z += (e.deltaY > 0 ? 1 : -1) * 0.5;
     });
 
     function handleEditorClick(e) {
@@ -1160,6 +1336,9 @@
 
       hudStageName.textContent = isTestPlay ? `[TEST] ${stageData.name || "ステージ"}` : (stageData.name || "ステージ");
       hudAuthor.textContent = stageData.author ? `作: ${stageData.author}` : "";
+
+      // チュートリアルテキストを再表示
+      hudTutorial.style.opacity = '1';
 
       buildPlayStage(stageData);
       const spawnSurf = getTopSurfaceAt(stageData.spawn.x, stageData.spawn.z, stageData.spawn.y);
@@ -1302,7 +1481,6 @@
       return { dy: 0, targetY: curY, type: 0, mover: null, surfaceY: curY, isFall: true };
     }
 
-    // キーボード入力 & D-PAD共通入力バッファ
     const keysPressed = {};
     window.addEventListener('keydown', (e) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -1314,7 +1492,6 @@
       if (keysPressed[e.key]) keysPressed[e.key] = false;
     });
 
-    // D-PAD タッチ操作のバインド
     function bindDpadButton(elementId, keyName) {
       const el = document.getElementById(elementId);
       el.addEventListener('touchstart', (e) => {
@@ -1411,6 +1588,14 @@
           cubeMesh.position.set(0, 0.5, 0);
 
           isRolling = false;
+
+          // スタート地点から1マスでも離れたらチュートリアル非表示
+          if (activeStage && activeStage.spawn) {
+            const distFromSpawn = Math.hypot(cubePos.x - activeStage.spawn.x, cubePos.z - activeStage.spawn.z);
+            if (distFromSpawn >= 1.0) {
+              hudTutorial.style.opacity = '0';
+            }
+          }
 
           if (surface.type === 6) {
             currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
