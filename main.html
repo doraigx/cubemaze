@@ -69,6 +69,7 @@
       box-sizing: border-box;
       transition: all 0.15s ease;
       -webkit-tap-highlight-color: transparent;
+      position: relative;
     }
 
     button:hover {
@@ -300,22 +301,76 @@
     .status-online { background-color: #10b981; }
     .status-offline { background-color: #64748b; }
 
+    .chat-bubble-wrap {
+      display: flex;
+      flex-direction: column;
+      max-width: 80%;
+    }
+    .chat-bubble-wrap.me {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+    .chat-bubble-wrap.other {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+
     .chat-bubble {
       padding: 6px 10px;
       border-radius: 6px;
-      max-width: 80%;
       word-break: break-all;
       font-size: 12px;
     }
     .chat-bubble-me {
-      align-self: flex-end;
       background: #0284c7;
       color: #fff;
     }
     .chat-bubble-other {
-      align-self: flex-start;
       background: #334155;
       color: #fff;
+    }
+    .chat-time {
+      font-size: 9px;
+      color: #94a3b8;
+      margin-top: 2px;
+      padding: 0 2px;
+    }
+
+    .badge-pill {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #ef4444;
+      color: #fff;
+      border-radius: 10px;
+      padding: 1px 6px;
+      font-size: 10px;
+      font-weight: bold;
+      border: 1px solid #fff;
+    }
+
+    /* 10秒カウントダウン用オーバーレイ */
+    #vs-countdown-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.85);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      pointer-events: auto;
+    }
+    #vs-countdown-number {
+      font-size: 6rem;
+      font-weight: 900;
+      color: #facc15;
+      text-shadow: 0 0 20px rgba(250, 204, 21, 0.8);
+      margin: 10px 0;
     }
   </style>
 
@@ -331,6 +386,14 @@
     <button id="btn-auth" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">Googleログイン</button>
   </div>
 
+  <!-- 対戦開始カウントダウンオーバーレイ -->
+  <div id="vs-countdown-overlay" class="hidden">
+    <h2 style="margin: 0; letter-spacing: 2px;">MATCH STARTING IN</h2>
+    <div id="vs-countdown-number">10</div>
+    <div id="vs-countdown-stage" style="color: #38bdf8; font-size: 1.2rem;">コース読込完了</div>
+  </div>
+
+  <!-- 1. スタート画面 -->
   <div id="screen-title" class="screen">
     <h1>CUBE EDGE</h1>
     <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; align-items: center;">
@@ -342,18 +405,23 @@
     </div>
   </div>
 
+  <!-- 2. モード選択画面 -->
   <div id="screen-modes" class="screen hidden">
     <h1>MODE SELECT</h1>
     <div class="btn-group">
       <button id="btn-to-stages">シングルプレイ</button>
       <button id="btn-to-versus-menu" style="background:#8b5cf6;">オンライン対戦</button>
-      <button id="btn-to-friends" style="background:#0284c7;">フレンドメニュー</button>
+      <button id="btn-to-friends" style="background:#0284c7;">
+        フレンドメニュー
+        <span id="badge-menu-friends" class="badge-pill hidden">0</span>
+      </button>
       <button id="btn-to-editor-slots">ステージエディタ</button>
       <button id="btn-to-options" style="background:#475569;">オプション</button>
       <button id="btn-back-to-title">スタート画面にもどる</button>
     </div>
   </div>
 
+  <!-- フレンドモーダル -->
   <div id="modal-friends" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">フレンドメニュー</h3>
     <div style="font-size: 12px; color: #94a3b8;">
@@ -367,7 +435,9 @@
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
       <span style="font-size:12px; font-weight:bold; color:#cbd5e1;">フレンド一覧</span>
-      <button id="btn-open-friend-requests" style="font-size:11px; padding:3px 8px; background:#475569;">申請一覧 (<span id="req-count-badge">0</span>)</button>
+      <button id="btn-open-friend-requests" style="font-size:11px; padding:3px 8px; background:#475569;">
+        申請一覧 (<span id="req-count-badge">0</span>)
+      </button>
     </div>
 
     <div id="friends-list-container" class="list-container">
@@ -377,6 +447,7 @@
     <button id="btn-close-friends" style="align-self: flex-end;">閉じる</button>
   </div>
 
+  <!-- フレンドチャットモーダル -->
   <div id="modal-friend-chat" class="modal-dialog hidden" style="min-width: 340px;">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <h3 style="margin: 0;" id="chat-friend-name-title">チャット</h3>
@@ -392,6 +463,7 @@
     <button id="btn-close-friend-chat" style="align-self: flex-end;">閉じる</button>
   </div>
 
+  <!-- フレンド申請一覧モーダル -->
   <div id="modal-friend-requests" class="modal-dialog hidden" style="min-width: 320px;">
     <h3 style="margin: 0;">フレンド申請一覧</h3>
     <div id="friend-requests-container" class="list-container">
@@ -400,6 +472,7 @@
     <button id="btn-close-friend-requests" style="align-self: flex-end;">戻る</button>
   </div>
 
+  <!-- 対戦メニューモーダル -->
   <div id="modal-versus-menu" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">オンライン対戦</h3>
     <div style="font-size: 12px; color: #94a3b8;">タイムの速いプレイヤーが勝利します！</div>
@@ -413,6 +486,7 @@
     <button id="btn-close-versus-menu" style="align-self: flex-end;">戻る</button>
   </div>
 
+  <!-- 対戦戦績モーダル -->
   <div id="modal-vs-records" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">対戦戦績・履歴</h3>
     <div id="vs-records-container" class="list-container" style="max-height: 260px;">
@@ -421,6 +495,16 @@
     <button id="btn-close-vs-records" style="align-self: flex-end;">戻る</button>
   </div>
 
+  <!-- ステージクリア履歴モーダル -->
+  <div id="modal-stage-history" class="modal-dialog hidden" style="min-width: 360px;">
+    <h3 style="margin: 0;" id="stage-history-title">ステージクリア履歴</h3>
+    <div id="stage-history-container" class="list-container" style="max-height: 260px;">
+      <div style="color:#64748b; font-size:12px; text-align:center;">クリア履歴を読み込み中...</div>
+    </div>
+    <button id="btn-close-stage-history" style="align-self: flex-end;">閉じる</button>
+  </div>
+
+  <!-- コース指定マッチのコース選択モーダル -->
   <div id="modal-vs-pick-stage" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">対戦コースを選択</h3>
     <div style="display:flex; gap:8px; margin-bottom:8px;">
@@ -434,6 +518,7 @@
     <button id="btn-close-vs-pick" style="align-self: flex-end;">戻る</button>
   </div>
 
+  <!-- 対戦相手招待モーダル -->
   <div id="modal-vs-invite" class="modal-dialog hidden" style="min-width: 340px;">
     <h3 style="margin: 0;">対戦相手を選択 (オンラインのみ)</h3>
     <div style="font-size:12px; color:#94a3b8;" id="vs-invite-stage-name-lbl">コース: 選択中</div>
@@ -443,6 +528,7 @@
     <button id="btn-close-vs-invite" style="align-self: flex-end;">戻る</button>
   </div>
 
+  <!-- 届いた対戦招待モーダル -->
   <div id="modal-incoming-vs" class="modal-dialog hidden" style="min-width: 300px; text-align:center;">
     <h3 style="margin: 0;">対戦の申し込み！</h3>
     <p id="incoming-vs-text" style="font-size: 14px; margin: 10px 0;"></p>
@@ -452,6 +538,7 @@
     </div>
   </div>
 
+  <!-- オプション画面 -->
   <div id="modal-options" class="modal-dialog hidden">
     <h3 style="margin: 0;">オプション設定</h3>
     <label style="font-size: 13px;">D-PADの配置位置:
@@ -478,6 +565,7 @@
     </div>
   </div>
 
+  <!-- 3. ステージ選択画面 -->
   <div id="screen-stages" class="screen hidden">
     <h1>STAGE SELECT</h1>
     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
@@ -504,6 +592,7 @@
     <button id="btn-back-to-modes" style="margin-top: 15px; width: 280px;">モード画面にもどる</button>
   </div>
 
+  <!-- 4. エディタ前スロット管理モーダル -->
   <div id="modal-editor-slots" class="modal-dialog hidden">
     <h3 style="margin: 0;">エディタースロット (クラウド保存)</h3>
     <div style="font-size: 12px; color: #94a3b8;">作成・編集するステージを選んでください</div>
@@ -540,7 +629,6 @@
       <button id="btn-rot-left" style="background:#475569;">⟲ 90°</button>
       <button id="btn-rot-right" style="background:#475569;">90° ⟳</button>
 
-      <!-- Undo / Redo ボタン -->
       <button id="btn-editor-undo" title="元に戻す (Ctrl+Z)" style="background:#475569; padding: 4px 10px;">↩️ Undo</button>
       <button id="btn-editor-redo" title="やり直す (Ctrl+Y)" style="background:#475569; padding: 4px 10px;">↪️ Redo</button>
 
@@ -568,7 +656,6 @@
         <span id="route-editing-status" style="font-size:12px; font-weight:bold; color:#facc15; display:none;">✍️ ルート描画中 (グリッドをクリックで経由地追加)</span>
         <button id="btn-finish-route-edit" style="background:#0284c7; display:none; padding:4px 10px; font-size:12px;">描画完了</button>
 
-        <!-- 自動同期オンオフ切り替え -->
         <button id="btn-toggle-autosave" style="background:#059669; font-size:11px; padding:4px 8px;">自動同期: ON</button>
         <span id="autosave-status" style="font-size:11px; color:#10b981; margin-right:4px;">同期済み</span>
 
@@ -801,6 +888,7 @@
     const userFriendIdBadge = document.getElementById('user-friend-id-badge');
     const btnAuth = document.getElementById('btn-auth');
     const lblMyFriendId = document.getElementById('lbl-my-friend-id');
+    const badgeMenuFriends = document.getElementById('badge-menu-friends');
 
     function generateFriendId() {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -839,6 +927,7 @@
           startHeartbeat();
           listenIncomingMatchInvites();
           listenFriendRequests();
+          listenAllFriendChatUnread();
         } else {
           userStatusText.textContent = "未ログイン (ゲスト)";
           btnAuth.textContent = "Googleログイン";
@@ -872,6 +961,26 @@
       sendBeat();
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       heartbeatTimer = setInterval(sendBeat, 30000);
+    }
+
+    // 作者のフレンドIDを確実に解決・補完する関数
+    async function getAuthorFriendId(authorUid, fallbackFriendId) {
+      if (fallbackFriendId && fallbackFriendId !== '公開' && fallbackFriendId !== 'なし') {
+        return fallbackFriendId;
+      }
+      if (!authorUid || authorUid === 'OFFICIAL' || authorUid === 'vs' || authorUid === 'LOCAL') {
+        return 'OFFICIAL';
+      }
+      if (!db) return '--------';
+      try {
+        const userDoc = await db.collection("users").doc(authorUid).get();
+        if (userDoc.exists && userDoc.data().friendId) {
+          return userDoc.data().friendId;
+        }
+      } catch (e) {
+        console.warn("製作者フレンドID取得失敗:", e);
+      }
+      return '--------';
     }
 
     let currentAudio = new Audio();
@@ -990,13 +1099,69 @@
               <strong style="color:#facc15;">${s.name || "名称未設定"}</strong><br>
               <span style="font-size:11px; color:#94a3b8;">作者: ${s.author || "不明"} / ID: ${doc.id}</span>
             </div>
-            <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
+            <div style="display:flex; gap:4px;">
+              <button class="btn-stage-history" style="padding: 4px 8px; font-size: 11px; background: #475569;">履歴</button>
+              <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
+            </div>
           `;
-          item.querySelector('.btn-play-online').onclick = () => startPlay(s, false, null, null, doc.id, { id: doc.id, author: s.author, authorUid: s.authorUid, authorFriendId: s.authorFriendId || '公開' });
+
+          item.querySelector('.btn-stage-history').onclick = () => openStageHistoryModal(doc.id, s.name);
+
+          item.querySelector('.btn-play-online').onclick = async () => {
+            const fId = await getAuthorFriendId(s.authorUid, s.authorFriendId);
+            startPlay(s, false, null, null, doc.id, { id: doc.id, author: s.author, authorUid: s.authorUid, authorFriendId: fId });
+          };
           onlineStagesContainer.appendChild(item);
         });
       } catch (e) {
         onlineStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    // ステージクリア履歴モーダル
+    const modalStageHistory = document.getElementById('modal-stage-history');
+    const stageHistoryTitle = document.getElementById('stage-history-title');
+    const stageHistoryContainer = document.getElementById('stage-history-container');
+    document.getElementById('btn-close-stage-history').onclick = () => modalStageHistory.classList.add('hidden');
+
+    async function openStageHistoryModal(stageId, stageName) {
+      modalStageHistory.classList.remove('hidden');
+      stageHistoryTitle.textContent = `「${stageName}」クリア履歴`;
+      stageHistoryContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">クリア履歴を読み込み中...</div>';
+
+      if (!db) {
+        stageHistoryContainer.innerHTML = '<div style="color:#ef4444; font-size:12px;">Firebaseが未設定です</div>';
+        return;
+      }
+
+      try {
+        const snap = await db.collection("stages").doc(stageId).collection("clear_records")
+          .orderBy("time", "asc").limit(30).get();
+
+        if (snap.empty) {
+          stageHistoryContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">まだクリアしたプレイヤーはいません</div>';
+          return;
+        }
+
+        stageHistoryContainer.innerHTML = '';
+        snap.docs.forEach((doc, idx) => {
+          const rec = doc.data();
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          const dtStr = rec.clearedAt ? new Date(rec.clearedAt.toDate()).toLocaleString() : '不明';
+          item.innerHTML = `
+            <div>
+              <strong style="color: ${idx === 0 ? '#facc15' : '#cbd5e1'}; font-size: 13px;">#${idx + 1} ${rec.userName}</strong><br>
+              <span style="font-size:10px; color:#94a3b8;">クリア日時: ${dtStr}</span>
+            </div>
+            <div style="font-size:13px; font-weight:bold; color:#38bdf8;">
+              ${formatTime(rec.time)}
+            </div>
+          `;
+          stageHistoryContainer.appendChild(item);
+        });
+      } catch (e) {
+        stageHistoryContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">履歴読込エラー: ${e.message}</div>`;
       }
     }
 
@@ -1015,6 +1180,20 @@
     const inputChatMsg = document.getElementById('input-chat-msg');
     let currentChatFriendUid = null;
     let chatUnsub = null;
+
+    // 未読チャット管理
+    const unreadChatFriends = new Set();
+    let totalPendingRequests = 0;
+
+    function updateMenuFriendBadge() {
+      const totalNotifs = totalPendingRequests + unreadChatFriends.size;
+      if (totalNotifs > 0) {
+        badgeMenuFriends.textContent = totalNotifs;
+        badgeMenuFriends.classList.remove('hidden');
+      } else {
+        badgeMenuFriends.classList.add('hidden');
+      }
+    }
 
     document.getElementById('btn-to-friends').onclick = () => {
       if (!currentUser) { alert("フレンド機能の利用にはログインが必要です。"); return; }
@@ -1061,7 +1240,9 @@
     function listenFriendRequests() {
       if (!currentUser || !db) return;
       db.collection("users").doc(currentUser.uid).collection("friend_requests").onSnapshot(snap => {
-        reqCountBadge.textContent = snap.size;
+        totalPendingRequests = snap.size;
+        reqCountBadge.textContent = totalPendingRequests;
+        updateMenuFriendBadge();
       }, err => console.warn("friend_requests listener:", err.message));
     }
 
@@ -1136,6 +1317,8 @@
             if (now - last < 2 * 60 * 1000) isOnline = true;
           }
 
+          const hasUnread = unreadChatFriends.has(f.uid);
+
           const item = document.createElement('div');
           item.className = 'list-item';
           item.innerHTML = `
@@ -1145,8 +1328,10 @@
               <span style="font-size:11px; color:#94a3b8; margin-left:4px;">${isOnline ? '(オンライン)' : '(オフライン)'}</span><br>
               <span style="font-size:11px; color:#64748b;">ID: ${f.friendId}</span>
             </div>
-            <div style="display:flex; gap:4px;">
-              <button class="btn-chat-friend" style="padding:4px 8px; font-size:11px; background:#0284c7;">チャット</button>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <button class="btn-chat-friend" style="padding:4px 8px; font-size:11px; background:#0284c7;">
+                チャット ${hasUnread ? '<span style="color:#f87171;">🔴</span>' : ''}
+              </button>
               ${isOnline ? `<button class="btn-invite-friend-vs" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">対戦</button>` : ''}
             </div>
           `;
@@ -1166,9 +1351,33 @@
       }
     }
 
+    // チャット未読バッジの監視
+    function listenAllFriendChatUnread() {
+      if (!currentUser || !db) return;
+      db.collection("users").doc(currentUser.uid).collection("friends").get().then(snap => {
+        snap.forEach(fDoc => {
+          const fUid = fDoc.id;
+          const chatId = [currentUser.uid, fUid].sort().join('_');
+          db.collection("friend_chats").doc(chatId).collection("messages")
+            .orderBy("createdAt", "desc").limit(1).onSnapshot(mSnap => {
+              if (!mSnap.empty) {
+                const latest = mSnap.docs[0].data();
+                if (latest.senderUid !== currentUser.uid && currentChatFriendUid !== fUid) {
+                  unreadChatFriends.add(fUid);
+                }
+              }
+              updateMenuFriendBadge();
+            }, err => console.warn("Chat unread listener:", err.message));
+        });
+      });
+    }
+
     function openFriendChat(friend) {
       modalFriends.classList.add('hidden');
       currentChatFriendUid = friend.uid;
+      unreadChatFriends.delete(friend.uid);
+      updateMenuFriendBadge();
+
       chatFriendNameTitle.textContent = `${friend.name} とのチャット`;
       modalFriendChat.classList.remove('hidden');
 
@@ -1184,10 +1393,25 @@
           }
           snap.forEach(doc => {
             const m = doc.data();
-            const bubble = document.createElement('div');
-            bubble.className = `chat-bubble ${m.senderUid === currentUser.uid ? 'chat-bubble-me' : 'chat-bubble-other'}`;
-            bubble.textContent = m.text;
-            chatMessagesContainer.appendChild(bubble);
+            const wrap = document.createElement('div');
+            const isMe = (m.senderUid === currentUser.uid);
+            wrap.className = `chat-bubble-wrap ${isMe ? 'me' : 'other'}`;
+
+            let timeStr = '';
+            if (m.createdAt && m.createdAt.toDate) {
+              const dt = m.createdAt.toDate();
+              const hrs = dt.getHours().toString().padStart(2, '0');
+              const mins = dt.getMinutes().toString().padStart(2, '0');
+              timeStr = `${hrs}:${mins}`;
+            }
+
+            wrap.innerHTML = `
+              <div class="chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}">
+                ${m.text}
+              </div>
+              <span class="chat-time">${timeStr}</span>
+            `;
+            chatMessagesContainer.appendChild(wrap);
           });
           chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         }, err => console.warn("Chat listener:", err.message));
@@ -1215,8 +1439,10 @@
 
     document.getElementById('btn-close-friend-chat').onclick = () => {
       if (chatUnsub) chatUnsub();
+      currentChatFriendUid = null;
       modalFriendChat.classList.add('hidden');
       modalFriends.classList.remove('hidden');
+      loadFriendsList();
     };
 
     // ==========================================
@@ -1239,6 +1465,10 @@
     const vsPickStagesContainer = document.getElementById('vs-pick-stages-container');
     const modalIncomingVs = document.getElementById('modal-incoming-vs');
     const incomingVsText = document.getElementById('incoming-vs-text');
+
+    const vsCountdownOverlay = document.getElementById('vs-countdown-overlay');
+    const vsCountdownNumber = document.getElementById('vs-countdown-number');
+    const vsCountdownStage = document.getElementById('vs-countdown-stage');
 
     document.getElementById('btn-to-versus-menu').onclick = () => {
       if (!currentUser) { alert("オンライン対戦の利用にはログインが必要です。"); return; }
@@ -1517,8 +1747,11 @@
       vsRoomId = invite.roomId;
 
       await currentIncomingInviteDoc.ref.delete();
+      // 招待を承認したら 10秒後にスタートするタイムスタンプを共有
+      const startTimestamp = Date.now() + 10000;
       await db.collection("versus_rooms").doc(vsRoomId).update({
-        status: "PLAYING",
+        status: "COUNTDOWN",
+        startTime: startTimestamp,
         guestLastActive: Date.now()
       });
       listenVersusRoom(vsRoomId, false);
@@ -1530,6 +1763,25 @@
       }
       modalIncomingVs.classList.add('hidden');
     };
+
+    let countdownInterval = null;
+    function start10sCountdown(startTime, stageData, isHost) {
+      vsCountdownOverlay.classList.remove('hidden');
+      vsCountdownStage.textContent = `コース: ${stageData.name || '対戦ステージ'}`;
+
+      if (countdownInterval) clearInterval(countdownInterval);
+
+      countdownInterval = setInterval(() => {
+        const remaining = Math.max(0, Math.ceil((startTime - Date.now()) / 1000));
+        vsCountdownNumber.textContent = remaining;
+
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          vsCountdownOverlay.classList.add('hidden');
+          startVersusMatch(stageData, isHost);
+        }
+      }, 100);
+    }
 
     function listenVersusRoom(roomId, isHost) {
       if (vsRoomUnsub) vsRoomUnsub();
@@ -1545,8 +1797,9 @@
           vsOpponentId = room.hostFriendId || '--------';
         }
 
-        if (room.status === "PLAYING" && !isVersusMatch) {
-          startVersusMatch(room.stageData, isHost);
+        // カウントダウン開始
+        if (room.status === "COUNTDOWN" && !isVersusMatch && room.startTime) {
+          start10sCountdown(room.startTime, room.stageData, isHost);
         }
 
         if (isVersusMatch) {
@@ -1556,6 +1809,7 @@
             opponentMesh.position.set(oppPos.x, oppPos.y + 0.5, oppPos.z);
           }
 
+          // 不戦勝判定
           const oppLastActive = isHost ? room.guestLastActive : room.hostLastActive;
           if (room.forfeitUid && room.forfeitUid !== currentUser.uid) {
             handleVersusForfeitWin("相手が対戦から退出または2分以上無操作のため、あなたの不戦勝です！");
@@ -1567,10 +1821,15 @@
             return;
           }
 
+          // 片方がゴールした瞬間に即座に強制終了
           const oppTime = isHost ? room.guestClearTime : room.hostClearTime;
           if (oppTime && !opponentFinished) {
             opponentFinished = true;
             opponentClearTime = oppTime;
+            // 相手が先にゴールしたため即座に敗北終了
+            alert(`💥 相手(${formatTime(oppTime)})が先にゴールしました！ (YOU LOSE)`);
+            recordMatchHistory('LOSE', Math.round(playElapsedTime));
+            endVersusMatch();
           }
         }
       }, err => console.warn("versus_rooms listener:", err.message));
@@ -1798,7 +2057,6 @@
       }
     };
 
-    // 自動同期切り替え
     let isAutoSyncEnabled = true;
     const btnToggleAutosave = document.getElementById('btn-toggle-autosave');
     btnToggleAutosave.onclick = () => {
@@ -2006,7 +2264,6 @@
     function updatePauseModalUI() {
       document.getElementById('pause-info-stage-id').textContent = (activeStageMeta && activeStageMeta.id) ? activeStageMeta.id : '非公開/テスト';
       document.getElementById('pause-info-author-name').textContent = (activeStageMeta && activeStageMeta.author) ? activeStageMeta.author : (activeStage?.author || '不明');
-      // 製作者IDをフレンドIDとして表示
       document.getElementById('pause-info-author-friend-id').textContent = (activeStageMeta && activeStageMeta.authorFriendId) ? activeStageMeta.authorFriendId : (activeStage?.authorFriendId || myFriendId || 'なし');
 
       selectPauseCp.innerHTML = '';
@@ -2090,7 +2347,7 @@
           ...data,
           author: currentUsername,
           authorUid: currentUser.uid,
-          authorFriendId: myFriendId,
+          authorFriendId: myFriendId || '--------',
           hidden: false,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -2108,7 +2365,9 @@
         const doc = await db.collection("stages").doc(stageId).get();
         if (!doc.exists) { alert("ステージが見つかりませんでした。"); return; }
         if (doc.data().hidden) { alert("非公開のステージです。"); return; }
-        startPlay(doc.data(), false, null, null, stageId, { id: doc.id, author: doc.data().author, authorFriendId: doc.data().authorFriendId || '公開' });
+        const sData = doc.data();
+        const fId = await getAuthorFriendId(sData.authorUid, sData.authorFriendId);
+        startPlay(sData, false, null, null, stageId, { id: doc.id, author: sData.author, authorFriendId: fId });
       } catch (err) {
         alert("検索エラー: " + err.message);
       }
@@ -2122,7 +2381,9 @@
         const docs = snap.docs.filter(d => !d.data().hidden);
         if (docs.length === 0) { alert("公開中のステージがありません。"); return; }
         const picked = docs[Math.floor(Math.random() * docs.length)];
-        startPlay(picked.data(), false, null, null, picked.id, { id: picked.id, author: picked.data().author, authorFriendId: picked.data().authorFriendId || '公開' });
+        const sData = picked.data();
+        const fId = await getAuthorFriendId(sData.authorUid, sData.authorFriendId);
+        startPlay(sData, false, null, null, picked.id, { id: picked.id, author: sData.author, authorFriendId: fId });
       } catch (err) {
         alert("ランダム取得エラー: " + err.message);
       }
@@ -2238,7 +2499,7 @@
       });
       undoStack.push(snapshot);
       if (undoStack.length > 50) undoStack.shift();
-      redoStack.length = 0; // 新アクションでやり直し履歴をクリア
+      redoStack.length = 0;
     }
 
     function applyEditorSnapshot(snapshot) {
@@ -2259,7 +2520,6 @@
 
     document.getElementById('btn-editor-undo').onclick = () => {
       if (undoStack.length === 0) return;
-      // 現在状態をRedoに保存
       const currentSnapshot = [];
       editorBlocks.forEach((val, key) => currentSnapshot.push({ key, val: JSON.parse(JSON.stringify(val)) }));
       redoStack.push(currentSnapshot);
@@ -3263,7 +3523,7 @@
       cubeMesh.position.set(currentX - pivotX, startY + 0.5 - pivotY, currentZ - pivotZ);
 
       const targetAngle = (Math.abs(dy) > 0.25) ? Math.PI : (Math.PI / 2);
-      const rollSpeed = 0.16;
+      const rollSpeed = 0.16; // 完全一定速度
       let currentAngle = 0;
       const axis = new THREE.Vector3(dz, 0, -dx).normalize();
 
@@ -3337,6 +3597,17 @@
             const currentBestStr = formatTime(getBestTime(activeStageKey));
             const clearTimeStr = formatTime(finalTimeMs);
 
+            // ステージ履歴へのクリア記録保存 (公開ステージの場合)
+            if (activeStageMeta && activeStageMeta.id && db && !isTestPlay) {
+              db.collection("stages").doc(activeStageMeta.id).collection("clear_records").add({
+                userId: currentUser ? currentUser.uid : "GUEST",
+                userName: currentUsername,
+                userFriendId: myFriendId || '--------',
+                time: finalTimeMs,
+                clearedAt: firebase.firestore.FieldValue.serverTimestamp()
+              }).catch(() => {});
+            }
+
             if (isVersusMatch) {
               const timeField = isRoomHost ? "hostClearTime" : "guestClearTime";
               db.collection("versus_rooms").doc(vsRoomId).update({ [timeField]: finalTimeMs });
@@ -3352,7 +3623,7 @@
                   matchResult = 'LOSE';
                 }
               } else {
-                resultMsg += `相手のゴールを待っています... (暫定首位)`;
+                resultMsg += `相手より先にゴールしました！ (YOU WIN)`;
                 matchResult = 'WIN';
               }
               alert(resultMsg);
