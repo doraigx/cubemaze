@@ -387,12 +387,13 @@
 
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
-        左ドラッグ: 配置 / 削除<br>
+        左ドラッグ: 配置 / 削除 (自動保存)<br>
         「セーブ」「動く床」クリックで設定変更<br>
         右ドラッグ: 平行移動 / ホイール回転: 自由視点回転
       </div>
       <div class="editor-bar">
-        <button id="btn-save-current-slot" style="background:#059669;">スロット上書き保存</button>
+        <span id="autosave-status" style="font-size:11px; color:#10b981; margin-right:4px;">同期済み</span>
+        <button id="btn-save-current-slot" style="background:#059669;">手動上書き保存</button>
         <button id="btn-online-publish" style="background:#e11d48;">ネットに投稿</button>
 
         <span style="font-weight:bold; font-size:12px; margin-left:4px;">テスト開始:</span>
@@ -568,7 +569,7 @@
             inputUsername.value = currentUsername;
             localStorage.setItem('cube_username', currentUsername);
           } else {
-            db.collection("users").doc(user.uid).set({ username: currentUsername }, { merge: true });
+            db.collection("users").doc(user.uid).set({ username: currentUsername, email: user.email || "" }, { merge: true });
           }
         } else {
           userStatusText.textContent = "未ログイン (ゲスト)";
@@ -717,6 +718,7 @@
         onlineStagesContainer.innerHTML = '';
         snap.forEach(doc => {
           const s = doc.data();
+          if (s.hidden) return;
           const item = document.createElement('div');
           item.className = 'list-item';
           item.innerHTML = `
@@ -738,6 +740,7 @@
     const editorSlotsContainer = document.getElementById('editor-slots-container');
     const inputNewSlotName = document.getElementById('input-new-slot-name');
     const inputEditorStageName = document.getElementById('input-editor-stage-name');
+    const autosaveStatus = document.getElementById('autosave-status');
     let currentEditingSlotId = null;
 
     document.getElementById('btn-to-editor-slots').onclick = () => {
@@ -835,6 +838,7 @@
       try {
         const ref = await db.collection("users").doc(currentUser.uid).collection("custom_stages").add({
           ...defaultStage,
+          author: currentUsername,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         currentEditingSlotId = ref.id;
@@ -845,15 +849,38 @@
       }
     };
 
+    // 1ブロック置くごとの自動保存ロジック（デバウンス処理）
+    let autoSaveTimer = null;
+    function triggerAutoSave() {
+      if (!currentUser || !currentEditingSlotId || !db) return;
+      if (autosaveStatus) autosaveStatus.textContent = "同期中...";
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(async () => {
+        try {
+          const data = exportStageData();
+          await db.collection("users").doc(currentUser.uid).collection("custom_stages").doc(currentEditingSlotId).set({
+            ...data,
+            author: currentUsername,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          if (autosaveStatus) autosaveStatus.textContent = "自動保存済";
+        } catch (e) {
+          console.warn("オートセーブ失敗:", e);
+          if (autosaveStatus) autosaveStatus.textContent = "同期失敗";
+        }
+      }, 300);
+    }
+
     document.getElementById('btn-save-current-slot').onclick = async () => {
       if (!currentEditingSlotId) { alert("スロットが選択されていません。"); return; }
       const data = exportStageData();
       try {
         await db.collection("users").doc(currentUser.uid).collection("custom_stages").doc(currentEditingSlotId).update({
           ...data,
+          author: currentUsername,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        alert("現在のスロットに上書き保存しました！");
+        alert("手動上書き保存しました！");
       } catch (e) {
         alert("保存エラー: " + e.message);
       }
@@ -867,7 +894,6 @@
       switchScreen('MODES');
     };
 
-    // -5 ～ +10 に階層範囲を拡張
     const MIN_HEIGHT = -5;
     const MAX_HEIGHT = 10;
     let gridSize = 32;
@@ -999,6 +1025,7 @@
           ...data,
           author: currentUsername,
           authorUid: currentUser.uid,
+          hidden: false,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         alert(`ステージを公開しました！\n\nステージ名: ${data.name}\nステージID: ${stageId}`);
@@ -1014,6 +1041,7 @@
       try {
         const doc = await db.collection("stages").doc(stageId).get();
         if (!doc.exists) { alert("ステージが見つかりませんでした。"); return; }
+        if (doc.data().hidden) { alert("非公開のステージです。"); return; }
         startPlay(doc.data(), false);
       } catch (err) {
         alert("検索エラー: " + err.message);
@@ -1025,7 +1053,8 @@
       try {
         const snap = await db.collection("stages").limit(30).get();
         if (snap.empty) { alert("公開ステージがまだありません。"); return; }
-        const docs = snap.docs;
+        const docs = snap.docs.filter(d => !d.data().hidden);
+        if (docs.length === 0) { alert("公開中のステージがありません。"); return; }
         startPlay(docs[Math.floor(Math.random() * docs.length)].data(), false);
       } catch (err) {
         alert("ランダム取得エラー: " + err.message);
@@ -1059,7 +1088,6 @@
     const matMover = new THREE.MeshLambertMaterial({ color: 0xa855f7 });
     const matFallFloor = new THREE.MeshLambertMaterial({ color: 0xf97316 });
 
-    // チェックポイントの数字付きマテリアル作成
     function createCheckpointMaterials(number = 1) {
       const cv = document.createElement('canvas');
       cv.width = 128;
@@ -1081,8 +1109,6 @@
       const tex = new THREE.CanvasTexture(cv);
       const topMat = new THREE.MeshLambertMaterial({ map: tex });
       const sideMat = new THREE.MeshLambertMaterial({ color: 0xec4899 });
-
-      // BoxGeometry: [+X, -X, +Y(上面), -Y, +Z, -Z]
       return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
     }
 
@@ -1191,9 +1217,9 @@
       editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
       editorCamRadius = gridSize * 1.05;
       updateEditorCamPos();
+      triggerAutoSave();
     };
 
-    // 自動セーブ番号の取得
     function getNextCheckpointNumber() {
       let maxNum = 0;
       editorBlocks.forEach(val => {
@@ -1204,14 +1230,14 @@
       return maxNum + 1;
     }
 
-    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null) {
+    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null, skipAutoSave = false) {
       const key = `${x},${y},${z}`;
 
       if (type === 3) {
         editorBlocks.forEach((val, k) => {
           if (val.type === 3) {
             const [cx, cy, cz] = k.split(',').map(Number);
-            setEditorTile(cx, cy, cz, 0);
+            setEditorTile(cx, cy, cz, 0, null, null, true);
           }
         });
       }
@@ -1266,9 +1292,9 @@
         editorMeshMap.set(key, mesh);
       }
       updateTestSpawnOptions();
+      if (!skipAutoSave) triggerAutoSave();
     }
 
-    // テストプレイ時の開始位置セレクトボックスの更新
     function updateTestSpawnOptions() {
       const select = document.getElementById('select-test-spawn');
       if (!select) return;
@@ -1305,8 +1331,9 @@
     document.getElementById('btn-clear-editor').onclick = () => {
       editorBlocks.forEach((_, k) => {
         const [x, y, z] = k.split(',').map(Number);
-        setEditorTile(x, y, z, 0);
+        setEditorTile(x, y, z, 0, null, null, true);
       });
+      triggerAutoSave();
     };
 
     function exportStageData() {
@@ -1355,12 +1382,12 @@
         b.moverConfig.dir = document.getElementById('modal-dir').value;
         b.moverConfig.dist = parseInt(document.getElementById('modal-dist').value, 10);
         b.moverConfig.speed = parseFloat(document.getElementById('modal-speed').value);
+        triggerAutoSave();
       }
       modal.classList.add('hidden');
     };
     document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
 
-    // チェックポイント設定モーダル
     let editingCpKey = null;
     const modalCp = document.getElementById('modal-checkpoint');
     const inputCpNumber = document.getElementById('cp-number-input');
@@ -1384,7 +1411,6 @@
     };
     document.getElementById('cp-modal-cancel').onclick = () => modalCp.classList.add('hidden');
 
-    // 指定位置からのテストプレイ開始
     document.getElementById('btn-test-custom').onclick = () => {
       const data = exportStageData();
       if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
@@ -1495,17 +1521,17 @@
     function loadStageIntoEditor(stage) {
       editorBlocks.forEach((_, k) => {
         const [x, y, z] = k.split(',').map(Number);
-        setEditorTile(x, y, z, 0);
+        setEditorTile(x, y, z, 0, null, null, true);
       });
       gridSize = stage.size || 32;
       document.getElementById('select-grid-size').value = gridSize;
       buildEditorGrid();
 
-      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex));
+      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex, true));
       if (stage.movers) {
-        stage.movers.forEach(m => setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }));
+        stage.movers.forEach(m => setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }, null, true));
       }
-      if (stage.spawn) setEditorTile(stage.spawn.x, stage.spawn.y, stage.spawn.z, 3);
+      if (stage.spawn) setEditorTile(stage.spawn.x, stage.spawn.y, stage.spawn.z, 3, null, null, true);
       updateLayerDisplay();
       updateTestSpawnOptions();
     }
@@ -1554,12 +1580,11 @@
         mesh.receiveShadow = true;
         tilesGroup.add(mesh);
 
-        // 落下床 (Type 7) の個別管理
         if (b.type === 7) {
           activeFallingFloors.push({
             x: b.x, y: b.y, z: b.z,
             mesh: mesh,
-            state: 'IDLE', // IDLE -> COUNTING -> FALLING -> GONE
+            state: 'IDLE',
             timer: 0,
             fallVelocity: 0,
             initialY: b.y - 0.1
@@ -1605,7 +1630,6 @@
       isFallingDown = false;
       fallVelocity = 0;
 
-      // 落下床の状態をリセット
       activeFallingFloors.forEach(ff => {
         ff.state = 'IDLE';
         ff.timer = 0;
@@ -1643,7 +1667,6 @@
       activeStage.blocks.forEach(b => {
         if (b.x === x && b.z === z) {
           if (b.type === 7) {
-            // 落下床が落下中または消失状態の場合は足場として判定しない
             const ff = activeFallingFloors.find(f => f.x === b.x && f.y === b.y && f.z === b.z);
             if (ff && (ff.state === 'FALLING' || ff.state === 'GONE')) return;
           }
@@ -1806,12 +1829,10 @@
 
           isRolling = false;
 
-          // セーブ地点の登録
           if (surface.type === 6) {
             currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
           }
 
-          // 落下床 (Type 7) を踏んだ時のタイマースタート
           if (surface.type === 7) {
             const ff = activeFallingFloors.find(f => f.x === tx && f.y === Math.round(targetY) && f.z === tz);
             if (ff && ff.state === 'IDLE') {
@@ -1848,22 +1869,19 @@
       requestAnimationFrame(loop);
 
       if (gameState === 'PLAYING') {
-        // 落下床の更新（1秒後に落下）
         activeFallingFloors.forEach(ff => {
           if (ff.state === 'COUNTING') {
             ff.timer += 1 / 60;
-            // 踏まれてから落下するまでの点滅演出
             if (Math.floor(ff.timer * 8) % 2 === 0) {
               ff.mesh.material.color.setHex(0xef4444);
             } else {
               ff.mesh.material.color.setHex(0xf97316);
             }
 
-            if (ff.timer >= 1.0) { // 1秒経過で落下開始
+            if (ff.timer >= 1.0) {
               ff.state = 'FALLING';
               ff.fallVelocity = 0.05;
 
-              // 乗っていた場合キューブも落下状態に突入
               const cx = Math.round(cubePos.x);
               const cz = Math.round(cubePos.z);
               if (cx === ff.x && cz === ff.z && Math.abs(cubePos.y - ff.y) <= 0.2 && !isRolling) {
@@ -1881,7 +1899,6 @@
           }
         });
 
-        // 死亡判定（-10以下でリスポーン）
         if (isFallingDown) {
           fallVelocity += 0.03;
           cubePos.y -= fallVelocity;
