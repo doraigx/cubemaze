@@ -331,7 +331,6 @@
     <button id="btn-auth" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">Googleログイン</button>
   </div>
 
-  <!-- 1. スタート画面 -->
   <div id="screen-title" class="screen">
     <h1>CUBE EDGE</h1>
     <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; align-items: center;">
@@ -343,7 +342,6 @@
     </div>
   </div>
 
-  <!-- 2. モード選択画面 -->
   <div id="screen-modes" class="screen hidden">
     <h1>MODE SELECT</h1>
     <div class="btn-group">
@@ -356,7 +354,6 @@
     </div>
   </div>
 
-  <!-- フレンドモーダル -->
   <div id="modal-friends" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">フレンドメニュー</h3>
     <div style="font-size: 12px; color: #94a3b8;">
@@ -380,7 +377,6 @@
     <button id="btn-close-friends" style="align-self: flex-end;">閉じる</button>
   </div>
 
-  <!-- フレンドチャットモーダル -->
   <div id="modal-friend-chat" class="modal-dialog hidden" style="min-width: 340px;">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <h3 style="margin: 0;" id="chat-friend-name-title">チャット</h3>
@@ -396,7 +392,6 @@
     <button id="btn-close-friend-chat" style="align-self: flex-end;">閉じる</button>
   </div>
 
-  <!-- フレンド申請一覧モーダル -->
   <div id="modal-friend-requests" class="modal-dialog hidden" style="min-width: 320px;">
     <h3 style="margin: 0;">フレンド申請一覧</h3>
     <div id="friend-requests-container" class="list-container">
@@ -405,7 +400,6 @@
     <button id="btn-close-friend-requests" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- 対戦メニューモーダル -->
   <div id="modal-versus-menu" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">オンライン対戦</h3>
     <div style="font-size: 12px; color: #94a3b8;">タイムの速いプレイヤーが勝利します！</div>
@@ -419,7 +413,6 @@
     <button id="btn-close-versus-menu" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- 対戦戦績モーダル -->
   <div id="modal-vs-records" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">対戦戦績・履歴</h3>
     <div id="vs-records-container" class="list-container" style="max-height: 260px;">
@@ -428,7 +421,6 @@
     <button id="btn-close-vs-records" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- コース指定マッチのコース選択モーダル -->
   <div id="modal-vs-pick-stage" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">対戦コースを選択</h3>
     <div style="display:flex; gap:8px; margin-bottom:8px;">
@@ -442,7 +434,6 @@
     <button id="btn-close-vs-pick" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- 対戦相手招待モーダル -->
   <div id="modal-vs-invite" class="modal-dialog hidden" style="min-width: 340px;">
     <h3 style="margin: 0;">対戦相手を選択 (オンラインのみ)</h3>
     <div style="font-size:12px; color:#94a3b8;" id="vs-invite-stage-name-lbl">コース: 選択中</div>
@@ -452,7 +443,6 @@
     <button id="btn-close-vs-invite" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- 届いた対戦招待モーダル -->
   <div id="modal-incoming-vs" class="modal-dialog hidden" style="min-width: 300px; text-align:center;">
     <h3 style="margin: 0;">対戦の申し込み！</h3>
     <p id="incoming-vs-text" style="font-size: 14px; margin: 10px 0;"></p>
@@ -462,7 +452,6 @@
     </div>
   </div>
 
-  <!-- オプション画面 -->
   <div id="modal-options" class="modal-dialog hidden">
     <h3 style="margin: 0;">オプション設定</h3>
     <label style="font-size: 13px;">D-PADの配置位置:
@@ -489,7 +478,6 @@
     </div>
   </div>
 
-  <!-- 3. ステージ選択画面 -->
   <div id="screen-stages" class="screen hidden">
     <h1>STAGE SELECT</h1>
     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
@@ -516,7 +504,6 @@
     <button id="btn-back-to-modes" style="margin-top: 15px; width: 280px;">モード画面にもどる</button>
   </div>
 
-  <!-- 4. エディタ前スロット管理モーダル -->
   <div id="modal-editor-slots" class="modal-dialog hidden">
     <h3 style="margin: 0;">エディタースロット (クラウド保存)</h3>
     <div style="font-size: 12px; color: #94a3b8;">作成・編集するステージを選んでください</div>
@@ -553,6 +540,10 @@
       <button id="btn-rot-left" style="background:#475569;">⟲ 90°</button>
       <button id="btn-rot-right" style="background:#475569;">90° ⟳</button>
 
+      <!-- Undo / Redo ボタン -->
+      <button id="btn-editor-undo" title="元に戻す (Ctrl+Z)" style="background:#475569; padding: 4px 10px;">↩️ Undo</button>
+      <button id="btn-editor-redo" title="やり直す (Ctrl+Y)" style="background:#475569; padding: 4px 10px;">↪️ Redo</button>
+
       <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">パーツ:</span>
       <button class="palette-btn p-floor active" data-type="1">薄い床</button>
       <button class="palette-btn p-full" data-type="5">直方体</button>
@@ -570,14 +561,17 @@
 
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
-        左ドラッグ: 配置 / 削除 (自動保存)<br>
-        「動く床(ルート)」選択中: 床をクリックで直接ルート描きモード開始！<br>
+        左ドラッグ: 配置 / 削除 | 「動く床(ルート)」クリックでグリッド直接描画<br>
         「セーブ」「動く床」クリックで設定変更 / 右ドラッグ: 移動 / ホイール回転: 視点回転
       </div>
       <div class="editor-bar">
         <span id="route-editing-status" style="font-size:12px; font-weight:bold; color:#facc15; display:none;">✍️ ルート描画中 (グリッドをクリックで経由地追加)</span>
         <button id="btn-finish-route-edit" style="background:#0284c7; display:none; padding:4px 10px; font-size:12px;">描画完了</button>
+
+        <!-- 自動同期オンオフ切り替え -->
+        <button id="btn-toggle-autosave" style="background:#059669; font-size:11px; padding:4px 8px;">自動同期: ON</button>
         <span id="autosave-status" style="font-size:11px; color:#10b981; margin-right:4px;">同期済み</span>
+
         <button id="btn-export-json" style="background:#0284c7;">JSON書き出し</button>
         <button id="btn-import-json-trigger" style="background:#0284c7;">JSON読込</button>
         <input type="file" id="file-import-json" accept=".json" style="display:none;">
@@ -673,13 +667,13 @@
     </div>
   </div>
 
-  <!-- ポーズモーダル (製作者情報付き) -->
+  <!-- ポーズモーダル (製作者フレンドID表示) -->
   <div id="modal-pause" class="modal-dialog hidden" style="min-width: 300px; text-align: center;">
     <h3 style="margin: 0 0 4px 0;">一時停止 (PAUSE)</h3>
     <div id="pause-stage-info" style="background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 11px; color: #94a3b8; text-align: left; line-height: 1.4;">
       <div>ステージID: <span id="pause-info-stage-id" style="color:#cbd5e1;">-</span></div>
       <div>製作者名: <span id="pause-info-author-name" style="color:#facc15;">-</span></div>
-      <div>製作者ID: <span id="pause-info-author-id" style="color:#38bdf8;">-</span></div>
+      <div>製作者フレンドID: <span id="pause-info-author-friend-id" style="color:#38bdf8;">-</span></div>
     </div>
     <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;">
       <button id="btn-pause-resume" style="background: #0284c7;">ステージに戻る (再開)</button>
@@ -998,7 +992,7 @@
             </div>
             <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
           `;
-          item.querySelector('.btn-play-online').onclick = () => startPlay(s, false, null, null, doc.id, { id: doc.id, author: s.author, authorUid: s.authorUid });
+          item.querySelector('.btn-play-online').onclick = () => startPlay(s, false, null, null, doc.id, { id: doc.id, author: s.author, authorUid: s.authorUid, authorFriendId: s.authorFriendId || '公開' });
           onlineStagesContainer.appendChild(item);
         });
       } catch (e) {
@@ -1196,7 +1190,7 @@
             chatMessagesContainer.appendChild(bubble);
           });
           chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-        });
+        }, err => console.warn("Chat listener:", err.message));
     }
 
     document.getElementById('btn-send-chat-msg').onclick = async () => {
@@ -1208,11 +1202,15 @@
       const chatId = [currentUser.uid, currentChatFriendUid].sort().join('_');
       inputChatMsg.value = '';
 
-      await db.collection("friend_chats").doc(chatId).collection("messages").add({
-        senderUid: currentUser.uid,
-        text: text,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      try {
+        await db.collection("friend_chats").doc(chatId).collection("messages").add({
+          senderUid: currentUser.uid,
+          text: text,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e) {
+        alert("チャット送信エラー: " + e.message);
+      }
     };
 
     document.getElementById('btn-close-friend-chat').onclick = () => {
@@ -1324,7 +1322,6 @@
       loadVsMyStagesList();
     };
 
-    // 公開タブ最上部のランダム選択ボタン
     document.getElementById('btn-vs-pick-random-pub').onclick = async () => {
       try {
         const snap = await db.collection("stages").limit(25).get();
@@ -1553,46 +1550,47 @@
         }
 
         if (isVersusMatch) {
-          // 相手の位置同期（自分がホストならguestPos、自分がゲストならhostPos）
           const oppPos = isHost ? room.guestPos : room.hostPos;
           if (oppPos && opponentMesh) {
             opponentMesh.visible = true;
             opponentMesh.position.set(oppPos.x, oppPos.y + 0.5, oppPos.z);
           }
 
-          // 不戦勝判定
           const oppLastActive = isHost ? room.guestLastActive : room.hostLastActive;
           if (room.forfeitUid && room.forfeitUid !== currentUser.uid) {
             handleVersusForfeitWin("相手が対戦から退出または2分以上無操作のため、あなたの不戦勝です！");
             return;
           }
 
-          if (oppLastActive && (Date.now() - oppLastActive > 120000)) { // 2分放置
+          if (oppLastActive && (Date.now() - oppLastActive > 120000)) {
             handleVersusForfeitWin("相手が2分以上操作しなかったため、あなたの不戦勝です！");
             return;
           }
 
-          // 相手が先にクリアしたか
           const oppTime = isHost ? room.guestClearTime : room.hostClearTime;
           if (oppTime && !opponentFinished) {
             opponentFinished = true;
             opponentClearTime = oppTime;
           }
         }
-      });
+      }, err => console.warn("versus_rooms listener:", err.message));
     }
 
     async function recordMatchHistory(result, clearTime) {
       if (!currentUser || !db) return;
-      await db.collection("users").doc(currentUser.uid).collection("match_history").add({
-        result: result,
-        stageName: activeStage?.name || "対戦コース",
-        stageId: vsStagePickedId || 'custom',
-        opponentName: vsOpponentName,
-        opponentFriendId: vsOpponentId,
-        time: clearTime,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      try {
+        await db.collection("users").doc(currentUser.uid).collection("match_history").add({
+          result: result,
+          stageName: activeStage?.name || "対戦コース",
+          stageId: vsStagePickedId || 'custom',
+          opponentName: vsOpponentName,
+          opponentFriendId: vsOpponentId,
+          time: clearTime,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch(e) {
+        console.warn("戦績保存エラー:", e.message);
+      }
     }
 
     function handleVersusForfeitWin(reason) {
@@ -1621,11 +1619,11 @@
       opponentClearTime = null;
       lastActionTime = Date.now();
 
-      cubeMesh.material.color.setHex(0x38bdf8); // 自分は青
+      cubeMesh.material.color.setHex(0x38bdf8);
       if (!opponentMesh) {
         const oppGeo = new THREE.BoxGeometry(1, 1, 1);
         const oppMat = new THREE.MeshStandardMaterial({
-          color: 0xef4444, // 相手は半透明赤
+          color: 0xef4444,
           transparent: true,
           opacity: 0.55,
           roughness: 0.2
@@ -1635,7 +1633,7 @@
       }
       opponentMesh.visible = false;
 
-      startPlay(stageData, false, null, null, `VS_${vsRoomId}`, { id: vsStagePickedId, author: stageData.author || "対戦", authorUid: stageData.authorUid || "vs" });
+      startPlay(stageData, false, null, null, `VS_${vsRoomId}`, { id: vsStagePickedId, author: stageData.author || "対戦", authorUid: stageData.authorUid || "vs", authorFriendId: isHost ? stageData.hostFriendId : stageData.guestFriendId });
     }
 
     function syncMyVersusPosition() {
@@ -1789,6 +1787,7 @@
         const ref = await db.collection("users").doc(currentUser.uid).collection("custom_stages").add({
           ...defaultStage,
           author: currentUsername,
+          authorFriendId: myFriendId,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         currentEditingSlotId = ref.id;
@@ -1799,8 +1798,19 @@
       }
     };
 
+    // 自動同期切り替え
+    let isAutoSyncEnabled = true;
+    const btnToggleAutosave = document.getElementById('btn-toggle-autosave');
+    btnToggleAutosave.onclick = () => {
+      isAutoSyncEnabled = !isAutoSyncEnabled;
+      btnToggleAutosave.textContent = isAutoSyncEnabled ? "自動同期: ON" : "自動同期: OFF";
+      btnToggleAutosave.style.background = isAutoSyncEnabled ? "#059669" : "#475569";
+      autosaveStatus.textContent = isAutoSyncEnabled ? "同期待機" : "停止中";
+    };
+
     let autoSaveTimer = null;
     function triggerAutoSave() {
+      if (!isAutoSyncEnabled) return;
       if (!currentUser || !currentEditingSlotId || !db) return;
       if (autosaveStatus) autosaveStatus.textContent = "同期中...";
       clearTimeout(autoSaveTimer);
@@ -1810,6 +1820,7 @@
           await db.collection("users").doc(currentUser.uid).collection("custom_stages").doc(currentEditingSlotId).set({
             ...data,
             author: currentUsername,
+            authorFriendId: myFriendId,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
           if (autosaveStatus) autosaveStatus.textContent = "自動保存済";
@@ -1827,6 +1838,7 @@
         await db.collection("users").doc(currentUser.uid).collection("custom_stages").doc(currentEditingSlotId).update({
           ...data,
           author: currentUsername,
+          authorFriendId: myFriendId,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         alert("手動上書き保存しました！");
@@ -1853,6 +1865,7 @@
       1: {
         name: "ステージ 1",
         author: "Official",
+        authorFriendId: "OFFICIAL",
         authorUid: "OFFICIAL",
         size: 16,
         spawn: { x: 0, y: 0, z: 0 },
@@ -1871,6 +1884,7 @@
       2: {
         name: "ステージ 2",
         author: "Official",
+        authorFriendId: "OFFICIAL",
         authorUid: "OFFICIAL",
         size: 16,
         spawn: { x: 0, y: 0, z: 0 },
@@ -1974,7 +1988,7 @@
 
     document.querySelectorAll('.btn-official-stage').forEach(btn => {
       const stageIdx = btn.getAttribute('data-stage');
-      btn.onclick = () => startPlay(STAGES[stageIdx], false, null, null, `OFFICIAL_${stageIdx}`, { id: `OFFICIAL_${stageIdx}`, author: "公式", authorUid: "OFFICIAL" });
+      btn.onclick = () => startPlay(STAGES[stageIdx], false, null, null, `OFFICIAL_${stageIdx}`, { id: `OFFICIAL_${stageIdx}`, author: "公式", authorFriendId: "OFFICIAL" });
     });
 
     function togglePause() {
@@ -1990,10 +2004,10 @@
     }
 
     function updatePauseModalUI() {
-      // 製作者情報の反映
       document.getElementById('pause-info-stage-id').textContent = (activeStageMeta && activeStageMeta.id) ? activeStageMeta.id : '非公開/テスト';
       document.getElementById('pause-info-author-name').textContent = (activeStageMeta && activeStageMeta.author) ? activeStageMeta.author : (activeStage?.author || '不明');
-      document.getElementById('pause-info-author-id').textContent = (activeStageMeta && activeStageMeta.authorUid) ? activeStageMeta.authorUid : (activeStage?.authorUid || 'なし');
+      // 製作者IDをフレンドIDとして表示
+      document.getElementById('pause-info-author-friend-id').textContent = (activeStageMeta && activeStageMeta.authorFriendId) ? activeStageMeta.authorFriendId : (activeStage?.authorFriendId || myFriendId || 'なし');
 
       selectPauseCp.innerHTML = '';
       const optStart = document.createElement('option');
@@ -2046,7 +2060,6 @@
       modalPause.classList.add('hidden');
 
       if (isVersusMatch) {
-        // 対戦中に退出した場合、即座に不戦敗扱いにする
         if (vsRoomId && db && currentUser) {
           await db.collection("versus_rooms").doc(vsRoomId).update({ forfeitUid: currentUser.uid });
         }
@@ -2077,6 +2090,7 @@
           ...data,
           author: currentUsername,
           authorUid: currentUser.uid,
+          authorFriendId: myFriendId,
           hidden: false,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -2094,7 +2108,7 @@
         const doc = await db.collection("stages").doc(stageId).get();
         if (!doc.exists) { alert("ステージが見つかりませんでした。"); return; }
         if (doc.data().hidden) { alert("非公開のステージです。"); return; }
-        startPlay(doc.data(), false, null, null, stageId, { id: doc.id, author: doc.data().author, authorUid: doc.data().authorUid });
+        startPlay(doc.data(), false, null, null, stageId, { id: doc.id, author: doc.data().author, authorFriendId: doc.data().authorFriendId || '公開' });
       } catch (err) {
         alert("検索エラー: " + err.message);
       }
@@ -2108,7 +2122,7 @@
         const docs = snap.docs.filter(d => !d.data().hidden);
         if (docs.length === 0) { alert("公開中のステージがありません。"); return; }
         const picked = docs[Math.floor(Math.random() * docs.length)];
-        startPlay(picked.data(), false, null, null, picked.id, { id: picked.id, author: picked.data().author, authorUid: picked.data().authorUid });
+        startPlay(picked.data(), false, null, null, picked.id, { id: picked.id, author: picked.data().author, authorFriendId: picked.data().authorFriendId || '公開' });
       } catch (err) {
         alert("ランダム取得エラー: " + err.message);
       }
@@ -2208,6 +2222,75 @@
     let editorMeshMap = new Map();
     let selectedPalette = 1;
 
+    // Undo / Redo スタック
+    const undoStack = [];
+    const redoStack = [];
+    let isHistoryOperating = false;
+
+    function pushEditorHistory() {
+      if (isHistoryOperating) return;
+      const snapshot = [];
+      editorBlocks.forEach((val, key) => {
+        snapshot.push({
+          key,
+          val: JSON.parse(JSON.stringify(val))
+        });
+      });
+      undoStack.push(snapshot);
+      if (undoStack.length > 50) undoStack.shift();
+      redoStack.length = 0; // 新アクションでやり直し履歴をクリア
+    }
+
+    function applyEditorSnapshot(snapshot) {
+      isHistoryOperating = true;
+      editorBlocks.forEach((_, k) => {
+        const [x, y, z] = k.split(',').map(Number);
+        setEditorTile(x, y, z, 0, null, null, true);
+      });
+
+      snapshot.forEach(item => {
+        const [x, y, z] = item.key.split(',').map(Number);
+        setEditorTile(x, y, z, item.val.type, item.val.moverConfig, item.val.cpIndex, true, item.val.color, item.val.pathConfig);
+      });
+      rebuildPathVisuals();
+      isHistoryOperating = false;
+      triggerAutoSave();
+    }
+
+    document.getElementById('btn-editor-undo').onclick = () => {
+      if (undoStack.length === 0) return;
+      // 現在状態をRedoに保存
+      const currentSnapshot = [];
+      editorBlocks.forEach((val, key) => currentSnapshot.push({ key, val: JSON.parse(JSON.stringify(val)) }));
+      redoStack.push(currentSnapshot);
+
+      const prev = undoStack.pop();
+      applyEditorSnapshot(prev);
+    };
+
+    document.getElementById('btn-editor-redo').onclick = () => {
+      if (redoStack.length === 0) return;
+      const currentSnapshot = [];
+      editorBlocks.forEach((val, key) => currentSnapshot.push({ key, val: JSON.parse(JSON.stringify(val)) }));
+      undoStack.push(currentSnapshot);
+
+      const next = redoStack.pop();
+      applyEditorSnapshot(next);
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (gameState === 'EDITOR' && (e.ctrlKey || e.metaKey)) {
+        if (e.key === 'z' || e.key === 'Z') {
+          e.preventDefault();
+          if (e.shiftKey) document.getElementById('btn-editor-redo').click();
+          else document.getElementById('btn-editor-undo').click();
+        } else if (e.key === 'y' || e.key === 'Y') {
+          e.preventDefault();
+          document.getElementById('btn-editor-redo').click();
+        }
+      }
+    });
+
     let isDrawingRouteMode = false;
     let activeRouteEditKey = null;
 
@@ -2240,9 +2323,7 @@
     function highlightEditingBlock(key) {
       unhighlightEditingBlocks();
       const mesh = editorMeshMap.get(key);
-      if (mesh) {
-        mesh.material.color = new THREE.Color(0x38bdf8);
-      }
+      if (mesh) mesh.material.color = new THREE.Color(0x38bdf8);
     }
 
     function unhighlightEditingBlocks() {
@@ -2501,6 +2582,7 @@
     });
 
     document.getElementById('btn-clear-editor').onclick = () => {
+      pushEditorHistory();
       exitRouteDrawingMode();
       editorBlocks.forEach((_, k) => {
         const [x, y, z] = k.split(',').map(Number);
@@ -2554,6 +2636,7 @@
     }
     document.getElementById('modal-save').onclick = () => {
       if (editingMoverKey && editorBlocks.has(editingMoverKey)) {
+        pushEditorHistory();
         const b = editorBlocks.get(editingMoverKey);
         b.moverConfig.dir = document.getElementById('modal-dir').value;
         b.moverConfig.dist = parseInt(document.getElementById('modal-dist').value, 10);
@@ -2601,6 +2684,7 @@
 
     document.getElementById('btn-pop-step').onclick = () => {
       if (tempWaypoints.length > 1) {
+        pushEditorHistory();
         tempWaypoints.pop();
         renderPathStepsUI();
         const b = editorBlocks.get(editingPathKey);
@@ -2610,6 +2694,7 @@
 
     document.getElementById('btn-clear-path').onclick = () => {
       if (tempWaypoints.length > 0) {
+        pushEditorHistory();
         tempWaypoints = [tempWaypoints[0]];
         renderPathStepsUI();
         const b = editorBlocks.get(editingPathKey);
@@ -2619,6 +2704,7 @@
 
     document.getElementById('modal-path-save').onclick = () => {
       if (editingPathKey && editorBlocks.has(editingPathKey)) {
+        pushEditorHistory();
         const b = editorBlocks.get(editingPathKey);
         b.pathConfig.waypoints = [...tempWaypoints];
         b.pathConfig.speed = parseFloat(document.getElementById('modal-path-speed').value);
@@ -2648,6 +2734,7 @@
 
     document.getElementById('cp-modal-save').onclick = () => {
       if (editingCpKey && editorBlocks.has(editingCpKey)) {
+        pushEditorHistory();
         const curBlock = editorBlocks.get(editingCpKey);
         const maxCp = countCheckpoints();
         let targetNum = parseInt(inputCpNumber.value, 10);
@@ -2700,7 +2787,7 @@
         startCpIndex = editorBlocks.get(spawnChoice).cpIndex;
       }
 
-      startPlay({ ...data, author: currentUsername }, true, startPoint, startCpIndex, "CUSTOM_TEST", { id: "CUSTOM_TEST", author: currentUsername, authorUid: currentUser ? currentUser.uid : "LOCAL" });
+      startPlay({ ...data, author: currentUsername }, true, startPoint, startCpIndex, "CUSTOM_TEST", { id: "CUSTOM_TEST", author: currentUsername, authorFriendId: myFriendId || '自作' });
     };
 
     const raycaster = new THREE.Raycaster();
@@ -2782,6 +2869,7 @@
 
           if (isDrawingRouteMode) {
             if (activeRouteEditKey && editorBlocks.has(activeRouteEditKey)) {
+              pushEditorHistory();
               const b = editorBlocks.get(activeRouteEditKey);
               if (!b.pathConfig.waypoints) {
                 const [sx, sy, sz] = activeRouteEditKey.split(',').map(Number);
@@ -2805,6 +2893,7 @@
           } else if (selectedPalette === 6 && editorBlocks.has(key) && editorBlocks.get(key).type === 6) {
             openCpModal(key);
           } else {
+            pushEditorHistory();
             setEditorTile(tx, currentLayer, tz, selectedPalette, null, null, false, inputBlockColor.value);
             if (selectedPalette === 8) {
               enterRouteDrawingMode(key);
@@ -2816,6 +2905,8 @@
 
     function loadStageIntoEditor(stage) {
       exitRouteDrawingMode();
+      undoStack.length = 0;
+      redoStack.length = 0;
       editorBlocks.forEach((_, k) => {
         const [x, y, z] = k.split(',').map(Number);
         setEditorTile(x, y, z, 0, null, null, true);
@@ -2845,7 +2936,7 @@
     function startPlay(stageData, testPlayMode = false, overrideStart = null, overrideCpIndex = null, stageKey = null, metaInfo = null) {
       activeStage = stageData;
       activeStageKey = stageKey || stageData.name;
-      activeStageMeta = metaInfo || { id: stageKey || 'CUSTOM', author: stageData.author || currentUsername, authorUid: stageData.authorUid || (currentUser ? currentUser.uid : '') };
+      activeStageMeta = metaInfo || { id: stageKey || 'CUSTOM', author: stageData.author || currentUsername, authorFriendId: stageData.authorFriendId || myFriendId || 'なし' };
       isTestPlay = testPlayMode;
       currentCheckpoint = null;
       isPaused = false;
@@ -3172,7 +3263,6 @@
       cubeMesh.position.set(currentX - pivotX, startY + 0.5 - pivotY, currentZ - pivotZ);
 
       const targetAngle = (Math.abs(dy) > 0.25) ? Math.PI : (Math.PI / 2);
-      // 一定の速度で転がるよう固定（ダッシュ等による変動を完全撤廃）
       const rollSpeed = 0.16;
       let currentAngle = 0;
       const axis = new THREE.Vector3(dz, 0, -dx).normalize();
@@ -3298,7 +3388,6 @@
             hudLiveTime.textContent = formatTime(playElapsedTime);
           }
 
-          // 対戦中の2分無操作チェック
           if (isVersusMatch && (Date.now() - lastActionTime > 120000)) {
             alert("2分間操作がなかったため、時間切れで敗北となりました。");
             if (vsRoomId && db && currentUser) {
@@ -3345,7 +3434,6 @@
             if (cubePos.y <= -10) respawnPlayer();
           }
 
-          // 動く床の滑らかな更新
           activeMovers.forEach(m => {
             let stepX = 0, stepY = 0, stepZ = 0;
 
