@@ -20,7 +20,6 @@
       color: #fff;
     }
 
-    /* 管理リスト画面 */
     #admin-list-view {
       position: absolute;
       top: 0;
@@ -43,7 +42,28 @@
       padding: 12px 18px;
       border-radius: 8px;
       border: 1px solid #334155;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+    }
+
+    .tabs-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .tab-btn {
+      padding: 8px 16px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: #0284c7;
+      border-color: #38bdf8;
     }
 
     button, select, input {
@@ -101,6 +121,27 @@
       gap: 12px;
     }
 
+    .user-group {
+      background: #0b1120;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .user-group-title {
+      font-weight: bold;
+      font-size: 1rem;
+      color: #38bdf8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 6px;
+    }
+
     .badge {
       display: inline-block;
       padding: 2px 6px;
@@ -110,8 +151,8 @@
     }
     .badge-public { background: #059669; }
     .badge-hidden { background: #dc2626; }
+    .badge-draft { background: #8b5cf6; }
 
-    /* エディタUI */
     #editor-ui-container {
       position: absolute;
       top: 0;
@@ -192,7 +233,6 @@
 </head>
 <body>
 
-  <!-- 1. ステージ一覧管理画面 -->
   <div id="admin-list-view">
     <div class="header-bar">
       <div>
@@ -204,9 +244,15 @@
       </div>
     </div>
 
+    <!-- ページ切り替えタブ -->
+    <div class="tabs-bar">
+      <button id="tab-public-stages" class="tab-btn active">🌐 公開ステージ一覧</button>
+      <button id="tab-user-drafts" class="tab-btn">👥 ユーザー別作成中ステージ</button>
+    </div>
+
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h3 style="margin:0;">投稿ステージ一覧</h3>
+        <h3 id="card-title" style="margin:0;">公開ステージ一覧</h3>
         <button id="btn-refresh" style="background:#0284c7;">一覧を更新</button>
       </div>
       <div id="stage-list" class="stage-list-box">
@@ -215,7 +261,7 @@
     </div>
   </div>
 
-  <!-- 2. 直接編集エディターUI -->
+  <!-- エディターUI -->
   <div id="editor-ui-container" class="hidden">
     <div class="editor-bar">
       <span style="font-weight: bold; color: #ef4444;">[管理編集]</span>
@@ -258,10 +304,8 @@
     </div>
   </div>
 
-  <!-- テストプレイ中HUD -->
   <button id="hud-back-editor" class="hud-control-btn hidden" style="background: #e11d48;">エディタに戻る</button>
 
-  <!-- 動く床設定モーダル -->
   <div id="editor-modal" class="modal-dialog hidden">
     <h3 style="margin: 0;">動く床の設定</h3>
     <label>進行方向:
@@ -297,7 +341,6 @@
     </div>
   </div>
 
-  <!-- セーブ設定モーダル -->
   <div id="modal-checkpoint" class="modal-dialog hidden">
     <h3 style="margin: 0;">セーブ地点の設定</h3>
     <label>セーブ番号:
@@ -330,22 +373,27 @@
     const authStatus = document.getElementById('auth-status');
     const btnAuth = document.getElementById('btn-auth');
     const stageList = document.getElementById('stage-list');
+    const cardTitle = document.getElementById('card-title');
     const adminListView = document.getElementById('admin-list-view');
     const editorUiContainer = document.getElementById('editor-ui-container');
     const hudBackEditor = document.getElementById('hud-back-editor');
     const inputEditorStageName = document.getElementById('input-editor-stage-name');
 
+    const tabPublicStages = document.getElementById('tab-public-stages');
+    const tabUserDrafts = document.getElementById('tab-user-drafts');
+
     let currentUser = null;
-    let currentEditingStageId = null;
+    let currentTab = 'PUBLIC'; // 'PUBLIC' or 'USER_DRAFTS'
+    let currentEditingTarget = null; // { type: 'PUBLIC' | 'DRAFT', docId, userId }
 
     auth.onAuthStateChanged(user => {
       currentUser = user;
       if (user) {
         authStatus.textContent = `管理者: ${user.displayName || user.email} (${user.uid})`;
         btnAuth.textContent = "ログアウト";
-        loadStages();
+        loadCurrentTab();
       } else {
-        authStatus.textContent = "未ログイン (編集・削除にはログインが必要です)";
+        authStatus.textContent = "未ログイン";
         btnAuth.textContent = "Googleログイン";
         stageList.innerHTML = '<div style="color:#ef4444; text-align:center;">ログインしてください</div>';
       }
@@ -359,21 +407,43 @@
       }
     };
 
-    document.getElementById('btn-refresh').onclick = loadStages;
+    tabPublicStages.onclick = () => {
+      currentTab = 'PUBLIC';
+      tabPublicStages.classList.add('active');
+      tabUserDrafts.classList.remove('active');
+      cardTitle.textContent = "公開ステージ一覧";
+      loadCurrentTab();
+    };
 
-    async function loadStages() {
+    tabUserDrafts.onclick = () => {
+      currentTab = 'USER_DRAFTS';
+      tabUserDrafts.classList.add('active');
+      tabPublicStages.classList.remove('active');
+      cardTitle.textContent = "ユーザー別作成中ステージ一覧";
+      loadCurrentTab();
+    };
+
+    document.getElementById('btn-refresh').onclick = () => loadCurrentTab();
+
+    function loadCurrentTab() {
+      if (currentTab === 'PUBLIC') loadPublicStages();
+      else loadUserDrafts();
+    }
+
+    // 1. 公開ステージ一覧
+    async function loadPublicStages() {
       if (!currentUser) return;
       stageList.innerHTML = '<div style="color:#64748b; text-align:center;">読み込み中...</div>';
       try {
         const snap = await db.collection("stages").orderBy("createdAt", "desc").limit(50).get();
         if (snap.empty) {
-          stageList.innerHTML = '<div style="color:#64748b; text-align:center;">ステージが存在しません</div>';
+          stageList.innerHTML = '<div style="color:#64748b; text-align:center;">公開ステージはありません</div>';
           return;
         }
         stageList.innerHTML = '';
         snap.forEach(doc => {
           const s = doc.data();
-          const isHidden = !!s.hidden;
+          let isHidden = !!s.hidden;
           const item = document.createElement('div');
           item.className = 'stage-item';
           item.innerHTML = `
@@ -385,34 +455,41 @@
               </div>
             </div>
             <div style="display:flex; gap:6px;">
-              <button class="btn-edit" style="background:#2563eb;">この画面で編集</button>
+              <button class="btn-edit" style="background:#2563eb;">編集</button>
               <button class="btn-hide" style="background:${isHidden ? '#059669' : '#d97706'};">${isHidden ? '公開にする' : '非表示にする'}</button>
               <button class="btn-del" style="background:#dc2626;">削除</button>
             </div>
           `;
 
-          // 直接エディタを開く
           item.querySelector('.btn-edit').onclick = () => {
-            currentEditingStageId = doc.id;
+            currentEditingTarget = { type: 'PUBLIC', docId: doc.id };
             openEditorWithStage(s);
           };
 
-          // 非表示 / 公開切り替え
-          item.querySelector('.btn-hide').onclick = async () => {
+          const btnHide = item.querySelector('.btn-hide');
+          const badge = item.querySelector('.badge');
+          btnHide.onclick = async () => {
+            const nextHidden = !isHidden;
+            btnHide.disabled = true;
             try {
-              await db.collection("stages").doc(doc.id).update({ hidden: !isHidden });
-              loadStages();
+              await db.collection("stages").doc(doc.id).update({ hidden: nextHidden });
+              isHidden = nextHidden;
+              badge.className = `badge ${isHidden ? 'badge-hidden' : 'badge-public'}`;
+              badge.textContent = isHidden ? '非表示中' : '公開中';
+              btnHide.style.background = isHidden ? '#059669' : '#d97706';
+              btnHide.textContent = isHidden ? '公開にする' : '非表示にする';
             } catch(e) {
               alert("更新エラー: " + e.message);
+            } finally {
+              btnHide.disabled = false;
             }
           };
 
-          // 削除
           item.querySelector('.btn-del').onclick = async () => {
-            if (confirm(`本当に「${s.name}」(ID: ${doc.id}) を削除しますか？`)) {
+            if (confirm(`公開ステージ「${s.name}」(ID: ${doc.id}) を削除しますか？`)) {
               try {
                 await db.collection("stages").doc(doc.id).delete();
-                loadStages();
+                item.remove();
               } catch(e) {
                 alert("削除エラー: " + e.message);
               }
@@ -426,9 +503,91 @@
       }
     }
 
-    /* ============================================================
-       Three.js 3Dエンジン & エディタ実装
-    ============================================================ */
+    // 2. ユーザー別作成中ステージ一覧
+    async function loadUserDrafts() {
+      if (!currentUser) return;
+      stageList.innerHTML = '<div style="color:#64748b; text-align:center;">ユーザーの作成中データを読み込み中...</div>';
+      try {
+        const usersSnap = await db.collection("users").get();
+        if (usersSnap.empty) {
+          stageList.innerHTML = '<div style="color:#64748b; text-align:center;">ユーザーデータがありません</div>';
+          return;
+        }
+
+        stageList.innerHTML = '';
+        let totalDrafts = 0;
+
+        for (const userDoc of usersSnap.docs) {
+          const uData = userDoc.data();
+          const userId = userDoc.id;
+          const uName = uData.username || "名称未設定";
+
+          const draftsSnap = await db.collection("users").doc(userId).collection("custom_stages").orderBy("updatedAt", "desc").get();
+          if (draftsSnap.empty) continue;
+
+          totalDrafts += draftsSnap.size;
+          const userGroup = document.createElement('div');
+          userGroup.className = 'user-group';
+          userGroup.innerHTML = `
+            <div class="user-group-title">
+              <span>👤 ${uName} <span style="font-size:11px; color:#94a3b8;">(UID: ${userId})</span></span>
+              <span class="badge badge-draft">${draftsSnap.size}件の下書き</span>
+            </div>
+            <div class="draft-items-container" style="display:flex; flex-direction:column; gap:6px;"></div>
+          `;
+
+          const container = userGroup.querySelector('.draft-items-container');
+
+          draftsSnap.forEach(dDoc => {
+            const d = dDoc.data();
+            const item = document.createElement('div');
+            item.className = 'stage-item';
+            item.style.background = '#1e293b';
+            item.innerHTML = `
+              <div>
+                <strong style="color:#38bdf8;">${d.name || "名称未設定"}</strong>
+                <span style="font-size:11px; color:#94a3b8; margin-left:6px;">(${d.size}×${d.size})</span>
+                <div style="font-size:11px; color:#64748b; margin-top:2px;">
+                  更新: ${d.updatedAt ? new Date(d.updatedAt.toDate()).toLocaleString() : '不明'}
+                </div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-edit-draft" style="background:#0284c7; padding:4px 10px; font-size:12px;">編集・監視</button>
+                <button class="btn-del-draft" style="background:#dc2626; padding:4px 10px; font-size:12px;">削除</button>
+              </div>
+            `;
+
+            item.querySelector('.btn-edit-draft').onclick = () => {
+              currentEditingTarget = { type: 'DRAFT', docId: dDoc.id, userId: userId };
+              openEditorWithStage(d);
+            };
+
+            item.querySelector('.btn-del-draft').onclick = async () => {
+              if (confirm(`ユーザー「${uName}」のステージスロット「${d.name}」を削除しますか？`)) {
+                try {
+                  await db.collection("users").doc(userId).collection("custom_stages").doc(dDoc.id).delete();
+                  item.remove();
+                } catch(e) {
+                  alert("削除エラー: " + e.message);
+                }
+              }
+            };
+
+            container.appendChild(item);
+          });
+
+          stageList.appendChild(userGroup);
+        }
+
+        if (totalDrafts === 0) {
+          stageList.innerHTML = '<div style="color:#64748b; text-align:center;">作成中のステージスロットは現在ありません</div>';
+        }
+      } catch (e) {
+        stageList.innerHTML = `<div style="color:#ef4444; text-align:center;">読込エラー: ${e.message}</div>`;
+      }
+    }
+
+    /* 3Dエンジン・エディタ実装 */
     const MIN_HEIGHT = -5;
     const MAX_HEIGHT = 10;
     let gridSize = 32;
@@ -670,7 +829,7 @@
       editorUiContainer.classList.add('hidden');
       adminListView.classList.remove('hidden');
       gameState = 'LIST';
-      loadStages();
+      loadCurrentTab();
     };
 
     function exportStageData() {
@@ -697,25 +856,31 @@
       };
     }
 
-    // 管理者による直接上書き保存
     document.getElementById('btn-admin-save').onclick = async () => {
-      if (!currentEditingStageId) return;
+      if (!currentEditingTarget) return;
       const data = exportStageData();
       if (!data.spawn) { alert("スタート地点(S)が必要です。"); return; }
       if (!data.hasGoal) { alert("ゴール地点(G)が必要です。"); return; }
 
       try {
-        await db.collection("stages").doc(currentEditingStageId).update({
-          ...data,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        alert(`ステージ「${data.name}」(ID: ${currentEditingStageId}) を直接上書き保存しました！`);
+        if (currentEditingTarget.type === 'PUBLIC') {
+          await db.collection("stages").doc(currentEditingTarget.docId).update({
+            ...data,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          alert(`公開ステージ「${data.name}」を上書き保存しました！`);
+        } else {
+          await db.collection("users").doc(currentEditingTarget.userId).collection("custom_stages").doc(currentEditingTarget.docId).update({
+            ...data,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          alert(`ユーザー作成中スロット「${data.name}」を上書き保存しました！`);
+        }
       } catch (err) {
         alert("保存エラー: " + err.message);
       }
     };
 
-    // テストプレイ
     document.getElementById('btn-admin-test').onclick = () => {
       const data = exportStageData();
       if (!data.spawn) { alert("スタート地点を配置してください。"); return; }
@@ -743,7 +908,6 @@
       camera.lookAt(editorCamTarget);
     };
 
-    /* モーダル処理 */
     let editingMoverKey = null;
     const modalMover = document.getElementById('editor-modal');
     function openMoverModal(key) {
@@ -787,7 +951,6 @@
     };
     document.getElementById('cp-modal-cancel').onclick = () => modalCp.classList.add('hidden');
 
-    /* マウス操作 */
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     let isLeftDown = false, isRightDown = false, isMiddleDown = false;
@@ -852,7 +1015,6 @@
       }
     }
 
-    /* プレイモード処理 */
     let currentStageData = null;
     let currentCheckpoint = null;
     let isRolling = false;
