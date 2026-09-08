@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cube Roll Game (完全版・管理機能付)</title>
+  <style>
+    * {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #111118;
+      font-family: 'Segoe UI', Meiryo, sans-serif;
+      touch-action: manipulation;
+    }
+
+    canvas {
+      pointer-events: auto;
+      -webkit-touch-callout: none;
+    }
+
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(15, 15, 22, 0.92);
+      color: #ffffff;
+      z-index: 10;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      letter-spacing: 0.15rem;
+      margin-bottom: 1.5rem;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 260px;
+    }
+
+    button, select, input {
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: #334155;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: all 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:hover {
+      background-color: #475569;
+      transform: translateY(-1px);
+    }
+
+    input[type="text"], input[type="number"] {
+      cursor: text;
+      background-color: #1e293b;
+      border: 1px solid #38bdf8;
+      outline: none;
+      text-align: center;
+      font-size: 1rem;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+
+    #user-bar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 15;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    #editor-ui-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
+      padding: 12px;
+    }
+
+    .editor-bar {
+      display: flex;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(4px);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      pointer-events: auto;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .palette-btn {
+      border: 2px solid transparent;
+      border-radius: 4px;
+    }
+    .palette-btn.active {
+      border-color: #38bdf8;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+    .p-empty { background: #334155; }
+    .p-floor { background: #64748b; }
+    .p-full { background: #475569; border: 1px dashed #94a3b8; }
+    .p-goal { background: #eab308; color: #000; }
+    .p-start { background: #06b6d4; color: #000; }
+    .p-mover { background: #a855f7; color: #fff; }
+    .p-checkpoint { background: #ec4899; color: #fff; }
+    .p-fallfloor { background: #f97316; color: #fff; }
+
+    .modal-dialog {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e293b;
+      border: 2px solid #38bdf8;
+      padding: 20px;
+      border-radius: 8px;
+      color: #fff;
+      z-index: 25;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      max-height: 85vh;
+      overflow-y: auto;
+      min-width: 340px;
+    }
+
+    .list-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 260px;
+      overflow-y: auto;
+      background: #0f172a;
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background: #1e293b;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    #editor-info {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    .hud-control-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 5;
+    }
+
+    #btn-bgm-trigger {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 5;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 6px 14px;
+      font-size: 12px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+
+    #modal-bgm-picker {
+      z-index: 30;
+      min-width: 280px;
+    }
+
+    #dpad {
+      position: absolute;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 5px;
+      touch-action: none;
+    }
+
+    .dpad-btn {
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      color: #fff;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    .dpad-btn:active, .dpad-btn.active {
+      background: rgba(56, 189, 248, 0.5);
+      transform: scale(0.92);
+    }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <div id="user-bar">
+    <span id="user-status-text">未ログイン (ゲスト)</span>
+    <button id="btn-auth" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">Googleログイン</button>
+    <button id="btn-open-admin" class="hidden" style="padding: 4px 10px; font-size: 11px; background: #dc2626;">管理者画面</button>
+  </div>
+
+  <!-- 1. スタート画面 -->
+  <div id="screen-title" class="screen">
+    <h1>CUBE EDGE</h1>
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; align-items: center;">
+      <label style="font-size: 13px; color: #94a3b8;">プレイヤー名（投稿・プレイ時に表示）</label>
+      <input type="text" id="input-username" placeholder="プレイヤー名" style="width: 220px;" maxlength="12">
+    </div>
+    <div class="btn-group">
+      <button id="btn-to-modes">PRESS START</button>
+    </div>
+  </div>
+
+  <!-- 2. モード選択画面 -->
+  <div id="screen-modes" class="screen hidden">
+    <h1>MODE SELECT</h1>
+    <div class="btn-group">
+      <button id="btn-to-stages">ゲーム開始</button>
+      <button id="btn-to-editor-slots">ステージエディタ</button>
+      <button id="btn-to-options" style="background:#475569;">オプション</button>
+      <button id="btn-back-to-title">スタート画面にもどる</button>
+    </div>
+  </div>
+
+  <!-- 管理者用パネルモーダル -->
+  <div id="modal-admin" class="modal-dialog hidden" style="min-width: 580px; max-width: 90vw;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin: 0; color: #ef4444;">🛡️ 管理者ダッシュボード (投稿ステージ管理)</h3>
+      <button id="btn-admin-refresh" style="padding:3px 8px; font-size:11px; background:#0284c7;">再読み込み</button>
+    </div>
+    <div style="font-size: 12px; color: #94a3b8;">公開中のステージの削除、非表示化（トグル）、エディタでの直接修正が可能です。</div>
+    <div id="admin-stages-container" class="list-container" style="max-height: 420px; min-height: 180px;">
+      <div style="color:#64748b; font-size:12px; text-align:center;">ステージ一覧読込中...</div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="btn-close-admin">閉じる</button>
+    </div>
+  </div>
+
+  <!-- オプション画面 -->
+  <div id="modal-options" class="modal-dialog hidden">
+    <h3 style="margin: 0;">オプション設定</h3>
+    <label style="font-size: 13px;">D-PADの配置位置:
+      <select id="opt-dpad-pos" style="width: 100%; margin-top: 4px;">
+        <option value="left">画面の左下</option>
+        <option value="right">画面の右下</option>
+        <option value="center">画面の中央下</option>
+      </select>
+    </label>
+    <label style="font-size: 13px;">下端からの余白:
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="range" id="opt-dpad-bottom" min="10" max="120" value="25" style="flex:1;">
+        <span id="opt-dpad-bottom-val" style="width:45px; text-align:right;">25px</span>
+      </div>
+    </label>
+    <label style="font-size: 13px;">ボタンのサイズ:
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="range" id="opt-dpad-scale" min="100" max="200" value="140" style="flex:1;">
+        <span id="opt-dpad-scale-val" style="width:45px; text-align:right;">140px</span>
+      </div>
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="btn-save-options" style="background: #0284c7;">保存して戻る</button>
+    </div>
+  </div>
+
+  <!-- 3. ステージ選択画面 -->
+  <div id="screen-stages" class="screen hidden">
+    <h1>STAGE SELECT</h1>
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+      <button id="tab-official" style="background:#0284c7;">基礎ステージ</button>
+      <button id="tab-custom" style="background:#334155;">カスタムステージ</button>
+    </div>
+
+    <div id="stage-list-official" class="btn-group" style="width: 280px;">
+      <button class="btn-official-stage" data-stage="1">ステージ 1 (基本クライム)</button>
+      <button class="btn-official-stage" data-stage="2">ステージ 2 (動く床)</button>
+    </div>
+
+    <div id="stage-list-custom" class="hidden" style="display: flex; flex-direction: column; gap: 10px; width: 320px;">
+      <button id="btn-random-stage" style="background:#10b981;">ランダムでプレイ</button>
+      <div style="display: flex; gap: 6px;">
+        <input type="text" id="input-search-id" placeholder="ステージID (6桁)" style="flex:1;">
+        <button id="btn-search-stage" style="background:#0284c7;">検索</button>
+      </div>
+      <div id="online-stages-container" class="list-container" style="max-height: 220px;">
+        <div style="color:#64748b; font-size:12px; text-align:center;">オンラインステージ読込中...</div>
+      </div>
+    </div>
+
+    <button id="btn-back-to-modes" style="margin-top: 15px; width: 280px;">モード画面にもどる</button>
+  </div>
+
+  <!-- 4. エディタ前スロット管理モーダル -->
+  <div id="modal-editor-slots" class="modal-dialog hidden">
+    <h3 style="margin: 0;">エディタースロット (クラウド保存)</h3>
+    <div style="font-size: 12px; color: #94a3b8;">作成・編集するステージを選んでください</div>
+    <div style="display: flex; gap: 8px;">
+      <input type="text" id="input-new-slot-name" placeholder="新しいステージ名" style="flex:1;">
+      <button id="btn-create-new-slot" style="background:#059669;">新規作成</button>
+    </div>
+    <div id="editor-slots-container" class="list-container">
+      <div style="color:#64748b; font-size:12px; text-align:center;">スロット読込中...</div>
+    </div>
+    <button id="btn-close-editor-slots" style="align-self: flex-end;">戻る</button>
+  </div>
+
+  <!-- 5. ステージエディタUI -->
+  <div id="editor-ui-container" class="hidden">
+    <div class="editor-bar">
+      <span style="font-weight: bold; color: #ffffff;">ステージ名:</span>
+      <input type="text" id="input-editor-stage-name" placeholder="ステージ名" style="width: 130px; text-align: left; padding: 4px 8px; font-size: 0.85rem;" maxlength="20">
+
+      <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">サイズ:</span>
+      <select id="select-grid-size">
+        <option value="16">16 × 16</option>
+        <option value="32" selected>32 × 32</option>
+        <option value="48">48 × 48</option>
+        <option value="64">64 × 64</option>
+      </select>
+
+      <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">階層(Y):</span>
+      <button id="btn-layer-down">▼</button>
+      <span id="label-layer" style="min-width: 45px; text-align: center; color: #38bdf8; font-weight: bold;">Y: 0</span>
+      <button id="btn-layer-up">▲</button>
+
+      <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">視点回転:</span>
+      <button id="btn-rot-left" style="background:#475569;">⟲ 90°</button>
+      <button id="btn-rot-right" style="background:#475569;">90° ⟳</button>
+
+      <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">パーツ:</span>
+      <button class="palette-btn p-floor active" data-type="1">薄い床</button>
+      <button class="palette-btn p-full" data-type="5">直方体</button>
+      <button class="palette-btn p-mover" data-type="4">動く床</button>
+      <button class="palette-btn p-checkpoint" data-type="6">セーブ</button>
+      <button class="palette-btn p-fallfloor" data-type="7">落下床</button>
+      <button class="palette-btn p-start" data-type="3">スタート</button>
+      <button class="palette-btn p-goal" data-type="2">ゴール</button>
+      <button class="palette-btn p-empty" data-type="0">消去</button>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <div id="editor-info" class="editor-bar">
+        左ドラッグ: 配置 / 削除<br>
+        「セーブ」「動く床」クリックで設定変更<br>
+        右ドラッグ: 平行移動 / ホイール回転: 自由視点回転
+      </div>
+      <div class="editor-bar">
+        <button id="btn-save-current-slot" style="background:#059669;">スロット上書き保存</button>
+        <button id="btn-online-publish" style="background:#e11d48;">ネットに投稿</button>
+
+        <span style="font-weight:bold; font-size:12px; margin-left:4px;">テスト開始:</span>
+        <select id="select-test-spawn" style="background:#1e293b; border:1px solid #38bdf8;">
+          <option value="default">スタート地点(S)</option>
+        </select>
+        <button id="btn-test-custom" style="background:#2563eb;">テストプレイ</button>
+
+        <button id="btn-clear-editor" style="background:#dc2626;">全消去</button>
+        <button id="btn-editor-back">スロット選択へ戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 動く床設定ポップアップ -->
+  <div id="editor-modal" class="modal-dialog hidden">
+    <h3 style="margin: 0;">動く床の設定</h3>
+    <label>進行方向:
+      <select id="modal-dir">
+        <option value="UP">↑ (奥へ移動)</option>
+        <option value="DOWN">↓ (手前へ移動)</option>
+        <option value="LEFT">← (左へ移動)</option>
+        <option value="RIGHT">→ (右へ移動)</option>
+        <option value="Y_UP">▲ (上へ上昇)</option>
+        <option value="Y_DOWN">▼ (下へ下降)</option>
+      </select>
+    </label>
+    <label>往復距離:
+      <select id="modal-dist">
+        <option value="1">1マス</option>
+        <option value="2">2マス</option>
+        <option value="3" selected>3マス</option>
+        <option value="4">4マス</option>
+        <option value="5">5マス</option>
+        <option value="6">6マス</option>
+      </select>
+    </label>
+    <label>速度:
+      <select id="modal-speed">
+        <option value="0.02">遅い</option>
+        <option value="0.035" selected>普通</option>
+        <option value="0.06">速い</option>
+      </select>
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="modal-save" style="background: #0284c7;">決定</button>
+      <button id="modal-cancel">閉じる</button>
+    </div>
+  </div>
+
+  <!-- セーブ地点設定ポップアップ -->
+  <div id="modal-checkpoint" class="modal-dialog hidden">
+    <h3 style="margin: 0;">セーブ地点の設定</h3>
+    <label>セーブ番号:
+      <input type="number" id="cp-number-input" min="1" max="99" value="1" style="width: 80px;">
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="cp-modal-save" style="background: #0284c7;">決定</button>
+      <button id="cp-modal-cancel">閉じる</button>
+    </div>
+  </div>
+
+  <!-- BGM トグル & ピッカー -->
+  <button id="btn-bgm-trigger" class="hidden">▶️ BGM: 停止中</button>
+  <div id="modal-bgm-picker" class="modal-dialog hidden">
+    <h3 style="margin: 0; font-size: 1.1rem;">BGM 選択</h3>
+    <div class="list-container">
+      <div class="list-item" style="cursor:pointer;" onclick="playBGM('tombi.mp3', 'tombi.mp3')">
+        <span>🎵 tombi.mp3</span>
+        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+      </div>
+      <div class="list-item" style="cursor:pointer;" onclick="playBGM('tsuiraku.mp3', 'tsuiraku.mp3')">
+        <span>🎵 tsuiraku.mp3</span>
+        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+      </div>
+      <div class="list-item" style="cursor:pointer;" onclick="playBGM('シャイニングスター.mp3', 'シャイニングスター.mp3')">
+        <span>🎵 シャイニングスター.mp3</span>
+        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+      </div>
+      <div class="list-item" style="cursor:pointer;" onclick="playBGM('白銀の小舟.mp3', '白銀の小舟.mp3')">
+        <span>🎵 白銀の小舟.mp3</span>
+        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+      </div>
+      <div class="list-item" style="cursor:pointer;" onclick="stopBGM()">
+        <span style="color:#ef4444;">⏹ 再生停止</span>
+        <button style="padding:3px 8px; font-size:11px; background:#475569;">停止</button>
+      </div>
+    </div>
+    <label style="font-size:12px; display:flex; align-items:center; gap:8px;">
+      音量:
+      <input type="range" id="bgm-volume" min="0" max="1" step="0.05" value="0.5" style="flex:1;">
+    </label>
+    <button id="btn-close-bgm" style="align-self: flex-end; padding:4px 12px; font-size:12px;">閉じる</button>
+  </div>
+
+  <button id="hud-quit" class="hud-control-btn hidden">ステージ選択に戻る</button>
+  <button id="hud-back-editor" class="hud-control-btn hidden" style="background: #e11d48;">エディタに戻る</button>
+
+  <!-- 6. モバイル専用 D-PAD -->
+  <div id="dpad" class="hidden">
+    <div></div>
+    <div class="dpad-btn" id="dpad-up">▲</div>
+    <div></div>
+    <div class="dpad-btn" id="dpad-left">◀</div>
+    <div></div>
+    <div class="dpad-btn" id="dpad-right">▶</div>
+    <div></div>
+    <div class="dpad-btn" id="dpad-down">▼</div>
+    <div></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    }, { passive: false });
+
+    window.addEventListener('dragstart', (e) => { e.preventDefault(); });
+    window.addEventListener('copy', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+    window.addEventListener('cut', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+    window.addEventListener('paste', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+
+    // 管理者のUIDリスト（ここに管理者のFirebase Auth UIDを記述します）
+    // 開発・テスト用に空配列の場合はすべてのログインユーザーを管理者として表示することも可能
+    const ADMIN_UIDS = [
+      7eAo3qlBnldq9PJZSLIMmprD4wl2
+    ];
+    let isCurrentAdmin = false;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBq5Wqx7kwqQSf9spIfrgHjYdQ7qm-yPzs",
+      authDomain: "cubemaze-65594.firebaseapp.com",
+      projectId: "cubemaze-65594",
+      storageBucket: "cubemaze-65594.firebasestorage.app",
+      messagingSenderId: "94155316782",
+      appId: "1:94155316782:web:9dc3320c9e938ee16689bf",
+      measurementId: "G-NJTJ4DJ6JY"
+    };
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+
+    try {
+      if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+      }
+    } catch(e) {
+      console.warn("Firebase初期化失敗:", e);
+    }
+
+    const inputUsername = document.getElementById('input-username');
+    let currentUsername = localStorage.getItem('cube_username') || "NoName";
+    inputUsername.value = currentUsername;
+    inputUsername.onchange = () => {
+      currentUsername = inputUsername.value.trim() || "NoName";
+      localStorage.setItem('cube_username', currentUsername);
+      if (currentUser && db) {
+        db.collection("users").doc(currentUser.uid).set({ username: currentUsername }, { merge: true });
+      }
+    };
+
+    const userStatusText = document.getElementById('user-status-text');
+    const btnAuth = document.getElementById('btn-auth');
+    const btnOpenAdmin = document.getElementById('btn-open-admin');
+    const modalAdmin = document.getElementById('modal-admin');
+    const adminStagesContainer = document.getElementById('admin-stages-container');
+
+    if (auth) {
+      auth.onAuthStateChanged(async (user) => {
+        currentUser = user;
+        if (user) {
+          userStatusText.textContent = `${user.displayName || "ログイン済"}`;
+          btnAuth.textContent = "ログアウト";
+          btnAuth.style.background = "#475569";
+          
+          // 管理者権限チェック（ADMIN_UIDSが空の場合はログイン者全員に表示、指定時は一致チェック）
+          if (ADMIN_UIDS.length === 0 || ADMIN_UIDS.includes(user.uid)) {
+            isCurrentAdmin = true;
+            btnOpenAdmin.classList.remove('hidden');
+          } else {
+            isCurrentAdmin = false;
+            btnOpenAdmin.classList.add('hidden');
+          }
+
+          const userDoc = await db.collection("users").doc(user.uid).get();
+          if (userDoc.exists && userDoc.data().username) {
+            currentUsername = userDoc.data().username;
+            inputUsername.value = currentUsername;
+            localStorage.setItem('cube_username', currentUsername);
+          } else {
+            db.collection("users").doc(user.uid).set({ username: currentUsername }, { merge: true });
+          }
+        } else {
+          isCurrentAdmin = false;
+          btnOpenAdmin.classList.add('hidden');
+          userStatusText.textContent = "未ログイン (ゲスト)";
+          btnAuth.textContent = "Googleログイン";
+          btnAuth.style.background = "#0284c7";
+        }
+      });
+    }
+
+    btnAuth.onclick = () => {
+      if (!auth) { alert("Firebaseが設定されていません。"); return; }
+      if (currentUser) {
+        auth.signOut();
+      } else {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(err => alert("ログインエラー: " + err.message));
+      }
+    };
+
+    // 管理者モーダルの表示・読み込み
+    btnOpenAdmin.onclick = () => {
+      modalAdmin.classList.remove('hidden');
+      loadAdminStagesList();
+    };
+    document.getElementById('btn-close-admin').onclick = () => {
+      modalAdmin.classList.add('hidden');
+    };
+    document.getElementById('btn-admin-refresh').onclick = () => {
+      loadAdminStagesList();
+    };
+
+    let editingOnlineStageId = null;
+
+    async function loadAdminStagesList() {
+      if (!db) return;
+      adminStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">全ステージを読込中...</div>';
+      try {
+        const snap = await db.collection("stages").orderBy("createdAt", "desc").limit(50).get();
+        if (snap.empty) {
+          adminStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">投稿されたステージはありません</div>';
+          return;
+        }
+        adminStagesContainer.innerHTML = '';
+        snap.forEach(doc => {
+          const s = doc.data();
+          const isHidden = !!s.hidden;
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.style.borderLeft = isHidden ? '4px solid #ef4444' : '4px solid #10b981';
+          item.innerHTML = `
+            <div style="flex:1; margin-right: 10px;">
+              <strong style="color:${isHidden ? '#94a3b8' : '#facc15'};">${s.name || "名称未設定"}</strong>
+              ${isHidden ? '<span style="color:#ef4444; font-size:11px; margin-left:4px;">[非表示中]</span>' : '<span style="color:#10b981; font-size:11px; margin-left:4px;">[公開中]</span>'}
+              <br>
+              <span style="font-size:11px; color:#94a3b8;">ID: ${doc.id} | 作者: ${s.author || "不明"} (${s.size}×${s.size})</span>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="btn-admin-edit" style="padding: 3px 8px; font-size: 11px; background: #2563eb;">エディタで編集</button>
+              <button class="btn-admin-hide" style="padding: 3px 8px; font-size: 11px; background: ${isHidden ? '#059669' : '#d97706'};">
+                ${isHidden ? '公開に戻す' : '非表示にする'}
+              </button>
+              <button class="btn-admin-del" style="padding: 3px 8px; font-size: 11px; background: #dc2626;">削除</button>
+            </div>
+          `;
+
+          // エディタに読み込み
+          item.querySelector('.btn-admin-edit').onclick = () => {
+            if (confirm(`ステージ「${s.name}」(ID: ${doc.id}) をエディタで編集しますか？\n（エディタ内で「ネットに投稿」を押すと上書き保存されます）`)) {
+              editingOnlineStageId = doc.id;
+              modalAdmin.classList.add('hidden');
+              openEditorWithStage(s);
+            }
+          };
+
+          // 非表示 / 公開 切り替え
+          item.querySelector('.btn-admin-hide').onclick = async () => {
+            const nextHidden = !isHidden;
+            await db.collection("stages").doc(doc.id).update({
+              hidden: nextHidden
+            });
+            loadAdminStagesList();
+          };
+
+          // 削除
+          item.querySelector('.btn-admin-del').onclick = async () => {
+            if (confirm(`本当にステージ「${s.name}」(ID: ${doc.id}) を完全に削除しますか？\nこの操作は取り消せません。`)) {
+              await db.collection("stages").doc(doc.id).delete();
+              loadAdminStagesList();
+            }
+          };
+
+          adminStagesContainer.appendChild(item);
+        });
+      } catch (err) {
+        adminStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${err.message}</div>`;
+      }
+    }
+
+    let currentAudio = new Audio();
+    currentAudio.loop = true;
+    currentAudio.volume = 0.5;
+
+    const btnBgmTrigger = document.getElementById('btn-bgm-trigger');
+    const modalBgmPicker = document.getElementById('modal-bgm-picker');
+    const bgmVolume = document.getElementById('bgm-volume');
+
+    btnBgmTrigger.onclick = () => {
+      modalBgmPicker.classList.toggle('hidden');
+    };
+
+    document.getElementById('btn-close-bgm').onclick = () => {
+      modalBgmPicker.classList.add('hidden');
+    };
+
+    bgmVolume.oninput = (e) => {
+      currentAudio.volume = parseFloat(e.target.value);
+    };
+
+    function playBGM(src, title) {
+      currentAudio.src = src;
+      currentAudio.play().catch(e => console.warn("BGM再生ブロック:", e));
+      btnBgmTrigger.textContent = `▶️ BGM: ${title}`;
+      modalBgmPicker.classList.add('hidden');
+    }
+
+    function stopBGM() {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      btnBgmTrigger.textContent = "▶️ BGM: 停止中";
+      modalBgmPicker.classList.add('hidden');
+    }
+
+    const modalOptions = document.getElementById('modal-options');
+    const optDpadPos = document.getElementById('opt-dpad-pos');
+    const optDpadBottom = document.getElementById('opt-dpad-bottom');
+    const optDpadBottomVal = document.getElementById('opt-dpad-bottom-val');
+    const optDpadScale = document.getElementById('opt-dpad-scale');
+    const optDpadScaleVal = document.getElementById('opt-dpad-scale-val');
+    const dpad = document.getElementById('dpad');
+
+    let dpadSettings = JSON.parse(localStorage.getItem('cube_dpad_settings')) || {
+      pos: 'left',
+      bottom: 25,
+      size: 140
+    };
+
+    function applyDpadSettings() {
+      dpad.style.bottom = `${dpadSettings.bottom}px`;
+      dpad.style.width = `${dpadSettings.size}px`;
+      dpad.style.height = `${dpadSettings.size}px`;
+
+      dpad.style.left = 'auto';
+      dpad.style.right = 'auto';
+      dpad.style.transform = 'none';
+
+      if (dpadSettings.pos === 'left') {
+        dpad.style.left = '25px';
+      } else if (dpadSettings.pos === 'right') {
+        dpad.style.right = '25px';
+      } else if (dpadSettings.pos === 'center') {
+        dpad.style.left = '50%';
+        dpad.style.transform = 'translateX(-50%)';
+      }
+    }
+    applyDpadSettings();
+
+    document.getElementById('btn-to-options').onclick = () => {
+      optDpadPos.value = dpadSettings.pos;
+      optDpadBottom.value = dpadSettings.bottom;
+      optDpadBottomVal.textContent = `${dpadSettings.bottom}px`;
+      optDpadScale.value = dpadSettings.size;
+      optDpadScaleVal.textContent = `${dpadSettings.size}px`;
+      modalOptions.classList.remove('hidden');
+    };
+
+    optDpadBottom.oninput = (e) => {
+      optDpadBottomVal.textContent = `${e.target.value}px`;
+    };
+    optDpadScale.oninput = (e) => {
+      optDpadScaleVal.textContent = `${e.target.value}px`;
+    };
+
+    document.getElementById('btn-save-options').onclick = () => {
+      dpadSettings.pos = optDpadPos.value;
+      dpadSettings.bottom = parseInt(optDpadBottom.value, 10);
+      dpadSettings.size = parseInt(optDpadScale.value, 10);
+      localStorage.setItem('cube_dpad_settings', JSON.stringify(dpadSettings));
+      applyDpadSettings();
+      modalOptions.classList.add('hidden');
+    };
+
+    const tabOfficial = document.getElementById('tab-official');
+    const tabCustom = document.getElementById('tab-custom');
+    const stageListOfficial = document.getElementById('stage-list-official');
+    const stageListCustom = document.getElementById('stage-list-custom');
+    const onlineStagesContainer = document.getElementById('online-stages-container');
+
+    tabOfficial.onclick = () => {
+      tabOfficial.style.background = "#0284c7";
+      tabCustom.style.background = "#334155";
+      stageListOfficial.classList.remove('hidden');
+      stageListCustom.classList.add('hidden');
+    };
+
+    tabCustom.onclick = () => {
+      tabCustom.style.background = "#0284c7";
+      tabOfficial.style.background = "#334155";
+      stageListCustom.classList.remove('hidden');
+      stageListOfficial.classList.add('hidden');
+      loadPublicStagesList();
+    };
+
+    async function loadPublicStagesList() {
+      if (!db) {
+        onlineStagesContainer.innerHTML = '<div style="color:#ef4444; font-size:12px; text-align:center;">Firebase未設定です</div>';
+        return;
+      }
+      onlineStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
+      try {
+        const snap = await db.collection("stages").orderBy("createdAt", "desc").limit(30).get();
+        if (snap.empty) {
+          onlineStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">投稿されたステージはありません</div>';
+          return;
+        }
+        onlineStagesContainer.innerHTML = '';
+        snap.forEach(doc => {
+          const s = doc.data();
+          if (s.hidden) return; // 非表示ステージは一般リストで除外
+
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `
+            <div>
+              <strong style="color:#facc15;">${s.name || "名称未設定"}</strong><br>
+              <span style="font-size:11px; color:#94a3b8;">作者: ${s.author || "不明"} / ID: ${doc.id}</span>
+            </div>
+            <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
+          `;
+          item.querySelector('.btn-play-online').onclick = () => startPlay(s, false);
+          onlineStagesContainer.appendChild(item);
+        });
+      } catch (e) {
+        onlineStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    const modalEditorSlots = document.getElementById('modal-editor-slots');
+    const editorSlotsContainer = document.getElementById('editor-slots-container');
+    const inputNewSlotName = document.getElementById('input-new-slot-name');
+    const inputEditorStageName = document.getElementById('input-editor-stage-name');
+    let currentEditingSlotId = null;
+
+    document.getElementById('btn-to-editor-slots').onclick = () => {
+      if (!currentUser) {
+        alert("ステージエディタの利用（クラウド保存）にはGoogleログインが必要です。");
+        return;
+      }
+      modalEditorSlots.classList.remove('hidden');
+      loadEditorSlotsList();
+    };
+
+    document.getElementById('btn-close-editor-slots').onclick = () => {
+      modalEditorSlots.classList.add('hidden');
+      switchScreen('MODES');
+    };
+
+    function openEditorWithStage(stageData) {
+      modalEditorSlots.classList.add('hidden');
+      switchScreen('EDITOR');
+      gameState = 'EDITOR';
+      pivot.visible = false;
+      tilesGroup.visible = false;
+      editorGroup.visible = true;
+
+      inputEditorStageName.value = stageData.name || "マイステージ";
+      loadStageIntoEditor(stageData);
+
+      editorCamRadius = gridSize * 1.05;
+      editorCamTheta = Math.PI / 4;
+      editorCamPhi = Math.PI / 3;
+      editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+      updateEditorCamPos();
+      camera.position.copy(editorCamPos);
+      camera.lookAt(editorCamTarget);
+    }
+
+    function returnToEditorView() {
+      switchScreen('EDITOR');
+      gameState = 'EDITOR';
+      pivot.visible = false;
+      tilesGroup.visible = false;
+      editorGroup.visible = true;
+
+      camera.position.copy(editorCamPos);
+      camera.lookAt(editorCamTarget);
+      updateTestSpawnOptions();
+    }
+
+    async function loadEditorSlotsList() {
+      editorSlotsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
+      try {
+        const snap = await db.collection("users").doc(currentUser.uid).collection("custom_stages").orderBy("updatedAt", "desc").get();
+        if (snap.empty) {
+          editorSlotsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">保存されたスロットはありません</div>';
+          return;
+        }
+        editorSlotsContainer.innerHTML = '';
+        snap.forEach(doc => {
+          const s = doc.data();
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `
+            <span><strong>${s.name || "名称未設定"}</strong> (${s.size}×${s.size})</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-open-slot" style="padding: 3px 8px; font-size: 11px; background: #059669;">編集</button>
+              <button class="btn-del-slot" style="padding: 3px 8px; font-size: 11px; background: #dc2626;">削除</button>
+            </div>
+          `;
+          item.querySelector('.btn-open-slot').onclick = () => {
+            currentEditingSlotId = doc.id;
+            editingOnlineStageId = null;
+            openEditorWithStage(s);
+          };
+          item.querySelector('.btn-del-slot').onclick = async () => {
+            if (confirm(`「${s.name}」を削除しますか？`)) {
+              await doc.ref.delete();
+              loadEditorSlotsList();
+            }
+          };
+          editorSlotsContainer.appendChild(item);
+        });
+      } catch (e) {
+        editorSlotsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    document.getElementById('btn-create-new-slot').onclick = async () => {
+      const name = inputNewSlotName.value.trim() || `ステージ_${new Date().toLocaleDateString()}`;
+      const defaultStage = {
+        name: name,
+        size: 32,
+        spawn: { x: 0, y: 0, z: 0 },
+        blocks: [{ x: 0, y: 0, z: 0, type: 3 }, { x: 1, y: 0, z: 0, type: 2 }],
+        movers: []
+      };
+      try {
+        const ref = await db.collection("users").doc(currentUser.uid).collection("custom_stages").add({
+          ...defaultStage,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        currentEditingSlotId = ref.id;
+        editingOnlineStageId = null;
+        inputNewSlotName.value = '';
+        openEditorWithStage(defaultStage);
+      } catch (e) {
+        alert("作成エラー: " + e.message);
+      }
+    };
+
+    document.getElementById('btn-save-current-slot').onclick = async () => {
+      if (!currentEditingSlotId) { alert("スロットが選択されていません。"); return; }
+      const data = exportStageData();
+      try {
+        await db.collection("users").doc(currentUser.uid).collection("custom_stages").doc(currentEditingSlotId).update({
+          ...data,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert("現在のスロットに上書き保存しました！");
+      } catch (e) {
+        alert("保存エラー: " + e.message);
+      }
+    };
+
+    document.getElementById('btn-editor-back').onclick = () => {
+      editorGroup.visible = false;
+      modalEditorSlots.classList.remove('hidden');
+      loadEditorSlotsList();
+      gameState = 'MODES';
+      switchScreen('MODES');
+    };
+
+    const MIN_HEIGHT = -5;
+    const MAX_HEIGHT = 10;
+    let gridSize = 32;
+    let currentLayer = 0;
+
+    const STAGES = {
+      1: {
+        name: "ステージ 1",
+        author: "Official",
+        size: 16,
+        spawn: { x: 0, y: 0, z: 0 },
+        blocks: [
+          { x: 0, y: 0, z: 0, type: 3 },
+          { x: 1, y: 0, z: 0, type: 1 },
+          { x: 2, y: 0, z: 0, type: 6, cpIndex: 1 },
+          { x: 3, y: 0, z: 0, type: 7 },
+          { x: 4, y: 0, z: 0, type: 5 },
+          { x: 5, y: 1, z: 0, type: 5 },
+          { x: 6, y: 2, z: 0, type: 1 },
+          { x: 6, y: 2, z: 1, type: 2 }
+        ],
+        movers: []
+      },
+      2: {
+        name: "ステージ 2",
+        author: "Official",
+        size: 16,
+        spawn: { x: 0, y: 0, z: 0 },
+        blocks: [
+          { x: 0, y: 0, z: 0, type: 3 },
+          { x: 1, y: 0, z: 0, type: 1 },
+          { x: 2, y: 0, z: 0, type: 7 },
+          { x: 6, y: 0, z: 0, type: 1 },
+          { x: 7, y: 0, z: 0, type: 2 }
+        ],
+        movers: [
+          { x: 3, y: 0, z: 0, dir: 'RIGHT', dist: 2, speed: 0.03 }
+        ]
+      }
+    };
+
+    let activeStage = null;
+    let gameState = 'TITLE';
+    let isTestPlay = false;
+
+    const isMobileDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+    const screenTitle = document.getElementById('screen-title');
+    const screenModes = document.getElementById('screen-modes');
+    const screenStages = document.getElementById('screen-stages');
+    const editorUiContainer = document.getElementById('editor-ui-container');
+    const hudQuit = document.getElementById('hud-quit');
+    const hudBackEditor = document.getElementById('hud-back-editor');
+
+    function switchScreen(screen) {
+      [screenTitle, screenModes, screenStages].forEach(s => s.classList.add('hidden'));
+      editorUiContainer.classList.add('hidden');
+
+      if (screen === 'PLAYING') {
+        userBar.classList.add('hidden');
+        btnBgmTrigger.classList.remove('hidden');
+
+        if (isMobileDevice) {
+          dpad.classList.remove('hidden');
+          applyDpadSettings();
+        }
+
+        if (isTestPlay) {
+          hudQuit.classList.add('hidden');
+          hudBackEditor.classList.remove('hidden');
+        } else {
+          hudQuit.classList.remove('hidden');
+          hudBackEditor.classList.add('hidden');
+        }
+      } else {
+        dpad.classList.add('hidden');
+        btnBgmTrigger.classList.add('hidden');
+        modalBgmPicker.classList.add('hidden');
+
+        if (screen === 'EDITOR') {
+          userBar.classList.add('hidden');
+          hudQuit.classList.add('hidden');
+          hudBackEditor.classList.add('hidden');
+          editorUiContainer.classList.remove('hidden');
+          updateTestSpawnOptions();
+        } else {
+          userBar.classList.remove('hidden');
+          hudQuit.classList.add('hidden');
+          hudBackEditor.classList.add('hidden');
+          if (screen === 'MODES') screenModes.classList.remove('hidden');
+          else if (screen === 'TITLE') screenTitle.classList.remove('hidden');
+          else if (screen === 'STAGES') screenStages.classList.remove('hidden');
+        }
+      }
+    }
+
+    document.getElementById('btn-to-modes').onclick = () => switchScreen('MODES');
+    document.getElementById('btn-back-to-title').onclick = () => switchScreen('TITLE');
+    document.getElementById('btn-to-stages').onclick = () => switchScreen('STAGES');
+    document.getElementById('btn-back-to-modes').onclick = () => switchScreen('MODES');
+
+    document.querySelectorAll('.btn-official-stage').forEach(btn => {
+      btn.onclick = () => startPlay(STAGES[btn.getAttribute('data-stage')], false);
+    });
+
+    hudQuit.onclick = () => {
+      gameState = 'STAGES';
+      switchScreen('STAGES');
+    };
+
+    hudBackEditor.onclick = () => {
+      returnToEditorView();
+    };
+
+    // ネットに投稿（管理者による既存ステージの直接編集時は元のIDに上書き更新）
+    document.getElementById('btn-online-publish').onclick = async () => {
+      if (!db || !auth) { alert("Firebaseが設定されていません。"); return; }
+      if (!currentUser) { alert("ステージを投稿するにはGoogleログインが必要です。"); return; }
+
+      const data = exportStageData();
+      if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
+      if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
+
+      if (editingOnlineStageId && isCurrentAdmin) {
+        const overwrite = confirm(`管理者モード: 既存のオンラインステージ (ID: ${editingOnlineStageId}) に変更を上書きしますか？\n(「キャンセル」で新規IDとして別名保存します)`);
+        if (overwrite) {
+          try {
+            await db.collection("stages").doc(editingOnlineStageId).update({
+              ...data,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert(`ステージ (ID: ${editingOnlineStageId}) を更新しました！`);
+            return;
+          } catch (err) {
+            alert("上書きエラー: " + err.message);
+            return;
+          }
+        }
+      }
+
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let stageId = '';
+      for (let i = 0; i < 6; i++) stageId += chars.charAt(Math.floor(Math.random() * chars.length));
+
+      try {
+        await db.collection("stages").doc(stageId).set({
+          ...data,
+          author: currentUsername,
+          authorUid: currentUser.uid,
+          hidden: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert(`ステージを公開しました！\n\nステージ名: ${data.name}\nステージID: ${stageId}`);
+      } catch (err) {
+        alert("投稿エラー: " + err.message);
+      }
+    };
+
+    document.getElementById('btn-search-stage').onclick = async () => {
+      if (!db) { alert("Firebaseが設定されていません。"); return; }
+      const stageId = document.getElementById('input-search-id').value.trim().toUpperCase();
+      if (!stageId) { alert("ステージIDを入力してください。"); return; }
+      try {
+        const doc = await db.collection("stages").doc(stageId).get();
+        if (!doc.exists) { alert("ステージが見つかりませんでした。"); return; }
+        const s = doc.data();
+        if (s.hidden && !isCurrentAdmin) {
+          alert("このステージは管理者によって非公開に設定されています。");
+          return;
+        }
+        startPlay(s, false);
+      } catch (err) {
+        alert("検索エラー: " + err.message);
+      }
+    };
+
+    document.getElementById('btn-random-stage').onclick = async () => {
+      if (!db) { alert("Firebaseが設定されていません。"); return; }
+      try {
+        const snap = await db.collection("stages").limit(40).get();
+        if (snap.empty) { alert("公開ステージがまだありません。"); return; }
+        const docs = snap.docs.filter(d => !d.data().hidden);
+        if (docs.length === 0) { alert("公開可能なステージがありません。"); return; }
+        startPlay(docs[Math.floor(Math.random() * docs.length)].data(), false);
+      } catch (err) {
+        alert("ランダム取得エラー: " + err.message);
+      }
+    };
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111118);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(50, 100, 50);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    const thinTileGeo = new THREE.BoxGeometry(1, 0.2, 1);
+    const fullBlockGeo = new THREE.BoxGeometry(1, 1, 1);
+
+    const matFloor = new THREE.MeshLambertMaterial({ color: 0x64748b });
+    const matFull = new THREE.MeshLambertMaterial({ color: 0x475569 });
+    const matGoal = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
+    const matStart = new THREE.MeshLambertMaterial({ color: 0x06b6d4 });
+    const matMover = new THREE.MeshLambertMaterial({ color: 0xa855f7 });
+    const matFallFloor = new THREE.MeshLambertMaterial({ color: 0xf97316 });
+
+    function createCheckpointMaterials(number = 1) {
+      const cv = document.createElement('canvas');
+      cv.width = 128;
+      cv.height = 128;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#ec4899';
+      ctx.fillRect(0, 0, 128, 128);
+
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = '#ffffff';
+      ctx.strokeRect(4, 4, 120, 120);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 64px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(number.toString(), 64, 64);
+
+      const tex = new THREE.CanvasTexture(cv);
+      const topMat = new THREE.MeshLambertMaterial({ map: tex });
+      const sideMat = new THREE.MeshLambertMaterial({ color: 0xec4899 });
+
+      return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
+    }
+
+    let cubePos = { x: 0, y: 0, z: 0 };
+    const cubeMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15, metalness: 0.1 })
+    );
+    cubeMesh.castShadow = true;
+
+    const pivot = new THREE.Group();
+    scene.add(pivot);
+    pivot.add(cubeMesh);
+
+    const cameraTarget = new THREE.Vector3();
+    const tilesGroup = new THREE.Group();
+    scene.add(tilesGroup);
+    let activeMovers = [];
+    let activeFallingFloors = [];
+
+    const editorGroup = new THREE.Group();
+    scene.add(editorGroup);
+    editorGroup.visible = false;
+
+    let gridHelper = null;
+    let raycastPlane = null;
+    let editorBlocks = new Map();
+    let editorMeshMap = new Map();
+    let selectedPalette = 1;
+
+    let editorCamRadius = 35;
+    let editorCamTheta = Math.PI / 4;
+    let editorCamPhi = Math.PI / 3;
+    const editorCamPos = new THREE.Vector3();
+    const editorCamTarget = new THREE.Vector3();
+
+    function updateEditorCamPos() {
+      editorCamPos.x = editorCamTarget.x + editorCamRadius * Math.sin(editorCamPhi) * Math.sin(editorCamTheta);
+      editorCamPos.y = editorCamTarget.y + editorCamRadius * Math.cos(editorCamPhi);
+      editorCamPos.z = editorCamTarget.z + editorCamRadius * Math.sin(editorCamPhi) * Math.cos(editorCamTheta);
+    }
+
+    document.getElementById('btn-rot-left').onclick = () => {
+      editorCamTheta += Math.PI / 2;
+      updateEditorCamPos();
+    };
+    document.getElementById('btn-rot-right').onclick = () => {
+      editorCamTheta -= Math.PI / 2;
+      updateEditorCamPos();
+    };
+
+    function buildEditorGrid() {
+      if (gridHelper) {
+        editorGroup.remove(gridHelper);
+        gridHelper.geometry.dispose();
+      }
+      if (raycastPlane) {
+        editorGroup.remove(raycastPlane);
+        raycastPlane.geometry.dispose();
+      }
+
+      gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x0ea5e9, 0x334155);
+      gridHelper.position.set(gridSize / 2 - 0.5, currentLayer - 0.01, gridSize / 2 - 0.5);
+      editorGroup.add(gridHelper);
+
+      const planeGeo = new THREE.PlaneGeometry(gridSize, gridSize);
+      const planeMat = new THREE.MeshBasicMaterial({ visible: false });
+      raycastPlane = new THREE.Mesh(planeGeo, planeMat);
+      raycastPlane.rotation.x = -Math.PI / 2;
+      raycastPlane.position.set(gridSize / 2 - 0.5, currentLayer, gridSize / 2 - 0.5);
+      editorGroup.add(raycastPlane);
+    }
+
+    function updateLayerDisplay() {
+      document.getElementById('label-layer').textContent = `Y: ${currentLayer}`;
+      if (gridHelper && raycastPlane) {
+        gridHelper.position.y = currentLayer - 0.01;
+        raycastPlane.position.y = currentLayer;
+      }
+      editorMeshMap.forEach((mesh, key) => {
+        const y = parseInt(key.split(',')[1], 10);
+        const isCurrent = (y === currentLayer);
+        const targetOpacity = isCurrent ? 1.0 : 0.35;
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(m => {
+            m.transparent = true;
+            m.opacity = targetOpacity;
+          });
+        } else {
+          mesh.material.transparent = true;
+          mesh.material.opacity = targetOpacity;
+        }
+      });
+    }
+
+    document.getElementById('btn-layer-up').onclick = () => {
+      if (currentLayer < MAX_HEIGHT) { currentLayer++; updateLayerDisplay(); }
+    };
+    document.getElementById('btn-layer-down').onclick = () => {
+      if (currentLayer > MIN_HEIGHT) { currentLayer--; updateLayerDisplay(); }
+    };
+
+    document.getElementById('select-grid-size').onchange = (e) => {
+      gridSize = parseInt(e.target.value, 10);
+      buildEditorGrid();
+      editorCamTarget.set(gridSize / 2, 0, gridSize / 2);
+      editorCamRadius = gridSize * 1.05;
+      updateEditorCamPos();
+    };
+
+    function getNextCheckpointNumber() {
+      let maxNum = 0;
+      editorBlocks.forEach(val => {
+        if (val.type === 6 && val.cpIndex) {
+          if (val.cpIndex > maxNum) maxNum = val.cpIndex;
+        }
+      });
+      return maxNum + 1;
+    }
+
+    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null) {
+      const key = `${x},${y},${z}`;
+
+      if (type === 3) {
+        editorBlocks.forEach((val, k) => {
+          if (val.type === 3) {
+            const [cx, cy, cz] = k.split(',').map(Number);
+            setEditorTile(cx, cy, cz, 0);
+          }
+        });
+      }
+
+      if (type === 0) {
+        editorBlocks.delete(key);
+        if (editorMeshMap.has(key)) {
+          editorGroup.remove(editorMeshMap.get(key));
+          editorMeshMap.delete(key);
+        }
+      } else {
+        const cNum = (type === 6) ? (cpIndex || getNextCheckpointNumber()) : null;
+        const data = {
+          type,
+          moverConfig: moverConfig || (type === 4 ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null),
+          cpIndex: cNum
+        };
+        editorBlocks.set(key, data);
+
+        if (editorMeshMap.has(key)) editorGroup.remove(editorMeshMap.get(key));
+
+        let geo = (type === 5) ? fullBlockGeo : thinTileGeo;
+        let m = matFloor.clone();
+        let isMultiMat = false;
+
+        if (type === 5) m = matFull.clone();
+        else if (type === 2) m = matGoal.clone();
+        else if (type === 3) m = matStart.clone();
+        else if (type === 4) m = matMover.clone();
+        else if (type === 7) m = matFallFloor.clone();
+        else if (type === 6) {
+          m = createCheckpointMaterials(cNum);
+          isMultiMat = true;
+        }
+
+        const mesh = new THREE.Mesh(geo, m);
+        const yOffset = (type === 5) ? 0.5 : -0.1;
+        mesh.position.set(x, y + yOffset, z);
+
+        const isCurrent = (y === currentLayer);
+        if (isMultiMat) {
+          mesh.material.forEach(mat => {
+            mat.transparent = true;
+            mat.opacity = isCurrent ? 1.0 : 0.35;
+          });
+        } else {
+          mesh.material.transparent = true;
+          mesh.material.opacity = isCurrent ? 1.0 : 0.35;
+        }
+
+        editorGroup.add(mesh);
+        editorMeshMap.set(key, mesh);
+      }
+      updateTestSpawnOptions();
+    }
+
+    function updateTestSpawnOptions() {
+      const select = document.getElementById('select-test-spawn');
+      if (!select) return;
+      const prevVal = select.value;
+      select.innerHTML = '<option value="default">スタート地点(S)</option>';
+
+      const checkpoints = [];
+      editorBlocks.forEach((val, key) => {
+        if (val.type === 6) {
+          checkpoints.push({ key, cpIndex: val.cpIndex || 1 });
+        }
+      });
+
+      checkpoints.sort((a, b) => a.cpIndex - b.cpIndex);
+      checkpoints.forEach(cp => {
+        const opt = document.createElement('option');
+        opt.value = cp.key;
+        opt.textContent = `セーブ ${cp.cpIndex}`;
+        select.appendChild(opt);
+      });
+
+      select.value = prevVal;
+      if (!select.value) select.value = 'default';
+    }
+
+    document.querySelectorAll('.palette-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedPalette = parseInt(btn.dataset.type, 10);
+      };
+    });
+
+    document.getElementById('btn-clear-editor').onclick = () => {
+      editorBlocks.forEach((_, k) => {
+        const [x, y, z] = k.split(',').map(Number);
+        setEditorTile(x, y, z, 0);
+      });
+    };
+
+    function exportStageData() {
+      let spawn = null;
+      let hasGoal = false;
+      const blocks = [];
+      const movers = [];
+
+      editorBlocks.forEach((val, key) => {
+        const [x, y, z] = key.split(',').map(Number);
+        if (val.type === 3) spawn = { x, y, z };
+        if (val.type === 2) hasGoal = true;
+
+        if (val.type === 4) {
+          movers.push({ x, y, z, ...val.moverConfig });
+        } else {
+          blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex });
+        }
+      });
+
+      return {
+        name: inputEditorStageName.value.trim() || "マイステージ",
+        size: gridSize,
+        spawn,
+        hasGoal,
+        blocks,
+        movers
+      };
+    }
+
+    let editingMoverKey = null;
+    const modal = document.getElementById('editor-modal');
+    function openMoverModal(key) {
+      editingMoverKey = key;
+      const b = editorBlocks.get(key);
+      if (b && b.moverConfig) {
+        document.getElementById('modal-dir').value = b.moverConfig.dir;
+        document.getElementById('modal-dist').value = b.moverConfig.dist;
+        document.getElementById('modal-speed').value = b.moverConfig.speed;
+        modal.classList.remove('hidden');
+      }
+    }
+    document.getElementById('modal-save').onclick = () => {
+      if (editingMoverKey && editorBlocks.has(editingMoverKey)) {
+        const b = editorBlocks.get(editingMoverKey);
+        b.moverConfig.dir = document.getElementById('modal-dir').value;
+        b.moverConfig.dist = parseInt(document.getElementById('modal-dist').value, 10);
+        b.moverConfig.speed = parseFloat(document.getElementById('modal-speed').value);
+      }
+      modal.classList.add('hidden');
+    };
+    document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
+
+    let editingCpKey = null;
+    const modalCp = document.getElementById('modal-checkpoint');
+    const inputCpNumber = document.getElementById('cp-number-input');
+
+    function openCpModal(key) {
+      editingCpKey = key;
+      const b = editorBlocks.get(key);
+      if (b) {
+        inputCpNumber.value = b.cpIndex || 1;
+        modalCp.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('cp-modal-save').onclick = () => {
+      if (editingCpKey && editorBlocks.has(editingCpKey)) {
+        const [x, y, z] = editingCpKey.split(',').map(Number);
+        const newNum = parseInt(inputCpNumber.value, 10) || 1;
+        setEditorTile(x, y, z, 6, null, newNum);
+      }
+      modalCp.classList.add('hidden');
+    };
+    document.getElementById('cp-modal-cancel').onclick = () => modalCp.classList.add('hidden');
+
+    document.getElementById('btn-test-custom').onclick = () => {
+      const data = exportStageData();
+      if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
+      if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
+      editorGroup.visible = false;
+
+      const spawnChoice = document.getElementById('select-test-spawn').value;
+      let startPoint = null;
+      if (spawnChoice !== 'default' && editorBlocks.has(spawnChoice)) {
+        const [cx, cy, cz] = spawnChoice.split(',').map(Number);
+        startPoint = { x: cx, y: cy, z: cz };
+      }
+
+      startPlay({ ...data, author: currentUsername }, true, startPoint);
+    };
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isLeftDown = false;
+    let isRightDown = false;
+    let isMiddleDown = false;
+    let prevMouse = { x: 0, y: 0 };
+
+    window.addEventListener('mousedown', (e) => {
+      if (gameState !== 'EDITOR' || e.target.closest('#editor-ui-container, .modal-dialog')) return;
+      if (e.button === 0) {
+        isLeftDown = true;
+        handleEditorClick(e);
+      } else if (e.button === 1) {
+        isMiddleDown = true;
+      } else if (e.button === 2) {
+        if (e.shiftKey) {
+          isMiddleDown = true;
+        } else {
+          isRightDown = true;
+        }
+      }
+      prevMouse = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (gameState !== 'EDITOR') return;
+      const dx = e.clientX - prevMouse.x;
+      const dy = e.clientY - prevMouse.y;
+      prevMouse = { x: e.clientX, y: e.clientY };
+
+      if (isLeftDown && !e.target.closest('#editor-ui-container, .modal-dialog')) {
+        handleEditorClick(e);
+      }
+
+      if (isMiddleDown) {
+        editorCamTheta -= dx * 0.008;
+        editorCamPhi = THREE.MathUtils.clamp(editorCamPhi - dy * 0.008, 0.1, Math.PI / 2 - 0.05);
+        updateEditorCamPos();
+      }
+
+      if (isRightDown) {
+        const panSpeed = editorCamRadius * 0.0016;
+        const forward = new THREE.Vector3().subVectors(editorCamTarget, camera.position);
+        forward.y = 0;
+        forward.normalize();
+        const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+
+        editorCamTarget.addScaledVector(right, -dx * panSpeed);
+        editorCamTarget.addScaledVector(forward, dy * panSpeed);
+        updateEditorCamPos();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isLeftDown = false;
+      isRightDown = false;
+      isMiddleDown = false;
+    });
+
+    window.addEventListener('wheel', (e) => {
+      if (gameState === 'EDITOR') {
+        e.preventDefault();
+        const factor = e.deltaY > 0 ? 1.08 : 0.92;
+        editorCamRadius = THREE.MathUtils.clamp(editorCamRadius * factor, 8, 160);
+        updateEditorCamPos();
+      }
+    }, { passive: false });
+
+    function handleEditorClick(e) {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      if (!raycastPlane) return;
+      const intersects = raycaster.intersectObject(raycastPlane);
+      if (intersects.length > 0) {
+        const pt = intersects[0].point;
+        const tx = Math.floor(pt.x + 0.5);
+        const tz = Math.floor(pt.z + 0.5);
+        if (tx >= 0 && tx < gridSize && tz >= 0 && tz < gridSize) {
+          const key = `${tx},${currentLayer},${tz}`;
+          if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) {
+            openMoverModal(key);
+          } else if (selectedPalette === 6 && editorBlocks.has(key) && editorBlocks.get(key).type === 6) {
+            openCpModal(key);
+          } else {
+            setEditorTile(tx, currentLayer, tz, selectedPalette);
+          }
+        }
+      }
+    }
+
+    function loadStageIntoEditor(stage) {
+      editorBlocks.forEach((_, k) => {
+        const [x, y, z] = k.split(',').map(Number);
+        setEditorTile(x, y, z, 0);
+      });
+      gridSize = stage.size || 32;
+      document.getElementById('select-grid-size').value = gridSize;
+      buildEditorGrid();
+
+      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex));
+      if (stage.movers) {
+        stage.movers.forEach(m => setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }));
+      }
+      if (stage.spawn) setEditorTile(stage.spawn.x, stage.spawn.y, stage.spawn.z, 3);
+      updateLayerDisplay();
+      updateTestSpawnOptions();
+    }
+
+    let currentCheckpoint = null;
+
+    function startPlay(stageData, testPlayMode = false, overrideStart = null) {
+      activeStage = stageData;
+      isTestPlay = testPlayMode;
+      currentCheckpoint = null;
+      switchScreen('PLAYING');
+      gameState = 'PLAYING';
+      editorGroup.visible = false;
+      tilesGroup.visible = true;
+      pivot.visible = true;
+
+      buildPlayStage(stageData);
+
+      const targetStart = overrideStart || stageData.spawn;
+      const spawnSurf = getTopSurfaceAt(targetStart.x, targetStart.z, targetStart.y);
+      const startY = spawnSurf ? spawnSurf.surfaceY : targetStart.y;
+      resetCubePosition(targetStart.x, startY, targetStart.z);
+
+      if (overrideStart) {
+        currentCheckpoint = { x: targetStart.x, y: startY, z: targetStart.z };
+      }
+    }
+
+    function buildPlayStage(stage) {
+      while (tilesGroup.children.length > 0) tilesGroup.remove(tilesGroup.children[0]);
+      activeMovers = [];
+      activeFallingFloors = [];
+
+      stage.blocks.forEach(b => {
+        let geo = (b.type === 5) ? fullBlockGeo : thinTileGeo;
+        let m = matFloor;
+        if (b.type === 5) m = matFull;
+        if (b.type === 2) m = matGoal;
+        if (b.type === 3) m = matStart;
+        if (b.type === 7) m = matFallFloor.clone();
+        if (b.type === 6) m = createCheckpointMaterials(b.cpIndex || 1);
+
+        const mesh = new THREE.Mesh(geo, m);
+        const yOffset = (b.type === 5) ? 0.5 : -0.1;
+        mesh.position.set(b.x, b.y + yOffset, b.z);
+        mesh.receiveShadow = true;
+        tilesGroup.add(mesh);
+
+        if (b.type === 7) {
+          activeFallingFloors.push({
+            x: b.x, y: b.y, z: b.z,
+            mesh: mesh,
+            state: 'IDLE',
+            timer: 0,
+            fallVelocity: 0,
+            initialY: b.y - 0.1
+          });
+        }
+      });
+
+      if (stage.movers) {
+        stage.movers.forEach(m => {
+          const mesh = new THREE.Mesh(thinTileGeo, matMover);
+          mesh.position.set(m.x, m.y - 0.1, m.z);
+          mesh.receiveShadow = true;
+          tilesGroup.add(mesh);
+
+          let vecX = 0, vecY = 0, vecZ = 0;
+          if (m.dir === 'UP')     vecZ = -1;
+          if (m.dir === 'DOWN')   vecZ = 1;
+          if (m.dir === 'LEFT')   vecX = -1;
+          if (m.dir === 'RIGHT')  vecX = 1;
+          if (m.dir === 'Y_UP')   vecY = 1;
+          if (m.dir === 'Y_DOWN') vecY = -1;
+
+          activeMovers.push({
+            originX: m.x, originY: m.y, originZ: m.z,
+            vecX: vecX, vecY: vecY, vecZ: vecZ,
+            dist: m.dist, speed: m.speed,
+            mesh: mesh, currentOffset: 0, direction: 1
+          });
+        });
+      }
+    }
+
+    function resetInputBuffer() {
+      for (let k in keysPressed) keysPressed[k] = false;
+    }
+
+    let isFallingDown = false;
+    let fallVelocity = 0;
+
+    function resetCubePosition(x, y, z) {
+      resetInputBuffer();
+      isRolling = false;
+      isFallingDown = false;
+      fallVelocity = 0;
+
+      activeFallingFloors.forEach(ff => {
+        ff.state = 'IDLE';
+        ff.timer = 0;
+        ff.fallVelocity = 0;
+        ff.mesh.position.y = ff.initialY;
+        ff.mesh.visible = true;
+        ff.mesh.material.color.setHex(0xf97316);
+      });
+
+      cubePos = { x, y, z };
+      pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
+      pivot.rotation.set(0, 0, 0);
+      cubeMesh.position.set(0, 0.5, 0);
+      cubeMesh.rotation.set(0, 0, 0);
+
+      camera.position.set(cubePos.x + 6, cubePos.y + 7.5, cubePos.z + 8);
+      cameraTarget.set(cubePos.x, cubePos.y + 0.5, cubePos.z);
+    }
+
+    function respawnPlayer() {
+      if (currentCheckpoint) {
+        resetCubePosition(currentCheckpoint.x, currentCheckpoint.y, currentCheckpoint.z);
+      } else {
+        const spawnSurf = getTopSurfaceAt(activeStage.spawn.x, activeStage.spawn.z, activeStage.spawn.y);
+        resetCubePosition(activeStage.spawn.x, spawnSurf ? spawnSurf.surfaceY : activeStage.spawn.y, activeStage.spawn.z);
+      }
+    }
+
+    function isSolidAt(x, z, yLevel) {
+      return activeStage.blocks.some(b => b.x === x && b.z === z && b.type === 5 && b.y === yLevel);
+    }
+
+    function getAllSurfacesAt(x, z) {
+      const surfaces = [];
+      activeStage.blocks.forEach(b => {
+        if (b.x === x && b.z === z) {
+          if (b.type === 7) {
+            const ff = activeFallingFloors.find(f => f.x === b.x && f.y === b.y && f.z === b.z);
+            if (ff && (ff.state === 'FALLING' || ff.state === 'GONE')) return;
+          }
+          if (b.type === 5) surfaces.push({ type: 5, mover: null, surfaceY: b.y + 1 });
+          else surfaces.push({ type: b.type, mover: null, surfaceY: b.y, blockRef: b });
+        }
+      });
+      activeMovers.forEach(m => {
+        const dx = Math.abs(m.mesh.position.x - x);
+        const dz = Math.abs(m.mesh.position.z - z);
+        if (dx <= 0.85 && dz <= 0.85) {
+          surfaces.push({ type: 4, mover: m, surfaceY: m.mesh.position.y + 0.1 });
+        }
+      });
+      return surfaces.sort((a, b) => b.surfaceY - a.surfaceY);
+    }
+
+    function getTopSurfaceAt(x, z, nearY) {
+      const list = getAllSurfacesAt(x, z);
+      return list.find(s => Math.abs(s.surfaceY - nearY) <= 0.6) || list[0] || null;
+    }
+
+    function findTargetSurface(tx, tz, curY) {
+      const surfaces = getAllSurfacesAt(tx, tz);
+      let best = null;
+      let minDiff = 999;
+
+      for (const s of surfaces) {
+        const diff = s.surfaceY - curY;
+        if (diff >= -1.4 && diff <= 1.25) {
+          const solidCheckY = Math.round(s.surfaceY);
+          if (!isSolidAt(tx, tz, solidCheckY)) {
+            if (Math.abs(diff) < minDiff) {
+              minDiff = Math.abs(diff);
+              best = s;
+            }
+          }
+        }
+      }
+
+      if (best) {
+        const diff = best.surfaceY - curY;
+        return {
+          dy: diff,
+          targetY: best.surfaceY,
+          ...best
+        };
+      }
+
+      if (isSolidAt(tx, tz, Math.round(curY))) return { blocked: true };
+
+      return { dy: 0, targetY: curY, type: 0, mover: null, surfaceY: curY, isFall: true };
+    }
+
+    const keysPressed = {};
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        keysPressed[e.key] = true;
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (keysPressed[e.key]) keysPressed[e.key] = false;
+    });
+
+    function bindDpadButton(elementId, keyName) {
+      const el = document.getElementById(elementId);
+      el.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        keysPressed[keyName] = true;
+        el.classList.add('active');
+      }, { passive: false });
+
+      el.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        keysPressed[keyName] = false;
+        el.classList.remove('active');
+      }, { passive: false });
+
+      el.addEventListener('touchcancel', (e) => {
+        keysPressed[keyName] = false;
+        el.classList.remove('active');
+      });
+    }
+
+    bindDpadButton('dpad-up', 'ArrowUp');
+    bindDpadButton('dpad-down', 'ArrowDown');
+    bindDpadButton('dpad-left', 'ArrowLeft');
+    bindDpadButton('dpad-right', 'ArrowRight');
+
+    let isRolling = false;
+
+    function processInput() {
+      if (isRolling || isFallingDown || gameState !== 'PLAYING') return;
+      if (keysPressed['ArrowUp']) roll(0, -1);
+      else if (keysPressed['ArrowDown']) roll(0, 1);
+      else if (keysPressed['ArrowLeft']) roll(-1, 0);
+      else if (keysPressed['ArrowRight']) roll(1, 0);
+    }
+
+    function roll(dx, dz) {
+      isRolling = true;
+
+      const currentX = Math.round(cubePos.x);
+      const currentZ = Math.round(cubePos.z);
+      const tx = currentX + dx;
+      const tz = currentZ + dz;
+
+      const surface = findTargetSurface(tx, tz, cubePos.y);
+      if (surface.blocked) {
+        isRolling = false;
+        return;
+      }
+
+      const startY = cubePos.y;
+      const targetY = surface.targetY;
+      const dy = targetY - startY;
+
+      let pivotX = currentX + dx * 0.5;
+      let pivotY = (dy > 0.15) ? (startY + dy) : startY;
+      let pivotZ = currentZ + dz * 0.5;
+
+      pivot.position.set(pivotX, pivotY, pivotZ);
+      cubeMesh.position.set(currentX - pivotX, startY + 0.5 - pivotY, currentZ - pivotZ);
+
+      const targetAngle = (Math.abs(dy) > 0.25) ? Math.PI : (Math.PI / 2);
+      const rollSpeed = (Math.abs(dy) > 0.25) ? 0.20 : 0.16;
+      let currentAngle = 0;
+      const axis = new THREE.Vector3(dz, 0, -dx).normalize();
+
+      function animateRoll() {
+        currentAngle += rollSpeed;
+
+        if (surface.type === 4 && surface.mover) {
+          const liveMoverY = surface.mover.mesh.position.y + 0.1;
+          const liveDy = liveMoverY - startY;
+          if (liveDy > 0.15) {
+            pivot.position.y = startY + liveDy;
+          }
+        }
+
+        if (currentAngle < targetAngle) {
+          pivot.rotateOnAxis(axis, rollSpeed);
+          requestAnimationFrame(animateRoll);
+        } else {
+          cubePos.x = tx;
+          cubePos.z = tz;
+
+          if (surface.type === 4 && surface.mover) {
+            cubePos.x = surface.mover.mesh.position.x;
+            cubePos.z = surface.mover.mesh.position.z;
+            cubePos.y = surface.mover.mesh.position.y + 0.1;
+          } else {
+            cubePos.y = targetY;
+          }
+
+          pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
+          pivot.rotation.set(0, 0, 0);
+          cubeMesh.position.set(0, 0.5, 0);
+
+          isRolling = false;
+
+          if (surface.type === 6) {
+            currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
+          }
+
+          if (surface.type === 7) {
+            const ff = activeFallingFloors.find(f => f.x === tx && f.y === Math.round(targetY) && f.z === tz);
+            if (ff && ff.state === 'IDLE') {
+              ff.state = 'COUNTING';
+              ff.timer = 0;
+            }
+          }
+
+          if (surface.isFall) {
+            isFallingDown = true;
+            fallVelocity = 0.05;
+          } else if (surface.type === 2) {
+            resetInputBuffer();
+            alert("ステージクリア！おめでとうございます！");
+            if (isTestPlay) {
+              returnToEditorView();
+            } else {
+              gameState = 'STAGES';
+              switchScreen('STAGES');
+            }
+          }
+        }
+      }
+      animateRoll();
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function loop() {
+      requestAnimationFrame(loop);
+
+      if (gameState === 'PLAYING') {
+        activeFallingFloors.forEach(ff => {
+          if (ff.state === 'COUNTING') {
+            ff.timer += 1 / 60;
+            if (Math.floor(ff.timer * 8) % 2 === 0) {
+              ff.mesh.material.color.setHex(0xef4444);
+            } else {
+              ff.mesh.material.color.setHex(0xf97316);
+            }
+
+            if (ff.timer >= 1.0) {
+              ff.state = 'FALLING';
+              ff.fallVelocity = 0.05;
+
+              const cx = Math.round(cubePos.x);
+              const cz = Math.round(cubePos.z);
+              if (cx === ff.x && cz === ff.z && Math.abs(cubePos.y - ff.y) <= 0.2 && !isRolling) {
+                isFallingDown = true;
+                fallVelocity = 0.05;
+              }
+            }
+          } else if (ff.state === 'FALLING') {
+            ff.fallVelocity += 0.03;
+            ff.mesh.position.y -= ff.fallVelocity;
+            if (ff.mesh.position.y < -15) {
+              ff.state = 'GONE';
+              ff.mesh.visible = false;
+            }
+          }
+        });
+
+        if (isFallingDown) {
+          fallVelocity += 0.03;
+          cubePos.y -= fallVelocity;
+          pivot.position.y = cubePos.y;
+
+          if (cubePos.y <= -10) {
+            respawnPlayer();
+          }
+        }
+
+        activeMovers.forEach(m => {
+          const delta = m.speed * m.direction;
+          m.currentOffset += Math.abs(delta);
+
+          const stepX = m.vecX * delta;
+          const stepY = m.vecY * delta;
+          const stepZ = m.vecZ * delta;
+
+          m.mesh.position.x += stepX;
+          m.mesh.position.y += stepY;
+          m.mesh.position.z += stepZ;
+
+          if (m.currentOffset >= m.dist) {
+            m.direction *= -1;
+            m.currentOffset = 0;
+          }
+
+          if (!isRolling && !isFallingDown) {
+            const dx = Math.abs(m.mesh.position.x - cubePos.x);
+            const dz = Math.abs(m.mesh.position.z - cubePos.z);
+            const moverSurfaceY = m.mesh.position.y + 0.1;
+            const dy = Math.abs(moverSurfaceY - cubePos.y);
+
+            if (dx <= 0.85 && dz <= 0.85 && dy <= 0.75) {
+              cubePos.x += stepX;
+              cubePos.y += stepY;
+              cubePos.z += stepZ;
+              pivot.position.x = cubePos.x;
+              pivot.position.y = cubePos.y;
+              pivot.position.z = cubePos.z;
+            }
+          }
+        });
+
+        processInput();
+
+        const cubeWorldPos = new THREE.Vector3();
+        cubeMesh.getWorldPosition(cubeWorldPos);
+
+        const targetCamX = cubeWorldPos.x + 6;
+        const targetCamY = cubeWorldPos.y + 7.5;
+        const targetCamZ = cubeWorldPos.z + 8;
+
+        camera.position.x += (targetCamX - camera.position.x) * 0.06;
+        camera.position.y += (targetCamY - camera.position.y) * 0.06;
+        camera.position.z += (targetCamZ - camera.position.z) * 0.06;
+
+        cameraTarget.x += (cubeWorldPos.x - cameraTarget.x) * 0.06;
+        cameraTarget.y += (cubeWorldPos.y + 0.5 - cameraTarget.y) * 0.06;
+        cameraTarget.z += (cubeWorldPos.z - cameraTarget.z) * 0.06;
+        camera.lookAt(cameraTarget);
+
+      } else if (gameState === 'EDITOR') {
+        camera.position.lerp(editorCamPos, 0.15);
+        cameraTarget.lerp(editorCamTarget, 0.15);
+        camera.lookAt(cameraTarget);
+      }
+
+      renderer.render(scene, camera);
+    }
+    loop();
+  </script>
+</body>
+</html>
