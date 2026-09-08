@@ -526,10 +526,12 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
         左ドラッグ: 配置 / 削除 (自動保存)<br>
-        「セーブ」「動く床」「動く床(ルート)」クリックで設定変更<br>
-        右ドラッグ: 平行移動 / ホイール回転: 自由視点回転
+        「動く床(ルート)」選択中: 床をクリックで直接ルート描きモード開始！<br>
+        「セーブ」「動く床」クリックで設定変更 / 右ドラッグ: 移動 / ホイール回転: 視点回転
       </div>
       <div class="editor-bar">
+        <span id="route-editing-status" style="font-size:12px; font-weight:bold; color:#facc15; display:none;">✍️ ルート描画中 (グリッドをクリックで経由地追加)</span>
+        <button id="btn-finish-route-edit" style="background:#0284c7; display:none; padding:4px 10px; font-size:12px;">描画完了</button>
         <span id="autosave-status" style="font-size:11px; color:#10b981; margin-right:4px;">同期済み</span>
         <button id="btn-export-json" style="background:#0284c7;">JSON書き出し</button>
         <button id="btn-import-json-trigger" style="background:#0284c7;">JSON読込</button>
@@ -589,16 +591,14 @@
   <!-- ルート移動床設定モーダル -->
   <div id="modal-path-mover" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">動く床（ルート指定）の設定</h3>
-    <div style="font-size: 12px; color: #94a3b8;">順に移動するルートを追加してください</div>
+    <div style="font-size: 12px; color: #94a3b8;">
+      エディター上で直接グリッドをクリックして経由地番号を追加できます。<br>
+      番号順（① → ② → ③...）に巡回移動します。
+    </div>
     <div id="path-steps-list" style="display: flex; flex-wrap: wrap; gap: 6px; background: #0f172a; padding: 10px; border-radius: 6px; min-height: 40px;">
     </div>
     <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-      <button class="btn-add-step" data-dir="UP" style="padding: 4px 8px; font-size: 12px;">+ ↑(奥)</button>
-      <button class="btn-add-step" data-dir="DOWN" style="padding: 4px 8px; font-size: 12px;">+ ↓(手前)</button>
-      <button class="btn-add-step" data-dir="LEFT" style="padding: 4px 8px; font-size: 12px;">+ ←(左)</button>
-      <button class="btn-add-step" data-dir="RIGHT" style="padding: 4px 8px; font-size: 12px;">+ →(右)</button>
-      <button class="btn-add-step" data-dir="Y_UP" style="padding: 4px 8px; font-size: 12px;">+ ▲(上)</button>
-      <button class="btn-add-step" data-dir="Y_DOWN" style="padding: 4px 8px; font-size: 12px;">+ ▼(下)</button>
+      <button id="btn-draw-grid-route" style="background:#0284c7; padding: 4px 8px; font-size: 12px;">✍️ グリッド直接描き</button>
       <button id="btn-pop-step" style="background:#dc2626; padding: 4px 8px; font-size: 12px;">1つ戻す</button>
       <button id="btn-clear-path" style="background:#475569; padding: 4px 8px; font-size: 12px;">全クリア</button>
     </div>
@@ -708,7 +708,6 @@
     window.addEventListener('cut', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
     window.addEventListener('paste', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
 
-    // エディター画面・対戦中画面からの退出ガード
     window.addEventListener('beforeunload', (e) => {
       if (gameState === 'EDITOR' || isVersusMatch) {
         e.preventDefault();
@@ -753,7 +752,6 @@
       }
     };
 
-    // ★修正: userBar 変数を確実に取得定義
     const userBar = document.getElementById('user-bar');
     const userStatusText = document.getElementById('user-status-text');
     const userFriendIdBadge = document.getElementById('user-friend-id-badge');
@@ -794,7 +792,6 @@
           userFriendIdBadge.textContent = `ID: ${myFriendId}`;
           lblMyFriendId.textContent = myFriendId;
 
-          // オンラインハートビート開始（ログイン成功後にのみ実行）
           startHeartbeat();
           listenIncomingMatchInvites();
           listenFriendRequests();
@@ -1117,6 +1114,7 @@
     // オンライン対戦システム
     // ==========================================
     let isVersusMatch = false;
+    let isRoomHost = false; // ホストかゲストかを保持
     let vsRoomId = null;
     let vsRoomUnsub = null;
     let vsTargetFriend = null;
@@ -1361,7 +1359,7 @@
 
         if (isVersusMatch) {
           const oppPos = isHost ? room.guestPos : room.hostPos;
-          if (oppPos) {
+          if (oppPos && opponentMesh) {
             opponentMesh.visible = true;
             opponentMesh.position.set(oppPos.x, oppPos.y + 0.5, oppPos.z);
           }
@@ -1381,14 +1379,15 @@
 
     function startVersusMatch(stageData, isHost) {
       isVersusMatch = true;
+      isRoomHost = isHost;
       opponentFinished = false;
       opponentClearTime = null;
 
-      cubeMesh.material.color.setHex(0x38bdf8);
+      cubeMesh.material.color.setHex(0x38bdf8); // 自分は青
       if (!opponentMesh) {
         const oppGeo = new THREE.BoxGeometry(1, 1, 1);
         const oppMat = new THREE.MeshStandardMaterial({
-          color: 0xef4444,
+          color: 0xef4444, // 相手は赤
           transparent: true,
           opacity: 0.55,
           roughness: 0.2
@@ -1402,8 +1401,8 @@
     }
 
     function syncMyVersusPosition() {
-      if (!isVersusMatch || !vsRoomId || !db) return;
-      const posField = (activeStage.hostUid === currentUser.uid) ? "hostPos" : "guestPos";
+      if (!isVersusMatch || !vsRoomId || !db || !currentUser) return;
+      const posField = isRoomHost ? "hostPos" : "guestPos";
       db.collection("versus_rooms").doc(vsRoomId).update({
         [posField]: { x: cubePos.x, y: cubePos.y, z: cubePos.z }
       }).catch(() => {});
@@ -1596,6 +1595,7 @@
     };
 
     document.getElementById('btn-editor-back').onclick = () => {
+      exitRouteDrawingMode();
       editorGroup.visible = false;
       modalEditorSlots.classList.remove('hidden');
       loadEditorSlotsList();
@@ -1689,7 +1689,6 @@
     const modalPause = document.getElementById('modal-pause');
     const selectPauseCp = document.getElementById('select-pause-checkpoint');
 
-    // ★修正: switchScreen 関数内で安全に要素の表示・非表示を制御
     function switchScreen(screen) {
       [screenTitle, screenModes, screenStages].forEach(s => s?.classList.add('hidden'));
       editorUiContainer?.classList.add('hidden');
@@ -1905,6 +1904,29 @@
       return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
     }
 
+    // 経由地番号マーカーマテリアルの作成（エディター限定の半透明数字）
+    function createWaypointMarkerMaterial(number) {
+      const cv = document.createElement('canvas');
+      cv.width = 128; cv.height = 128;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#6366f1';
+      ctx.beginPath();
+      ctx.arc(64, 64, 54, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 56px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(number.toString(), 64, 64);
+
+      const tex = new THREE.CanvasTexture(cv);
+      return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+    }
+
     let cubePos = { x: 0, y: 0, z: 0 };
     const cubeMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
@@ -1934,6 +1956,53 @@
     let editorBlocks = new Map();
     let editorMeshMap = new Map();
     let selectedPalette = 1;
+
+    // 直接グリッド描画モード管理
+    let isDrawingRouteMode = false;
+    let activeRouteEditKey = null;
+
+    const routeEditingStatus = document.getElementById('route-editing-status');
+    const btnFinishRouteEdit = document.getElementById('btn-finish-route-edit');
+
+    function enterRouteDrawingMode(key) {
+      isDrawingRouteMode = true;
+      activeRouteEditKey = key;
+      routeEditingStatus.style.display = 'inline';
+      btnFinishRouteEdit.style.display = 'inline';
+      highlightEditingBlock(key);
+      rebuildPathVisuals();
+    }
+
+    function exitRouteDrawingMode() {
+      isDrawingRouteMode = false;
+      activeRouteEditKey = null;
+      routeEditingStatus.style.display = 'none';
+      btnFinishRouteEdit.style.display = 'none';
+      unhighlightEditingBlocks();
+      rebuildPathVisuals();
+    }
+
+    btnFinishRouteEdit.onclick = () => {
+      exitRouteDrawingMode();
+      triggerAutoSave();
+    };
+
+    function highlightEditingBlock(key) {
+      unhighlightEditingBlocks();
+      const mesh = editorMeshMap.get(key);
+      if (mesh) {
+        mesh.material.color = new THREE.Color(0x38bdf8);
+      }
+    }
+
+    function unhighlightEditingBlocks() {
+      editorBlocks.forEach((val, k) => {
+        if (val.type === 8) {
+          const m = editorMeshMap.get(k);
+          if (m) m.material.color = new THREE.Color(0x6366f1);
+        }
+      });
+    }
 
     let editorCamRadius = 35;
     let editorCamTheta = Math.PI / 4;
@@ -2029,6 +2098,7 @@
       });
     }
 
+    // エディター上でのみ表示される経由地番号つきルート可視化
     function rebuildPathVisuals() {
       while (pathVisualsGroup.children.length > 0) {
         const obj = pathVisualsGroup.children[0];
@@ -2037,45 +2107,39 @@
       }
 
       editorBlocks.forEach((val, key) => {
-        if (val.type === 8 && val.pathConfig && val.pathConfig.steps && val.pathConfig.steps.length > 0) {
+        if (val.type === 8 && val.pathConfig) {
           const [sx, sy, sz] = key.split(',').map(Number);
-          let cx = sx, cy = sy, cz = sz;
+          const waypoints = val.pathConfig.waypoints || [{ x: sx, y: sy, z: sz }];
 
-          val.pathConfig.steps.forEach((step, idx) => {
-            let nx = cx, ny = cy, nz = cz;
-            if (step === 'UP') nz -= 1;
-            else if (step === 'DOWN') nz += 1;
-            else if (step === 'LEFT') nx -= 1;
-            else if (step === 'RIGHT') nx += 1;
-            else if (step === 'Y_UP') ny += 1;
-            else if (step === 'Y_DOWN') ny -= 1;
+          for (let i = 0; i < waypoints.length; i++) {
+            const wp = waypoints[i];
 
-            const tileGeo = new THREE.BoxGeometry(0.85, 0.05, 0.85);
-            const tileMat = new THREE.MeshBasicMaterial({
-              color: 0x818cf8,
-              transparent: true,
-              opacity: (ny === currentLayer) ? 0.45 : 0.15
-            });
-            const tile = new THREE.Mesh(tileGeo, tileMat);
-            tile.position.set(nx, ny - 0.05, nz);
-            pathVisualsGroup.add(tile);
+            // 経由地マーカー（番号付き円盤）
+            const markerGeo = new THREE.PlaneGeometry(0.7, 0.7);
+            const markerMat = createWaypointMarkerMaterial(i + 1);
+            const marker = new THREE.Mesh(markerGeo, markerMat);
+            marker.rotation.x = -Math.PI / 2;
+            marker.position.set(wp.x, wp.y + 0.05, wp.z);
+            pathVisualsGroup.add(marker);
 
-            const points = [
-              new THREE.Vector3(cx, cy + 0.1, cz),
-              new THREE.Vector3(nx, ny + 0.1, nz)
-            ];
-            const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-            const lineMat = new THREE.LineBasicMaterial({
-              color: 0x38bdf8,
-              transparent: true,
-              opacity: (ny === currentLayer) ? 0.8 : 0.25,
-              linewidth: 2
-            });
-            const line = new THREE.Line(lineGeo, lineMat);
-            pathVisualsGroup.add(line);
-
-            cx = nx; cy = ny; cz = nz;
-          });
+            // 経由地を結ぶライン
+            if (i > 0) {
+              const prevWp = waypoints[i - 1];
+              const points = [
+                new THREE.Vector3(prevWp.x, prevWp.y + 0.05, prevWp.z),
+                new THREE.Vector3(wp.x, wp.y + 0.05, wp.z)
+              ];
+              const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+              const lineMat = new THREE.LineBasicMaterial({
+                color: (key === activeRouteEditKey) ? 0xfacc15 : 0x38bdf8,
+                transparent: true,
+                opacity: 0.8,
+                linewidth: 3
+              });
+              const line = new THREE.Line(lineGeo, lineMat);
+              pathVisualsGroup.add(line);
+            }
+          }
         }
       });
     }
@@ -2102,12 +2166,10 @@
         if (wasCheckpoint) sanitizeCheckpointIndices();
       } else {
         let cNum = null;
-        if (type === 6) {
-          cNum = cpIndex || (countCheckpoints() + 1);
-        }
+        if (type === 6) cNum = cpIndex || (countCheckpoints() + 1);
 
         const color = (type === 1 || type === 5) ? (blockColor || inputBlockColor.value) : null;
-        const pCfg = (type === 8) ? (pathConfig || { steps: ['RIGHT', 'RIGHT'], speed: 0.035 }) : null;
+        const pCfg = (type === 8) ? (pathConfig || { waypoints: [{ x, y, z }], speed: 0.035 }) : null;
 
         const data = {
           type,
@@ -2183,6 +2245,7 @@
 
     document.querySelectorAll('.palette-btn').forEach(btn => {
       btn.onclick = () => {
+        exitRouteDrawingMode();
         document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedPalette = parseInt(btn.dataset.type, 10);
@@ -2192,6 +2255,7 @@
     });
 
     document.getElementById('btn-clear-editor').onclick = () => {
+      exitRouteDrawingMode();
       editorBlocks.forEach((_, k) => {
         const [x, y, z] = k.split(',').map(Number);
         setEditorTile(x, y, z, 0, null, null, true);
@@ -2255,21 +2319,20 @@
     document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
 
     let editingPathKey = null;
-    let tempPathSteps = [];
+    let tempWaypoints = [];
     const modalPath = document.getElementById('modal-path-mover');
     const pathStepsList = document.getElementById('path-steps-list');
 
     function renderPathStepsUI() {
       pathStepsList.innerHTML = '';
-      if (tempPathSteps.length === 0) {
-        pathStepsList.innerHTML = '<span style="color:#64748b; font-size:12px;">ステップが設定されていません</span>';
+      if (tempWaypoints.length <= 1) {
+        pathStepsList.innerHTML = '<span style="color:#64748b; font-size:12px;">経由地がまだありません（グリッドをクリックして直接描画できます）</span>';
         return;
       }
-      const dirLabels = { UP: '↑(奥)', DOWN: '↓(手前)', LEFT: '←(左)', RIGHT: '→(右)', Y_UP: '▲(上)', Y_DOWN: '▼(下)' };
-      tempPathSteps.forEach((step, idx) => {
+      tempWaypoints.forEach((wp, idx) => {
         const pill = document.createElement('div');
         pill.className = 'route-step-pill';
-        pill.textContent = `${idx + 1}. ${dirLabels[step] || step}`;
+        pill.textContent = `${idx === 0 ? '始点' : `経由地 ${idx}`}: (${wp.x}, ${wp.y}, ${wp.z})`;
         pathStepsList.appendChild(pill);
       });
     }
@@ -2278,35 +2341,40 @@
       editingPathKey = key;
       const b = editorBlocks.get(key);
       if (b && b.pathConfig) {
-        tempPathSteps = [...(b.pathConfig.steps || [])];
+        tempWaypoints = [...(b.pathConfig.waypoints || [])];
         document.getElementById('modal-path-speed').value = b.pathConfig.speed || 0.035;
         renderPathStepsUI();
         modalPath.classList.remove('hidden');
       }
     }
 
-    document.querySelectorAll('.btn-add-step').forEach(btn => {
-      btn.onclick = () => {
-        if (tempPathSteps.length >= 24) { alert("ルートは最大24ステップまでです。"); return; }
-        tempPathSteps.push(btn.dataset.dir);
-        renderPathStepsUI();
-      };
-    });
+    document.getElementById('btn-draw-grid-route').onclick = () => {
+      modalPath.classList.add('hidden');
+      if (editingPathKey) enterRouteDrawingMode(editingPathKey);
+    };
 
     document.getElementById('btn-pop-step').onclick = () => {
-      tempPathSteps.pop();
-      renderPathStepsUI();
+      if (tempWaypoints.length > 1) {
+        tempWaypoints.pop();
+        renderPathStepsUI();
+        const b = editorBlocks.get(editingPathKey);
+        if (b) { b.pathConfig.waypoints = [...tempWaypoints]; rebuildPathVisuals(); }
+      }
     };
 
     document.getElementById('btn-clear-path').onclick = () => {
-      tempPathSteps = [];
-      renderPathStepsUI();
+      if (tempWaypoints.length > 0) {
+        tempWaypoints = [tempWaypoints[0]];
+        renderPathStepsUI();
+        const b = editorBlocks.get(editingPathKey);
+        if (b) { b.pathConfig.waypoints = [...tempWaypoints]; rebuildPathVisuals(); }
+      }
     };
 
     document.getElementById('modal-path-save').onclick = () => {
       if (editingPathKey && editorBlocks.has(editingPathKey)) {
         const b = editorBlocks.get(editingPathKey);
-        b.pathConfig.steps = [...tempPathSteps];
+        b.pathConfig.waypoints = [...tempWaypoints];
         b.pathConfig.speed = parseFloat(document.getElementById('modal-path-speed').value);
         rebuildPathVisuals();
         triggerAutoSave();
@@ -2371,6 +2439,7 @@
     document.getElementById('cp-modal-cancel').onclick = () => modalCp.classList.add('hidden');
 
     document.getElementById('btn-test-custom').onclick = () => {
+      exitRouteDrawingMode();
       const data = exportStageData();
       if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
       if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
@@ -2415,7 +2484,7 @@
       const dy = e.clientY - prevMouse.y;
       prevMouse = { x: e.clientX, y: e.clientY };
 
-      if (isLeftDown && !e.target.closest('#editor-ui-container, .modal-dialog')) {
+      if (isLeftDown && !isDrawingRouteMode && !e.target.closest('#editor-ui-container, .modal-dialog')) {
         handleEditorClick(e);
       }
 
@@ -2464,6 +2533,27 @@
         const tz = Math.floor(pt.z + 0.5);
         if (tx >= 0 && tx < gridSize && tz >= 0 && tz < gridSize) {
           const key = `${tx},${currentLayer},${tz}`;
+
+          // グリッド直接ルート描画モード中
+          if (isDrawingRouteMode) {
+            if (activeRouteEditKey && editorBlocks.has(activeRouteEditKey)) {
+              const b = editorBlocks.get(activeRouteEditKey);
+              if (!b.pathConfig.waypoints) {
+                const [sx, sy, sz] = activeRouteEditKey.split(',').map(Number);
+                b.pathConfig.waypoints = [{ x: sx, y: sy, z: sz }];
+              }
+              const wps = b.pathConfig.waypoints;
+              const last = wps[wps.length - 1];
+              if (last.x !== tx || last.y !== currentLayer || last.z !== tz) {
+                wps.push({ x: tx, y: currentLayer, z: tz });
+                rebuildPathVisuals();
+                triggerAutoSave();
+              }
+            }
+            return;
+          }
+
+          // 通常エディット
           if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) {
             openMoverModal(key);
           } else if (selectedPalette === 8 && editorBlocks.has(key) && editorBlocks.get(key).type === 8) {
@@ -2472,12 +2562,16 @@
             openCpModal(key);
           } else {
             setEditorTile(tx, currentLayer, tz, selectedPalette, null, null, false, inputBlockColor.value);
+            if (selectedPalette === 8) {
+              enterRouteDrawingMode(key);
+            }
           }
         }
       }
     }
 
     function loadStageIntoEditor(stage) {
+      exitRouteDrawingMode();
       editorBlocks.forEach((_, k) => {
         const [x, y, z] = k.split(',').map(Number);
         setEditorTile(x, y, z, 0, null, null, true);
@@ -2490,7 +2584,7 @@
       if (stage.movers) {
         stage.movers.forEach(m => {
           if (m.isPathMover) {
-            setEditorTile(m.x, m.y, m.z, 8, null, null, true, null, { steps: m.steps, speed: m.speed });
+            setEditorTile(m.x, m.y, m.z, 8, null, null, true, null, { waypoints: m.waypoints || [{ x: m.x, y: m.y, z: m.z }], speed: m.speed });
           } else {
             setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }, null, true);
           }
@@ -2581,17 +2675,7 @@
             mesh.receiveShadow = true;
             tilesGroup.add(mesh);
 
-            const waypoints = [{ x: m.x, y: m.y, z: m.z }];
-            let curX = m.x, curY = m.y, curZ = m.z;
-            (m.steps || []).forEach(step => {
-              if (step === 'UP') curZ -= 1;
-              else if (step === 'DOWN') curZ += 1;
-              else if (step === 'LEFT') curX -= 1;
-              else if (step === 'RIGHT') curX += 1;
-              else if (step === 'Y_UP') curY += 1;
-              else if (step === 'Y_DOWN') curY -= 1;
-              waypoints.push({ x: curX, y: curY, z: curZ });
-            });
+            const waypoints = (m.waypoints && m.waypoints.length > 0) ? m.waypoints : [{ x: m.x, y: m.y, z: m.z }];
 
             activeMovers.push({
               isPathMover: true,
@@ -2703,20 +2787,50 @@
       return list.find(s => Math.abs(s.surfaceY - nearY) <= 0.6) || list[0] || null;
     }
 
+    // 直方体の挟まれ判定 & 階段昇降処理
     function findTargetSurface(curX, curZ, curY, tx, tz) {
       const currentLevelY = Math.round(curY);
+      const dx = tx - curX;
+      const dz = tz - curZ;
 
-      if (isSolidAt(tx, tz, currentLevelY)) {
-        return { blocked: true };
-      }
+      // 1. 直方体に挟まれているか判定（左右に直方体がある場合）
+      const hasSolidAtTarget = isSolidAt(tx, tz, currentLevelY);
+      let isPinched = false;
 
-      if (isSolidAt(tx, tz, currentLevelY + 1)) {
-        const surfaces = getAllSurfacesAt(tx, tz);
-        if (!surfaces.some(s => s.surfaceY <= curY + 0.2)) {
-          return { blocked: true };
+      if (dx !== 0) { // X軸移動時、両側に直方体があるか
+        if (isSolidAt(curX - 1, curZ, currentLevelY) && isSolidAt(curX + 1, curZ, currentLevelY)) {
+          isPinched = true;
+        }
+      } else if (dz !== 0) { // Z軸移動時、前後両側に直方体があるか
+        if (isSolidAt(curX, curZ - 1, currentLevelY) && isSolidAt(curX, curZ + 1, currentLevelY)) {
+          isPinched = true;
         }
       }
 
+      // 挟まれている場合は進めない
+      if (isPinched && hasSolidAtTarget) {
+        return { blocked: true };
+      }
+
+      // 2. 挟まれておらず、進行先が直方体（Type 5）の場合:
+      // その直方体の上面が空いていれば、階段のように登れるようにする
+      if (hasSolidAtTarget) {
+        const targetTopY = currentLevelY + 1;
+        // 上に乗れるかチェック（上に直方体がないこと）
+        if (!isSolidAt(tx, tz, targetTopY)) {
+          return {
+            dy: 1,
+            targetY: targetTopY,
+            type: 5,
+            surfaceY: targetTopY,
+            mover: null
+          };
+        } else {
+          return { blocked: true }; // 2段以上の壁は登れない
+        }
+      }
+
+      // 3. 通常のサーフェス判定
       const surfaces = getAllSurfacesAt(tx, tz);
       let best = null;
       let minDiff = 999;
@@ -2895,7 +3009,7 @@
             const clearTimeStr = formatTime(finalTimeMs);
 
             if (isVersusMatch) {
-              const timeField = (activeStage.hostUid === currentUser.uid) ? "hostClearTime" : "guestClearTime";
+              const timeField = isRoomHost ? "hostClearTime" : "guestClearTime";
               db.collection("versus_rooms").doc(vsRoomId).update({ [timeField]: finalTimeMs });
 
               let resultMsg = `🎉 ゴールしました！\nタイム: ${clearTimeStr}\n\n`;
