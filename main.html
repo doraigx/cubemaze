@@ -76,7 +76,7 @@
       transform: translateY(-1px);
     }
 
-    input[type="text"] {
+    input[type="text"], input[type="number"] {
       cursor: text;
       background-color: #1e293b;
       border: 1px solid #38bdf8;
@@ -146,6 +146,7 @@
     .p-start { background: #06b6d4; color: #000; }
     .p-mover { background: #a855f7; color: #fff; }
     .p-checkpoint { background: #ec4899; color: #fff; }
+    .p-fallfloor { background: #f97316; color: #fff; }
 
     .modal-dialog {
       position: absolute;
@@ -354,9 +355,9 @@
   <div id="editor-ui-container" class="hidden">
     <div class="editor-bar">
       <span style="font-weight: bold; color: #ffffff;">ステージ名:</span>
-      <input type="text" id="input-editor-stage-name" placeholder="ステージ名" style="width: 140px; text-align: left; padding: 4px 8px; font-size: 0.85rem;" maxlength="20">
+      <input type="text" id="input-editor-stage-name" placeholder="ステージ名" style="width: 130px; text-align: left; padding: 4px 8px; font-size: 0.85rem;" maxlength="20">
 
-      <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">サイズ:</span>
+      <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">サイズ:</span>
       <select id="select-grid-size">
         <option value="16">16 × 16</option>
         <option value="32" selected>32 × 32</option>
@@ -364,20 +365,21 @@
         <option value="64">64 × 64</option>
       </select>
 
-      <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">階層(Y):</span>
+      <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">階層(Y):</span>
       <button id="btn-layer-down">▼</button>
       <span id="label-layer" style="min-width: 45px; text-align: center; color: #38bdf8; font-weight: bold;">Y: 0</span>
       <button id="btn-layer-up">▲</button>
 
-      <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">視点回転:</span>
+      <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">視点回転:</span>
       <button id="btn-rot-left" style="background:#475569;">⟲ 90°</button>
       <button id="btn-rot-right" style="background:#475569;">90° ⟳</button>
 
-      <span style="font-weight: bold; color: #ffffff; margin-left: 8px;">パーツ:</span>
+      <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">パーツ:</span>
       <button class="palette-btn p-floor active" data-type="1">薄い床</button>
       <button class="palette-btn p-full" data-type="5">直方体</button>
       <button class="palette-btn p-mover" data-type="4">動く床</button>
       <button class="palette-btn p-checkpoint" data-type="6">セーブ</button>
+      <button class="palette-btn p-fallfloor" data-type="7">落下床</button>
       <button class="palette-btn p-start" data-type="3">スタート</button>
       <button class="palette-btn p-goal" data-type="2">ゴール</button>
       <button class="palette-btn p-empty" data-type="0">消去</button>
@@ -386,13 +388,19 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
         左ドラッグ: 配置 / 削除<br>
-        右ドラッグ: 平行移動 / ホイール回転(中ボタン): 自由視点回転<br>
-        ホイールスクロール: ズーム / 「動く床」クリックで設定
+        「セーブ」「動く床」クリックで設定変更<br>
+        右ドラッグ: 平行移動 / ホイール回転: 自由視点回転
       </div>
       <div class="editor-bar">
         <button id="btn-save-current-slot" style="background:#059669;">スロット上書き保存</button>
         <button id="btn-online-publish" style="background:#e11d48;">ネットに投稿</button>
+
+        <span style="font-weight:bold; font-size:12px; margin-left:4px;">テスト開始:</span>
+        <select id="select-test-spawn" style="background:#1e293b; border:1px solid #38bdf8;">
+          <option value="default">スタート地点(S)</option>
+        </select>
         <button id="btn-test-custom" style="background:#2563eb;">テストプレイ</button>
+
         <button id="btn-clear-editor" style="background:#dc2626;">全消去</button>
         <button id="btn-editor-back">スロット選択へ戻る</button>
       </div>
@@ -432,6 +440,18 @@
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
       <button id="modal-save" style="background: #0284c7;">決定</button>
       <button id="modal-cancel">閉じる</button>
+    </div>
+  </div>
+
+  <!-- セーブ地点設定ポップアップ -->
+  <div id="modal-checkpoint" class="modal-dialog hidden">
+    <h3 style="margin: 0;">セーブ地点の設定</h3>
+    <label>セーブ番号:
+      <input type="number" id="cp-number-input" min="1" max="99" value="1" style="width: 80px;">
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="cp-modal-save" style="background: #0284c7;">決定</button>
+      <button id="cp-modal-cancel">閉じる</button>
     </div>
   </div>
 
@@ -486,13 +506,11 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
-    // 右クリックメニューの無効化
     window.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       return false;
     }, { passive: false });
 
-    // 不要なドラッグ・コピペ防止
     window.addEventListener('dragstart', (e) => { e.preventDefault(); });
     window.addEventListener('copy', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
     window.addEventListener('cut', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
@@ -765,6 +783,7 @@
 
       camera.position.copy(editorCamPos);
       camera.lookAt(editorCamTarget);
+      updateTestSpawnOptions();
     }
 
     async function loadEditorSlotsList() {
@@ -848,7 +867,9 @@
       switchScreen('MODES');
     };
 
-    const MAX_HEIGHT = 8;
+    // -5 ～ +10 に階層範囲を拡張
+    const MIN_HEIGHT = -5;
+    const MAX_HEIGHT = 10;
     let gridSize = 32;
     let currentLayer = 0;
 
@@ -861,11 +882,12 @@
         blocks: [
           { x: 0, y: 0, z: 0, type: 3 },
           { x: 1, y: 0, z: 0, type: 1 },
-          { x: 2, y: 0, z: 0, type: 6 },
-          { x: 3, y: 0, z: 0, type: 5 },
-          { x: 4, y: 1, z: 0, type: 5 },
-          { x: 5, y: 2, z: 0, type: 1 },
-          { x: 5, y: 2, z: 1, type: 2 }
+          { x: 2, y: 0, z: 0, type: 6, cpIndex: 1 },
+          { x: 3, y: 0, z: 0, type: 7 },
+          { x: 4, y: 0, z: 0, type: 5 },
+          { x: 5, y: 1, z: 0, type: 5 },
+          { x: 6, y: 2, z: 0, type: 1 },
+          { x: 6, y: 2, z: 1, type: 2 }
         ],
         movers: []
       },
@@ -877,11 +899,12 @@
         blocks: [
           { x: 0, y: 0, z: 0, type: 3 },
           { x: 1, y: 0, z: 0, type: 1 },
+          { x: 2, y: 0, z: 0, type: 7 },
           { x: 6, y: 0, z: 0, type: 1 },
           { x: 7, y: 0, z: 0, type: 2 }
         ],
         movers: [
-          { x: 2, y: 0, z: 0, dir: 'Y_UP', dist: 3, speed: 0.03 }
+          { x: 3, y: 0, z: 0, dir: 'RIGHT', dist: 2, speed: 0.03 }
         ]
       }
     };
@@ -929,6 +952,7 @@
           hudQuit.classList.add('hidden');
           hudBackEditor.classList.add('hidden');
           editorUiContainer.classList.remove('hidden');
+          updateTestSpawnOptions();
         } else {
           userBar.classList.remove('hidden');
           hudQuit.classList.add('hidden');
@@ -1033,7 +1057,34 @@
     const matGoal = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
     const matStart = new THREE.MeshLambertMaterial({ color: 0x06b6d4 });
     const matMover = new THREE.MeshLambertMaterial({ color: 0xa855f7 });
-    const matCheckpoint = new THREE.MeshLambertMaterial({ color: 0xec4899 });
+    const matFallFloor = new THREE.MeshLambertMaterial({ color: 0xf97316 });
+
+    // チェックポイントの数字付きマテリアル作成
+    function createCheckpointMaterials(number = 1) {
+      const cv = document.createElement('canvas');
+      cv.width = 128;
+      cv.height = 128;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#ec4899';
+      ctx.fillRect(0, 0, 128, 128);
+
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = '#ffffff';
+      ctx.strokeRect(4, 4, 120, 120);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 64px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(number.toString(), 64, 64);
+
+      const tex = new THREE.CanvasTexture(cv);
+      const topMat = new THREE.MeshLambertMaterial({ map: tex });
+      const sideMat = new THREE.MeshLambertMaterial({ color: 0xec4899 });
+
+      // BoxGeometry: [+X, -X, +Y(上面), -Y, +Z, -Z]
+      return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
+    }
 
     let cubePos = { x: 0, y: 0, z: 0 };
     const cubeMesh = new THREE.Mesh(
@@ -1050,6 +1101,7 @@
     const tilesGroup = new THREE.Group();
     scene.add(tilesGroup);
     let activeMovers = [];
+    let activeFallingFloors = [];
 
     const editorGroup = new THREE.Group();
     scene.add(editorGroup);
@@ -1112,16 +1164,25 @@
       }
       editorMeshMap.forEach((mesh, key) => {
         const y = parseInt(key.split(',')[1], 10);
-        mesh.material.transparent = true;
-        mesh.material.opacity = (y === currentLayer) ? 1.0 : 0.35;
+        const isCurrent = (y === currentLayer);
+        const targetOpacity = isCurrent ? 1.0 : 0.35;
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(m => {
+            m.transparent = true;
+            m.opacity = targetOpacity;
+          });
+        } else {
+          mesh.material.transparent = true;
+          mesh.material.opacity = targetOpacity;
+        }
       });
     }
 
     document.getElementById('btn-layer-up').onclick = () => {
-      if (currentLayer < MAX_HEIGHT - 1) { currentLayer++; updateLayerDisplay(); }
+      if (currentLayer < MAX_HEIGHT) { currentLayer++; updateLayerDisplay(); }
     };
     document.getElementById('btn-layer-down').onclick = () => {
-      if (currentLayer > 0) { currentLayer--; updateLayerDisplay(); }
+      if (currentLayer > MIN_HEIGHT) { currentLayer--; updateLayerDisplay(); }
     };
 
     document.getElementById('select-grid-size').onchange = (e) => {
@@ -1132,7 +1193,18 @@
       updateEditorCamPos();
     };
 
-    function setEditorTile(x, y, z, type, moverConfig = null) {
+    // 自動セーブ番号の取得
+    function getNextCheckpointNumber() {
+      let maxNum = 0;
+      editorBlocks.forEach(val => {
+        if (val.type === 6 && val.cpIndex) {
+          if (val.cpIndex > maxNum) maxNum = val.cpIndex;
+        }
+      });
+      return maxNum + 1;
+    }
+
+    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null) {
       const key = `${x},${y},${z}`;
 
       if (type === 3) {
@@ -1151,27 +1223,75 @@
           editorMeshMap.delete(key);
         }
       } else {
-        const data = { type, moverConfig: moverConfig || (type === 4 ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null) };
+        const cNum = (type === 6) ? (cpIndex || getNextCheckpointNumber()) : null;
+        const data = {
+          type,
+          moverConfig: moverConfig || (type === 4 ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null),
+          cpIndex: cNum
+        };
         editorBlocks.set(key, data);
 
         if (editorMeshMap.has(key)) editorGroup.remove(editorMeshMap.get(key));
 
         let geo = (type === 5) ? fullBlockGeo : thinTileGeo;
         let m = matFloor.clone();
+        let isMultiMat = false;
+
         if (type === 5) m = matFull.clone();
-        if (type === 2) m = matGoal.clone();
-        if (type === 3) m = matStart.clone();
-        if (type === 4) m = matMover.clone();
-        if (type === 6) m = matCheckpoint.clone();
+        else if (type === 2) m = matGoal.clone();
+        else if (type === 3) m = matStart.clone();
+        else if (type === 4) m = matMover.clone();
+        else if (type === 7) m = matFallFloor.clone();
+        else if (type === 6) {
+          m = createCheckpointMaterials(cNum);
+          isMultiMat = true;
+        }
 
         const mesh = new THREE.Mesh(geo, m);
         const yOffset = (type === 5) ? 0.5 : -0.1;
         mesh.position.set(x, y + yOffset, z);
-        mesh.material.transparent = true;
-        mesh.material.opacity = (y === currentLayer) ? 1.0 : 0.35;
+
+        const isCurrent = (y === currentLayer);
+        if (isMultiMat) {
+          mesh.material.forEach(mat => {
+            mat.transparent = true;
+            mat.opacity = isCurrent ? 1.0 : 0.35;
+          });
+        } else {
+          mesh.material.transparent = true;
+          mesh.material.opacity = isCurrent ? 1.0 : 0.35;
+        }
+
         editorGroup.add(mesh);
         editorMeshMap.set(key, mesh);
       }
+      updateTestSpawnOptions();
+    }
+
+    // テストプレイ時の開始位置セレクトボックスの更新
+    function updateTestSpawnOptions() {
+      const select = document.getElementById('select-test-spawn');
+      if (!select) return;
+      const prevVal = select.value;
+      select.innerHTML = '<option value="default">スタート地点(S)</option>';
+
+      const checkpoints = [];
+      editorBlocks.forEach((val, key) => {
+        if (val.type === 6) {
+          checkpoints.push({ key, cpIndex: val.cpIndex || 1 });
+        }
+      });
+
+      checkpoints.sort((a, b) => a.cpIndex - b.cpIndex);
+      checkpoints.forEach(cp => {
+        const opt = document.createElement('option');
+        opt.value = cp.key;
+        opt.textContent = `セーブ ${cp.cpIndex}`;
+        select.appendChild(opt);
+      });
+
+      select.value = prevVal;
+      if (!select.value) select.value = 'default';
     }
 
     document.querySelectorAll('.palette-btn').forEach(btn => {
@@ -1203,7 +1323,7 @@
         if (val.type === 4) {
           movers.push({ x, y, z, ...val.moverConfig });
         } else {
-          blocks.push({ x, y, z, type: val.type });
+          blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex });
         }
       });
 
@@ -1240,12 +1360,45 @@
     };
     document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
 
+    // チェックポイント設定モーダル
+    let editingCpKey = null;
+    const modalCp = document.getElementById('modal-checkpoint');
+    const inputCpNumber = document.getElementById('cp-number-input');
+
+    function openCpModal(key) {
+      editingCpKey = key;
+      const b = editorBlocks.get(key);
+      if (b) {
+        inputCpNumber.value = b.cpIndex || 1;
+        modalCp.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('cp-modal-save').onclick = () => {
+      if (editingCpKey && editorBlocks.has(editingCpKey)) {
+        const [x, y, z] = editingCpKey.split(',').map(Number);
+        const newNum = parseInt(inputCpNumber.value, 10) || 1;
+        setEditorTile(x, y, z, 6, null, newNum);
+      }
+      modalCp.classList.add('hidden');
+    };
+    document.getElementById('cp-modal-cancel').onclick = () => modalCp.classList.add('hidden');
+
+    // 指定位置からのテストプレイ開始
     document.getElementById('btn-test-custom').onclick = () => {
       const data = exportStageData();
       if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
       if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
       editorGroup.visible = false;
-      startPlay({ ...data, author: currentUsername }, true);
+
+      const spawnChoice = document.getElementById('select-test-spawn').value;
+      let startPoint = null;
+      if (spawnChoice !== 'default' && editorBlocks.has(spawnChoice)) {
+        const [cx, cy, cz] = spawnChoice.split(',').map(Number);
+        startPoint = { x: cx, y: cy, z: cz };
+      }
+
+      startPlay({ ...data, author: currentUsername }, true, startPoint);
     };
 
     const raycaster = new THREE.Raycaster();
@@ -1261,12 +1414,12 @@
         isLeftDown = true;
         handleEditorClick(e);
       } else if (e.button === 1) {
-        isMiddleDown = true; // ホイールクリックによる視点回転
+        isMiddleDown = true;
       } else if (e.button === 2) {
         if (e.shiftKey) {
-          isMiddleDown = true; // Shift+右クリックでも回転
+          isMiddleDown = true;
         } else {
-          isRightDown = true;  // 右クリックドラッグで平行移動
+          isRightDown = true;
         }
       }
       prevMouse = { x: e.clientX, y: e.clientY };
@@ -1307,7 +1460,6 @@
       isMiddleDown = false;
     });
 
-    // 通常のマウスホイール操作のみ（エディタ時のズームイン・ズームアウト）
     window.addEventListener('wheel', (e) => {
       if (gameState === 'EDITOR') {
         e.preventDefault();
@@ -1331,6 +1483,8 @@
           const key = `${tx},${currentLayer},${tz}`;
           if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) {
             openMoverModal(key);
+          } else if (selectedPalette === 6 && editorBlocks.has(key) && editorBlocks.get(key).type === 6) {
+            openCpModal(key);
           } else {
             setEditorTile(tx, currentLayer, tz, selectedPalette);
           }
@@ -1347,17 +1501,18 @@
       document.getElementById('select-grid-size').value = gridSize;
       buildEditorGrid();
 
-      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type));
+      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex));
       if (stage.movers) {
         stage.movers.forEach(m => setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }));
       }
       if (stage.spawn) setEditorTile(stage.spawn.x, stage.spawn.y, stage.spawn.z, 3);
       updateLayerDisplay();
+      updateTestSpawnOptions();
     }
 
     let currentCheckpoint = null;
 
-    function startPlay(stageData, testPlayMode = false) {
+    function startPlay(stageData, testPlayMode = false, overrideStart = null) {
       activeStage = stageData;
       isTestPlay = testPlayMode;
       currentCheckpoint = null;
@@ -1368,14 +1523,21 @@
       pivot.visible = true;
 
       buildPlayStage(stageData);
-      const spawnSurf = getTopSurfaceAt(stageData.spawn.x, stageData.spawn.z, stageData.spawn.y);
-      const startY = spawnSurf ? spawnSurf.surfaceY : stageData.spawn.y;
-      resetCubePosition(stageData.spawn.x, startY, stageData.spawn.z);
+
+      const targetStart = overrideStart || stageData.spawn;
+      const spawnSurf = getTopSurfaceAt(targetStart.x, targetStart.z, targetStart.y);
+      const startY = spawnSurf ? spawnSurf.surfaceY : targetStart.y;
+      resetCubePosition(targetStart.x, startY, targetStart.z);
+
+      if (overrideStart) {
+        currentCheckpoint = { x: targetStart.x, y: startY, z: targetStart.z };
+      }
     }
 
     function buildPlayStage(stage) {
       while (tilesGroup.children.length > 0) tilesGroup.remove(tilesGroup.children[0]);
       activeMovers = [];
+      activeFallingFloors = [];
 
       stage.blocks.forEach(b => {
         let geo = (b.type === 5) ? fullBlockGeo : thinTileGeo;
@@ -1383,13 +1545,26 @@
         if (b.type === 5) m = matFull;
         if (b.type === 2) m = matGoal;
         if (b.type === 3) m = matStart;
-        if (b.type === 6) m = matCheckpoint;
+        if (b.type === 7) m = matFallFloor.clone();
+        if (b.type === 6) m = createCheckpointMaterials(b.cpIndex || 1);
 
         const mesh = new THREE.Mesh(geo, m);
         const yOffset = (b.type === 5) ? 0.5 : -0.1;
         mesh.position.set(b.x, b.y + yOffset, b.z);
         mesh.receiveShadow = true;
         tilesGroup.add(mesh);
+
+        // 落下床 (Type 7) の個別管理
+        if (b.type === 7) {
+          activeFallingFloors.push({
+            x: b.x, y: b.y, z: b.z,
+            mesh: mesh,
+            state: 'IDLE', // IDLE -> COUNTING -> FALLING -> GONE
+            timer: 0,
+            fallVelocity: 0,
+            initialY: b.y - 0.1
+          });
+        }
       });
 
       if (stage.movers) {
@@ -1430,6 +1605,16 @@
       isFallingDown = false;
       fallVelocity = 0;
 
+      // 落下床の状態をリセット
+      activeFallingFloors.forEach(ff => {
+        ff.state = 'IDLE';
+        ff.timer = 0;
+        ff.fallVelocity = 0;
+        ff.mesh.position.y = ff.initialY;
+        ff.mesh.visible = true;
+        ff.mesh.material.color.setHex(0xf97316);
+      });
+
       cubePos = { x, y, z };
       pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
       pivot.rotation.set(0, 0, 0);
@@ -1457,8 +1642,13 @@
       const surfaces = [];
       activeStage.blocks.forEach(b => {
         if (b.x === x && b.z === z) {
+          if (b.type === 7) {
+            // 落下床が落下中または消失状態の場合は足場として判定しない
+            const ff = activeFallingFloors.find(f => f.x === b.x && f.y === b.y && f.z === b.z);
+            if (ff && (ff.state === 'FALLING' || ff.state === 'GONE')) return;
+          }
           if (b.type === 5) surfaces.push({ type: 5, mover: null, surfaceY: b.y + 1 });
-          else surfaces.push({ type: b.type, mover: null, surfaceY: b.y });
+          else surfaces.push({ type: b.type, mover: null, surfaceY: b.y, blockRef: b });
         }
       });
       activeMovers.forEach(m => {
@@ -1616,8 +1806,18 @@
 
           isRolling = false;
 
+          // セーブ地点の登録
           if (surface.type === 6) {
             currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
+          }
+
+          // 落下床 (Type 7) を踏んだ時のタイマースタート
+          if (surface.type === 7) {
+            const ff = activeFallingFloors.find(f => f.x === tx && f.y === Math.round(targetY) && f.z === tz);
+            if (ff && ff.state === 'IDLE') {
+              ff.state = 'COUNTING';
+              ff.timer = 0;
+            }
           }
 
           if (surface.isFall) {
@@ -1648,12 +1848,46 @@
       requestAnimationFrame(loop);
 
       if (gameState === 'PLAYING') {
+        // 落下床の更新（1秒後に落下）
+        activeFallingFloors.forEach(ff => {
+          if (ff.state === 'COUNTING') {
+            ff.timer += 1 / 60;
+            // 踏まれてから落下するまでの点滅演出
+            if (Math.floor(ff.timer * 8) % 2 === 0) {
+              ff.mesh.material.color.setHex(0xef4444);
+            } else {
+              ff.mesh.material.color.setHex(0xf97316);
+            }
+
+            if (ff.timer >= 1.0) { // 1秒経過で落下開始
+              ff.state = 'FALLING';
+              ff.fallVelocity = 0.05;
+
+              // 乗っていた場合キューブも落下状態に突入
+              const cx = Math.round(cubePos.x);
+              const cz = Math.round(cubePos.z);
+              if (cx === ff.x && cz === ff.z && Math.abs(cubePos.y - ff.y) <= 0.2 && !isRolling) {
+                isFallingDown = true;
+                fallVelocity = 0.05;
+              }
+            }
+          } else if (ff.state === 'FALLING') {
+            ff.fallVelocity += 0.03;
+            ff.mesh.position.y -= ff.fallVelocity;
+            if (ff.mesh.position.y < -15) {
+              ff.state = 'GONE';
+              ff.mesh.visible = false;
+            }
+          }
+        });
+
+        // 死亡判定（-10以下でリスポーン）
         if (isFallingDown) {
           fallVelocity += 0.03;
           cubePos.y -= fallVelocity;
           pivot.position.y = cubePos.y;
 
-          if (cubePos.y <= -5) {
+          if (cubePos.y <= -10) {
             respawnPlayer();
           }
         }
