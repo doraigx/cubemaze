@@ -753,6 +753,8 @@
       }
     };
 
+    // ★修正: userBar 変数を確実に取得定義
+    const userBar = document.getElementById('user-bar');
     const userStatusText = document.getElementById('user-status-text');
     const userFriendIdBadge = document.getElementById('user-friend-id-badge');
     const btnAuth = document.getElementById('btn-auth');
@@ -792,7 +794,7 @@
           userFriendIdBadge.textContent = `ID: ${myFriendId}`;
           lblMyFriendId.textContent = myFriendId;
 
-          // オンラインハートビート開始
+          // オンラインハートビート開始（ログイン成功後にのみ実行）
           startHeartbeat();
           listenIncomingMatchInvites();
           listenFriendRequests();
@@ -816,7 +818,6 @@
       }
     };
 
-    // オンラインハートビート管理 (サイトアクセス中オンライン、放置でオフライン)
     let heartbeatTimer = null;
     function startHeartbeat() {
       if (!currentUser || !db) return;
@@ -829,7 +830,7 @@
       };
       sendBeat();
       if (heartbeatTimer) clearInterval(heartbeatTimer);
-      heartbeatTimer = setInterval(sendBeat, 30000); // 30秒ごとに更新
+      heartbeatTimer = setInterval(sendBeat, 30000);
     }
 
     let currentAudio = new Audio();
@@ -985,7 +986,6 @@
       loadFriendsList();
     };
 
-    // フレンド申請送信
     document.getElementById('btn-send-friend-req').onclick = async () => {
       const searchId = document.getElementById('input-search-friend-id').value.trim().toUpperCase();
       if (!searchId || searchId.length !== 8) { alert("8桁のフレンドIDを入力してください。"); return; }
@@ -1010,12 +1010,11 @@
       }
     };
 
-    // 届いた申請の監視バッジ
     function listenFriendRequests() {
-      if (!currentUser) return;
+      if (!currentUser || !db) return;
       db.collection("users").doc(currentUser.uid).collection("friend_requests").onSnapshot(snap => {
         reqCountBadge.textContent = snap.size;
-      });
+      }, err => console.warn("friend_requests listener:", err.message));
     }
 
     async function loadFriendRequestsList() {
@@ -1042,7 +1041,6 @@
             </div>
           `;
           item.querySelector('.btn-accept-req').onclick = async () => {
-            // 相互フレンドに追加
             await db.collection("users").doc(currentUser.uid).collection("friends").doc(req.senderUid).set({
               uid: req.senderUid,
               name: req.senderName,
@@ -1087,7 +1085,7 @@
           let isOnline = false;
           if (userDoc.exists && userDoc.data().lastSeen) {
             const last = userDoc.data().lastSeen.toMillis();
-            if (now - last < 2 * 60 * 1000) isOnline = true; // 2分以内の通信でオンライン
+            if (now - last < 2 * 60 * 1000) isOnline = true;
           }
 
           const item = document.createElement('div');
@@ -1137,7 +1135,6 @@
     document.getElementById('btn-close-versus-menu').onclick = () => modalVersusMenu.classList.add('hidden');
     document.getElementById('btn-close-vs-pick').onclick = () => modalVsPickStage.classList.add('hidden');
 
-    // ランダムマッチ (公開コースからランダム)
     document.getElementById('btn-vs-random').onclick = async () => {
       try {
         const snap = await db.collection("stages").limit(20).get();
@@ -1151,7 +1148,6 @@
       }
     };
 
-    // コース指定マッチ
     document.getElementById('btn-vs-custom').onclick = () => {
       modalVersusMenu.classList.add('hidden');
       modalVsPickStage.classList.remove('hidden');
@@ -1313,7 +1309,6 @@
 
       vsRoomId = roomRef.id;
 
-      // 招待した相手へ通知送信
       await db.collection("users").doc(friend.uid).collection("versus_invites").doc(vsRoomId).set({
         roomId: vsRoomId,
         senderName: currentUsername,
@@ -1325,7 +1320,7 @@
 
     let currentIncomingInviteDoc = null;
     function listenIncomingMatchInvites() {
-      if (!currentUser) return;
+      if (!currentUser || !db) return;
       db.collection("users").doc(currentUser.uid).collection("versus_invites").onSnapshot(snap => {
         if (!snap.empty && !isVersusMatch) {
           const invite = snap.docs[0].data();
@@ -1333,7 +1328,7 @@
           incomingVsText.textContent = `${invite.senderName} からオンライン対戦の招待が届きました！`;
           modalIncomingVs.classList.remove('hidden');
         }
-      });
+      }, err => console.warn("versus_invites listener:", err.message));
     }
 
     document.getElementById('btn-accept-vs').onclick = async () => {
@@ -1364,7 +1359,6 @@
           startVersusMatch(room.stageData, isHost);
         }
 
-        // 相手の位置をリアルタイム同期
         if (isVersusMatch) {
           const oppPos = isHost ? room.guestPos : room.hostPos;
           if (oppPos) {
@@ -1372,7 +1366,6 @@
             opponentMesh.position.set(oppPos.x, oppPos.y + 0.5, oppPos.z);
           }
 
-          // 相手が先にクリアしたかの監視
           const oppTime = isHost ? room.guestClearTime : room.hostClearTime;
           if (oppTime && !opponentFinished) {
             opponentFinished = true;
@@ -1391,12 +1384,11 @@
       opponentFinished = false;
       opponentClearTime = null;
 
-      // 自分を青、相手を透明な赤に設定
-      cubeMesh.material.color.setHex(0x38bdf8); // 自分: 青
+      cubeMesh.material.color.setHex(0x38bdf8);
       if (!opponentMesh) {
         const oppGeo = new THREE.BoxGeometry(1, 1, 1);
         const oppMat = new THREE.MeshStandardMaterial({
-          color: 0xef4444, // 相手: 赤
+          color: 0xef4444,
           transparent: true,
           opacity: 0.55,
           roughness: 0.2
@@ -1659,7 +1651,6 @@
     let isPaused = false;
     let passedCheckpoints = new Map();
 
-    // タイマー管理
     let playStartTime = 0;
     let playElapsedTime = 0;
     let timerRunning = false;
@@ -1698,36 +1689,37 @@
     const modalPause = document.getElementById('modal-pause');
     const selectPauseCp = document.getElementById('select-pause-checkpoint');
 
+    // ★修正: switchScreen 関数内で安全に要素の表示・非表示を制御
     function switchScreen(screen) {
-      [screenTitle, screenModes, screenStages].forEach(s => s.classList.add('hidden'));
-      editorUiContainer.classList.add('hidden');
+      [screenTitle, screenModes, screenStages].forEach(s => s?.classList.add('hidden'));
+      editorUiContainer?.classList.add('hidden');
 
       if (screen === 'PLAYING') {
-        userBar.classList.add('hidden');
-        hudTopLeft.classList.remove('hidden');
-        hudPauseBtn.classList.remove('hidden');
+        userBar?.classList.add('hidden');
+        hudTopLeft?.classList.remove('hidden');
+        hudPauseBtn?.classList.remove('hidden');
 
         if (isMobileDevice) {
-          dpad.classList.remove('hidden');
+          dpad?.classList.remove('hidden');
           applyDpadSettings();
         }
       } else {
-        dpad.classList.add('hidden');
-        hudTopLeft.classList.add('hidden');
-        modalBgmPicker.classList.add('hidden');
-        hudPauseBtn.classList.add('hidden');
-        modalPause.classList.add('hidden');
+        dpad?.classList.add('hidden');
+        hudTopLeft?.classList.add('hidden');
+        modalBgmPicker?.classList.add('hidden');
+        hudPauseBtn?.classList.add('hidden');
+        modalPause?.classList.add('hidden');
 
         if (screen === 'EDITOR') {
-          userBar.classList.add('hidden');
-          editorUiContainer.classList.remove('hidden');
+          userBar?.classList.add('hidden');
+          editorUiContainer?.classList.remove('hidden');
           updateTestSpawnOptions();
           rebuildPathVisuals();
         } else {
-          userBar.classList.remove('hidden');
-          if (screen === 'MODES') screenModes.classList.remove('hidden');
-          else if (screen === 'TITLE') screenTitle.classList.remove('hidden');
-          else if (screen === 'STAGES') screenStages.classList.remove('hidden');
+          userBar?.classList.remove('hidden');
+          if (screen === 'MODES') screenModes?.classList.remove('hidden');
+          else if (screen === 'TITLE') screenTitle?.classList.remove('hidden');
+          else if (screen === 'STAGES') screenStages?.classList.remove('hidden');
         }
       }
     }
@@ -1774,7 +1766,6 @@
         selectPauseCp.value = 'start';
       }
 
-      // 対戦中はセーブポイント復帰を非表示
       document.getElementById('pause-cp-group').style.display = isVersusMatch ? 'none' : 'flex';
     }
 
@@ -2522,7 +2513,6 @@
       modalPause.classList.add('hidden');
       passedCheckpoints.clear();
 
-      // タイマーの初期化
       playStartTime = performance.now();
       playElapsedTime = 0;
       timerRunning = true;
@@ -2531,7 +2521,6 @@
       hudBestTime.textContent = formatTime(best);
       hudLiveTime.textContent = "00:00.00";
 
-      // 通常プレイ時は白、対戦時は青
       if (!isVersusMatch) {
         cubeMesh.material.color.setHex(0xffffff);
         if (opponentMesh) opponentMesh.visible = false;
@@ -2906,7 +2895,6 @@
             const clearTimeStr = formatTime(finalTimeMs);
 
             if (isVersusMatch) {
-              // 対戦時のゴール判定
               const timeField = (activeStage.hostUid === currentUser.uid) ? "hostClearTime" : "guestClearTime";
               db.collection("versus_rooms").doc(vsRoomId).update({ [timeField]: finalTimeMs });
 
@@ -2926,7 +2914,6 @@
               gameState = 'MODES';
               switchScreen('MODES');
             } else {
-              // 通常プレイのゴール
               let msg = `🎉 ステージクリア！おめでとうございます！\n\nタイム: ${clearTimeStr}\n自己ベスト: ${currentBestStr}`;
               if (isNewRecord) msg += "\n✨ NEW RECORD 更新！ ✨";
               alert(msg);
@@ -2951,13 +2938,11 @@
 
       if (gameState === 'PLAYING') {
         if (!isPaused) {
-          // タイム加算
           if (timerRunning) {
             playElapsedTime = performance.now() - playStartTime;
             hudLiveTime.textContent = formatTime(playElapsedTime);
           }
 
-          // 落下床更新
           activeFallingFloors.forEach(ff => {
             if (ff.state === 'COUNTING') {
               ff.timer += 1 / 60;
@@ -2985,7 +2970,6 @@
             }
           });
 
-          // 奈落落下死亡
           if (isFallingDown) {
             fallVelocity += 0.03;
             cubePos.y -= fallVelocity;
@@ -2995,7 +2979,6 @@
             if (cubePos.y <= -10) respawnPlayer();
           }
 
-          // 移動床の物理移動
           activeMovers.forEach(m => {
             let stepX = 0, stepY = 0, stepZ = 0;
 
