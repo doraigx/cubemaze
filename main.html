@@ -155,6 +155,7 @@
     .p-goal { background: #eab308; color: #000; }
     .p-start { background: #06b6d4; color: #000; }
     .p-mover { background: #a855f7; color: #fff; }
+    .p-path-mover { background: #6366f1; color: #fff; }
     .p-checkpoint { background: #ec4899; color: #fff; }
     .p-fallfloor { background: #f97316; color: #fff; }
 
@@ -212,16 +213,37 @@
       z-index: 15;
     }
 
-    #btn-bgm-trigger {
+    #hud-top-left {
       position: absolute;
       top: 15px;
       left: 15px;
-      z-index: 5;
+      z-index: 15;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    #btn-bgm-trigger {
       background: rgba(15, 23, 42, 0.75);
       border: 1px solid rgba(56, 189, 248, 0.4);
       padding: 6px 14px;
       font-size: 12px;
       border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+
+    #hud-timer-card {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 6px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
       backdrop-filter: blur(4px);
     }
 
@@ -257,6 +279,26 @@
       background: rgba(56, 189, 248, 0.5);
       transform: scale(0.92);
     }
+
+    .route-step-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #334155;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .status-online { background-color: #10b981; }
+    .status-offline { background-color: #64748b; }
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -267,6 +309,7 @@
 
   <div id="user-bar">
     <span id="user-status-text">未ログイン (ゲスト)</span>
+    <span id="user-friend-id-badge" style="color: #38bdf8; font-weight: bold; display: none;"></span>
     <button id="btn-auth" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">Googleログイン</button>
   </div>
 
@@ -274,7 +317,7 @@
   <div id="screen-title" class="screen">
     <h1>CUBE EDGE</h1>
     <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; align-items: center;">
-      <label style="font-size: 13px; color: #94a3b8;">プレイヤー名（投稿・プレイ時に表示）</label>
+      <label style="font-size: 13px; color: #94a3b8;">プレイヤー名（投稿・プレイ・対戦時に表示）</label>
       <input type="text" id="input-username" placeholder="プレイヤー名" style="width: 220px;" maxlength="12">
     </div>
     <div class="btn-group">
@@ -286,10 +329,91 @@
   <div id="screen-modes" class="screen hidden">
     <h1>MODE SELECT</h1>
     <div class="btn-group">
-      <button id="btn-to-stages">ゲーム開始</button>
+      <button id="btn-to-stages">シングルプレイ</button>
+      <button id="btn-to-versus-menu" style="background:#8b5cf6;">オンライン対戦</button>
+      <button id="btn-to-friends" style="background:#0284c7;">フレンドメニュー</button>
       <button id="btn-to-editor-slots">ステージエディタ</button>
       <button id="btn-to-options" style="background:#475569;">オプション</button>
       <button id="btn-back-to-title">スタート画面にもどる</button>
+    </div>
+  </div>
+
+  <!-- フレンドモーダル -->
+  <div id="modal-friends" class="modal-dialog hidden" style="min-width: 360px;">
+    <h3 style="margin: 0;">フレンドメニュー</h3>
+    <div style="font-size: 12px; color: #94a3b8;">
+      あなたのフレンドID: <strong id="lbl-my-friend-id" style="color:#38bdf8; font-size:14px;">--------</strong>
+    </div>
+
+    <div style="display: flex; gap: 6px;">
+      <input type="text" id="input-search-friend-id" placeholder="8桁のフレンドID" maxlength="8" style="flex:1;">
+      <button id="btn-send-friend-req" style="background:#059669; padding: 4px 10px; font-size: 12px;">申請送る</button>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+      <span style="font-size:12px; font-weight:bold; color:#cbd5e1;">フレンド一覧</span>
+      <button id="btn-open-friend-requests" style="font-size:11px; padding:3px 8px; background:#475569;">申請一覧 (<span id="req-count-badge">0</span>)</button>
+    </div>
+
+    <div id="friends-list-container" class="list-container">
+      <div style="color:#64748b; font-size:12px; text-align:center;">フレンド読込中...</div>
+    </div>
+
+    <button id="btn-close-friends" style="align-self: flex-end;">閉じる</button>
+  </div>
+
+  <!-- フレンド申請一覧モーダル -->
+  <div id="modal-friend-requests" class="modal-dialog hidden" style="min-width: 320px;">
+    <h3 style="margin: 0;">フレンド申請一覧</h3>
+    <div id="friend-requests-container" class="list-container">
+      <div style="color:#64748b; font-size:12px; text-align:center;">届いている申請はありません</div>
+    </div>
+    <button id="btn-close-friend-requests" style="align-self: flex-end;">戻る</button>
+  </div>
+
+  <!-- 対戦メニューモーダル -->
+  <div id="modal-versus-menu" class="modal-dialog hidden" style="min-width: 360px;">
+    <h3 style="margin: 0;">オンライン対戦</h3>
+    <div style="font-size: 12px; color: #94a3b8;">タイムの速いプレイヤーが勝利します！</div>
+
+    <div class="btn-group" style="width: 100%;">
+      <button id="btn-vs-random" style="background: #10b981;">🎲 ランダムマッチ (公開コース)</button>
+      <button id="btn-vs-custom" style="background: #8b5cf6;">🗺️ コース指定マッチ (公開 / 下書き)</button>
+    </div>
+
+    <button id="btn-close-versus-menu" style="align-self: flex-end;">戻る</button>
+  </div>
+
+  <!-- コース指定マッチのコース選択モーダル -->
+  <div id="modal-vs-pick-stage" class="modal-dialog hidden" style="min-width: 360px;">
+    <h3 style="margin: 0;">対戦コースを選択</h3>
+    <div style="display:flex; gap:8px; margin-bottom:8px;">
+      <button id="tab-vs-pick-public" style="background:#0284c7; flex:1; font-size:12px;">公開コース</button>
+      <button id="tab-vs-pick-my" style="background:#334155; flex:1; font-size:12px;">自分の下書き</button>
+    </div>
+    <div id="vs-pick-stages-container" class="list-container" style="max-height: 240px;">
+      <div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>
+    </div>
+    <button id="btn-close-vs-pick" style="align-self: flex-end;">戻る</button>
+  </div>
+
+  <!-- 対戦相手招待モーダル -->
+  <div id="modal-vs-invite" class="modal-dialog hidden" style="min-width: 340px;">
+    <h3 style="margin: 0;">対戦相手を選択 (オンラインのみ)</h3>
+    <div style="font-size:12px; color:#94a3b8;" id="vs-invite-stage-name-lbl">コース: 選択中</div>
+    <div id="vs-online-friends-container" class="list-container">
+      <div style="color:#64748b; font-size:12px; text-align:center;">オンラインのフレンドがいません</div>
+    </div>
+    <button id="btn-close-vs-invite" style="align-self: flex-end;">戻る</button>
+  </div>
+
+  <!-- 届いた対戦招待モーダル -->
+  <div id="modal-incoming-vs" class="modal-dialog hidden" style="min-width: 300px; text-align:center;">
+    <h3 style="margin: 0;">対戦の申し込み！</h3>
+    <p id="incoming-vs-text" style="font-size: 14px; margin: 10px 0;"></p>
+    <div style="display: flex; gap: 10px; justify-content: center;">
+      <button id="btn-accept-vs" style="background:#059669;">対戦を受ける！</button>
+      <button id="btn-decline-vs" style="background:#dc2626;">ことわる</button>
     </div>
   </div>
 
@@ -388,6 +512,7 @@
       <button class="palette-btn p-floor active" data-type="1">薄い床</button>
       <button class="palette-btn p-full" data-type="5">直方体</button>
       <button class="palette-btn p-mover" data-type="4">動く床</button>
+      <button class="palette-btn p-path-mover" data-type="8">動く床(ルート)</button>
       <button class="palette-btn p-checkpoint" data-type="6">セーブ</button>
       <button class="palette-btn p-fallfloor" data-type="7">落下床</button>
       <button class="palette-btn p-start" data-type="3">スタート</button>
@@ -401,15 +526,19 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
         左ドラッグ: 配置 / 削除 (自動保存)<br>
-        「セーブ」「動く床」クリックで設定変更 / カラーピッカーで薄い床・直方体の着色<br>
+        「セーブ」「動く床」「動く床(ルート)」クリックで設定変更<br>
         右ドラッグ: 平行移動 / ホイール回転: 自由視点回転
       </div>
       <div class="editor-bar">
         <span id="autosave-status" style="font-size:11px; color:#10b981; margin-right:4px;">同期済み</span>
+        <button id="btn-export-json" style="background:#0284c7;">JSON書き出し</button>
+        <button id="btn-import-json-trigger" style="background:#0284c7;">JSON読込</button>
+        <input type="file" id="file-import-json" accept=".json" style="display:none;">
+
         <button id="btn-save-current-slot" style="background:#059669;">手動上書き保存</button>
         <button id="btn-online-publish" style="background:#e11d48;">ネットに投稿</button>
 
-        <span style="font-weight:bold; font-size:12px; margin-left:4px;">テスト開始:</span>
+        <span style="font-weight:bold; font-size:12px; margin-left:4px; color:#ffffff;">テスト開始:</span>
         <select id="select-test-spawn" style="background:#1e293b; border:1px solid #38bdf8;">
           <option value="default">スタート地点(S)</option>
         </select>
@@ -457,11 +586,41 @@
     </div>
   </div>
 
+  <!-- ルート移動床設定モーダル -->
+  <div id="modal-path-mover" class="modal-dialog hidden" style="min-width: 360px;">
+    <h3 style="margin: 0;">動く床（ルート指定）の設定</h3>
+    <div style="font-size: 12px; color: #94a3b8;">順に移動するルートを追加してください</div>
+    <div id="path-steps-list" style="display: flex; flex-wrap: wrap; gap: 6px; background: #0f172a; padding: 10px; border-radius: 6px; min-height: 40px;">
+    </div>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+      <button class="btn-add-step" data-dir="UP" style="padding: 4px 8px; font-size: 12px;">+ ↑(奥)</button>
+      <button class="btn-add-step" data-dir="DOWN" style="padding: 4px 8px; font-size: 12px;">+ ↓(手前)</button>
+      <button class="btn-add-step" data-dir="LEFT" style="padding: 4px 8px; font-size: 12px;">+ ←(左)</button>
+      <button class="btn-add-step" data-dir="RIGHT" style="padding: 4px 8px; font-size: 12px;">+ →(右)</button>
+      <button class="btn-add-step" data-dir="Y_UP" style="padding: 4px 8px; font-size: 12px;">+ ▲(上)</button>
+      <button class="btn-add-step" data-dir="Y_DOWN" style="padding: 4px 8px; font-size: 12px;">+ ▼(下)</button>
+      <button id="btn-pop-step" style="background:#dc2626; padding: 4px 8px; font-size: 12px;">1つ戻す</button>
+      <button id="btn-clear-path" style="background:#475569; padding: 4px 8px; font-size: 12px;">全クリア</button>
+    </div>
+    <label style="font-size: 13px;">移動速度:
+      <select id="modal-path-speed">
+        <option value="0.02">遅い</option>
+        <option value="0.035" selected>普通</option>
+        <option value="0.06">速い</option>
+      </select>
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="modal-path-save" style="background: #0284c7;">決定</button>
+      <button id="modal-path-cancel">閉じる</button>
+    </div>
+  </div>
+
   <!-- セーブ地点設定ポップアップ -->
   <div id="modal-checkpoint" class="modal-dialog hidden">
     <h3 style="margin: 0;">セーブ地点の設定</h3>
+    <div style="font-size: 12px; color: #94a3b8;" id="cp-max-desc">置いた数以上の数字は設定できません。重複時は自動で入れ替わります。</div>
     <label>セーブ番号:
-      <input type="number" id="cp-number-input" min="1" max="99" value="1" style="width: 80px;">
+      <input type="number" id="cp-number-input" min="1" max="1" value="1" style="width: 80px;">
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
       <button id="cp-modal-save" style="background: #0284c7;">決定</button>
@@ -469,13 +628,13 @@
     </div>
   </div>
 
-  <!-- プレイ中ポーズ（一時停止）モーダル -->
+  <!-- ポーズモーダル -->
   <div id="modal-pause" class="modal-dialog hidden" style="min-width: 300px; text-align: center;">
     <h3 style="margin: 0 0 10px 0;">一時停止 (PAUSE)</h3>
     <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 6px;">
       <button id="btn-pause-resume" style="background: #0284c7;">ステージに戻る (再開)</button>
       
-      <div style="border-top: 1px solid #334155; padding-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+      <div id="pause-cp-group" style="border-top: 1px solid #334155; padding-top: 10px; display: flex; flex-direction: column; gap: 6px;">
         <label style="font-size: 13px; color: #94a3b8;">セーブポイントからやり直す:</label>
         <select id="select-pause-checkpoint" style="background: #0f172a; border: 1px solid #38bdf8;"></select>
         <button id="btn-pause-restart-cp" style="background: #ec4899;">指定セーブからリトライ</button>
@@ -485,8 +644,16 @@
     </div>
   </div>
 
-  <!-- BGM トグル & ピッカー -->
-  <button id="btn-bgm-trigger" class="hidden">▶️ BGM: 停止中</button>
+  <!-- HUD 左上コンテナ (BGM + タイム) -->
+  <div id="hud-top-left" class="hidden">
+    <button id="btn-bgm-trigger">▶️ BGM: 停止中</button>
+    <div id="hud-timer-card">
+      <div>⏱ タイム: <span id="hud-live-time">00:00.00</span></div>
+      <div style="font-size:11px; color:#38bdf8;">🏆 自己ベスト: <span id="hud-best-time">--:--.--</span></div>
+    </div>
+  </div>
+
+  <!-- BGM ピッカー -->
   <div id="modal-bgm-picker" class="modal-dialog hidden">
     <h3 style="margin: 0; font-size: 1.1rem;">BGM 選択</h3>
     <div class="list-container">
@@ -535,15 +702,20 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
-    window.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      return false;
-    }, { passive: false });
-
+    window.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; }, { passive: false });
     window.addEventListener('dragstart', (e) => { e.preventDefault(); });
     window.addEventListener('copy', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
     window.addEventListener('cut', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
     window.addEventListener('paste', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+
+    // エディター画面・対戦中画面からの退出ガード
+    window.addEventListener('beforeunload', (e) => {
+      if (gameState === 'EDITOR' || isVersusMatch) {
+        e.preventDefault();
+        e.returnValue = "変更が失われるか、対戦が中断されます。退出しますか？";
+        return e.returnValue;
+      }
+    });
 
     const firebaseConfig = {
       apiKey: "AIzaSyBq5Wqx7kwqQSf9spIfrgHjYdQ7qm-yPzs",
@@ -558,6 +730,7 @@
     let db = null;
     let auth = null;
     let currentUser = null;
+    let myFriendId = null;
 
     try {
       if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
@@ -581,8 +754,16 @@
     };
 
     const userStatusText = document.getElementById('user-status-text');
+    const userFriendIdBadge = document.getElementById('user-friend-id-badge');
     const btnAuth = document.getElementById('btn-auth');
-    const userBar = document.getElementById('user-bar');
+    const lblMyFriendId = document.getElementById('lbl-my-friend-id');
+
+    function generateFriendId() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let id = "";
+      for (let i = 0; i < 8; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
+      return id;
+    }
 
     if (auth) {
       auth.onAuthStateChanged(async (user) => {
@@ -591,18 +772,36 @@
           userStatusText.textContent = `${user.displayName || "ログイン済"}`;
           btnAuth.textContent = "ログアウト";
           btnAuth.style.background = "#475569";
-          const userDoc = await db.collection("users").doc(user.uid).get();
-          if (userDoc.exists && userDoc.data().username) {
-            currentUsername = userDoc.data().username;
+
+          const userDocRef = db.collection("users").doc(user.uid);
+          const doc = await userDocRef.get();
+          if (doc.exists && doc.data().friendId) {
+            myFriendId = doc.data().friendId;
+          } else {
+            myFriendId = generateFriendId();
+            await userDocRef.set({ friendId: myFriendId }, { merge: true });
+          }
+
+          if (doc.exists && doc.data().username) {
+            currentUsername = doc.data().username;
             inputUsername.value = currentUsername;
             localStorage.setItem('cube_username', currentUsername);
-          } else {
-            db.collection("users").doc(user.uid).set({ username: currentUsername, email: user.email || "" }, { merge: true });
           }
+
+          userFriendIdBadge.style.display = "inline";
+          userFriendIdBadge.textContent = `ID: ${myFriendId}`;
+          lblMyFriendId.textContent = myFriendId;
+
+          // オンラインハートビート開始
+          startHeartbeat();
+          listenIncomingMatchInvites();
+          listenFriendRequests();
         } else {
           userStatusText.textContent = "未ログイン (ゲスト)";
           btnAuth.textContent = "Googleログイン";
           btnAuth.style.background = "#0284c7";
+          userFriendIdBadge.style.display = "none";
+          lblMyFriendId.textContent = "--------";
         }
       });
     }
@@ -617,6 +816,22 @@
       }
     };
 
+    // オンラインハートビート管理 (サイトアクセス中オンライン、放置でオフライン)
+    let heartbeatTimer = null;
+    function startHeartbeat() {
+      if (!currentUser || !db) return;
+      const sendBeat = () => {
+        db.collection("users").doc(currentUser.uid).set({
+          username: currentUsername,
+          friendId: myFriendId,
+          lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      };
+      sendBeat();
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      heartbeatTimer = setInterval(sendBeat, 30000); // 30秒ごとに更新
+    }
+
     let currentAudio = new Audio();
     currentAudio.loop = true;
     currentAudio.volume = 0.5;
@@ -625,17 +840,9 @@
     const modalBgmPicker = document.getElementById('modal-bgm-picker');
     const bgmVolume = document.getElementById('bgm-volume');
 
-    btnBgmTrigger.onclick = () => {
-      modalBgmPicker.classList.toggle('hidden');
-    };
-
-    document.getElementById('btn-close-bgm').onclick = () => {
-      modalBgmPicker.classList.add('hidden');
-    };
-
-    bgmVolume.oninput = (e) => {
-      currentAudio.volume = parseFloat(e.target.value);
-    };
+    btnBgmTrigger.onclick = () => modalBgmPicker.classList.toggle('hidden');
+    document.getElementById('btn-close-bgm').onclick = () => modalBgmPicker.classList.add('hidden');
+    bgmVolume.oninput = (e) => { currentAudio.volume = parseFloat(e.target.value); };
 
     function playBGM(src, title) {
       currentAudio.src = src;
@@ -659,26 +866,17 @@
     const optDpadScaleVal = document.getElementById('opt-dpad-scale-val');
     const dpad = document.getElementById('dpad');
 
-    let dpadSettings = JSON.parse(localStorage.getItem('cube_dpad_settings')) || {
-      pos: 'left',
-      bottom: 25,
-      size: 140
-    };
+    let dpadSettings = JSON.parse(localStorage.getItem('cube_dpad_settings')) || { pos: 'left', bottom: 25, size: 140 };
 
     function applyDpadSettings() {
       dpad.style.bottom = `${dpadSettings.bottom}px`;
       dpad.style.width = `${dpadSettings.size}px`;
       dpad.style.height = `${dpadSettings.size}px`;
+      dpad.style.left = 'auto'; dpad.style.right = 'auto'; dpad.style.transform = 'none';
 
-      dpad.style.left = 'auto';
-      dpad.style.right = 'auto';
-      dpad.style.transform = 'none';
-
-      if (dpadSettings.pos === 'left') {
-        dpad.style.left = '25px';
-      } else if (dpadSettings.pos === 'right') {
-        dpad.style.right = '25px';
-      } else if (dpadSettings.pos === 'center') {
+      if (dpadSettings.pos === 'left') dpad.style.left = '25px';
+      else if (dpadSettings.pos === 'right') dpad.style.right = '25px';
+      else if (dpadSettings.pos === 'center') {
         dpad.style.left = '50%';
         dpad.style.transform = 'translateX(-50%)';
       }
@@ -694,12 +892,8 @@
       modalOptions.classList.remove('hidden');
     };
 
-    optDpadBottom.oninput = (e) => {
-      optDpadBottomVal.textContent = `${e.target.value}px`;
-    };
-    optDpadScale.oninput = (e) => {
-      optDpadScaleVal.textContent = `${e.target.value}px`;
-    };
+    optDpadBottom.oninput = (e) => { optDpadBottomVal.textContent = `${e.target.value}px`; };
+    optDpadScale.oninput = (e) => { optDpadScaleVal.textContent = `${e.target.value}px`; };
 
     document.getElementById('btn-save-options').onclick = () => {
       dpadSettings.pos = optDpadPos.value;
@@ -756,13 +950,508 @@
             </div>
             <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
           `;
-          item.querySelector('.btn-play-online').onclick = () => startPlay(s, false);
+          item.querySelector('.btn-play-online').onclick = () => startPlay(s, false, null, null, doc.id);
           onlineStagesContainer.appendChild(item);
         });
       } catch (e) {
         onlineStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
       }
     }
+
+    // ==========================================
+    // フレンドシステム
+    // ==========================================
+    const modalFriends = document.getElementById('modal-friends');
+    const modalFriendRequests = document.getElementById('modal-friend-requests');
+    const friendsListContainer = document.getElementById('friends-list-container');
+    const friendRequestsContainer = document.getElementById('friend-requests-container');
+    const reqCountBadge = document.getElementById('req-count-badge');
+
+    document.getElementById('btn-to-friends').onclick = () => {
+      if (!currentUser) { alert("フレンド機能の利用にはログインが必要です。"); return; }
+      modalFriends.classList.remove('hidden');
+      loadFriendsList();
+    };
+
+    document.getElementById('btn-close-friends').onclick = () => modalFriends.classList.add('hidden');
+    document.getElementById('btn-open-friend-requests').onclick = () => {
+      modalFriends.classList.add('hidden');
+      modalFriendRequests.classList.remove('hidden');
+      loadFriendRequestsList();
+    };
+    document.getElementById('btn-close-friend-requests').onclick = () => {
+      modalFriendRequests.classList.add('hidden');
+      modalFriends.classList.remove('hidden');
+      loadFriendsList();
+    };
+
+    // フレンド申請送信
+    document.getElementById('btn-send-friend-req').onclick = async () => {
+      const searchId = document.getElementById('input-search-friend-id').value.trim().toUpperCase();
+      if (!searchId || searchId.length !== 8) { alert("8桁のフレンドIDを入力してください。"); return; }
+      if (searchId === myFriendId) { alert("自分自身には申請できません。"); return; }
+
+      try {
+        const snap = await db.collection("users").where("friendId", "==", searchId).limit(1).get();
+        if (snap.empty) { alert("ユーザーが見つかりませんでした。"); return; }
+        const targetUid = snap.docs[0].id;
+
+        await db.collection("users").doc(targetUid).collection("friend_requests").doc(currentUser.uid).set({
+          senderUid: currentUser.uid,
+          senderName: currentUsername,
+          senderFriendId: myFriendId,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        alert("フレンド申請を送信しました！");
+        document.getElementById('input-search-friend-id').value = '';
+      } catch (e) {
+        alert("申請エラー: " + e.message);
+      }
+    };
+
+    // 届いた申請の監視バッジ
+    function listenFriendRequests() {
+      if (!currentUser) return;
+      db.collection("users").doc(currentUser.uid).collection("friend_requests").onSnapshot(snap => {
+        reqCountBadge.textContent = snap.size;
+      });
+    }
+
+    async function loadFriendRequestsList() {
+      friendRequestsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
+      try {
+        const snap = await db.collection("users").doc(currentUser.uid).collection("friend_requests").get();
+        if (snap.empty) {
+          friendRequestsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">届いている申請はありません</div>';
+          return;
+        }
+        friendRequestsContainer.innerHTML = '';
+        snap.forEach(doc => {
+          const req = doc.data();
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `
+            <div>
+              <strong>${req.senderName}</strong><br>
+              <span style="font-size:11px; color:#94a3b8;">ID: ${req.senderFriendId}</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-accept-req" style="padding: 4px 8px; font-size:11px; background:#059669;">承認</button>
+              <button class="btn-decline-req" style="padding: 4px 8px; font-size:11px; background:#dc2626;">拒絶</button>
+            </div>
+          `;
+          item.querySelector('.btn-accept-req').onclick = async () => {
+            // 相互フレンドに追加
+            await db.collection("users").doc(currentUser.uid).collection("friends").doc(req.senderUid).set({
+              uid: req.senderUid,
+              name: req.senderName,
+              friendId: req.senderFriendId,
+              addedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await db.collection("users").doc(req.senderUid).collection("friends").doc(currentUser.uid).set({
+              uid: currentUser.uid,
+              name: currentUsername,
+              friendId: myFriendId,
+              addedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await doc.ref.delete();
+            loadFriendRequestsList();
+          };
+          item.querySelector('.btn-decline-req').onclick = async () => {
+            await doc.ref.delete();
+            loadFriendRequestsList();
+          };
+          friendRequestsContainer.appendChild(item);
+        });
+      } catch (e) {
+        friendRequestsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    async function loadFriendsList() {
+      friendsListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">フレンド読込中...</div>';
+      try {
+        const snap = await db.collection("users").doc(currentUser.uid).collection("friends").get();
+        if (snap.empty) {
+          friendsListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">フレンドはいません</div>';
+          return;
+        }
+
+        const now = Date.now();
+        friendsListContainer.innerHTML = '';
+
+        for (const doc of snap.docs) {
+          const f = doc.data();
+          const userDoc = await db.collection("users").doc(f.uid).get();
+          let isOnline = false;
+          if (userDoc.exists && userDoc.data().lastSeen) {
+            const last = userDoc.data().lastSeen.toMillis();
+            if (now - last < 2 * 60 * 1000) isOnline = true; // 2分以内の通信でオンライン
+          }
+
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `
+            <div>
+              <span class="status-dot ${isOnline ? 'status-online' : 'status-offline'}"></span>
+              <strong>${f.name}</strong>
+              <span style="font-size:11px; color:#94a3b8; margin-left:4px;">${isOnline ? '(オンライン)' : '(オフライン)'}</span><br>
+              <span style="font-size:11px; color:#64748b;">ID: ${f.friendId}</span>
+            </div>
+            ${isOnline ? `<button class="btn-invite-friend-vs" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">対戦に誘う</button>` : ''}
+          `;
+
+          if (isOnline) {
+            item.querySelector('.btn-invite-friend-vs').onclick = () => {
+              modalFriends.classList.add('hidden');
+              openVersusStagePickModal(f);
+            };
+          }
+          friendsListContainer.appendChild(item);
+        }
+      } catch (e) {
+        friendsListContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    // ==========================================
+    // オンライン対戦システム
+    // ==========================================
+    let isVersusMatch = false;
+    let vsRoomId = null;
+    let vsRoomUnsub = null;
+    let vsTargetFriend = null;
+    let vsStageData = null;
+
+    const modalVersusMenu = document.getElementById('modal-versus-menu');
+    const modalVsPickStage = document.getElementById('modal-vs-pick-stage');
+    const vsPickStagesContainer = document.getElementById('vs-pick-stages-container');
+    const modalIncomingVs = document.getElementById('modal-incoming-vs');
+    const incomingVsText = document.getElementById('incoming-vs-text');
+
+    document.getElementById('btn-to-versus-menu').onclick = () => {
+      if (!currentUser) { alert("オンライン対戦の利用にはログインが必要です。"); return; }
+      modalVersusMenu.classList.remove('hidden');
+    };
+    document.getElementById('btn-close-versus-menu').onclick = () => modalVersusMenu.classList.add('hidden');
+    document.getElementById('btn-close-vs-pick').onclick = () => modalVsPickStage.classList.add('hidden');
+
+    // ランダムマッチ (公開コースからランダム)
+    document.getElementById('btn-vs-random').onclick = async () => {
+      try {
+        const snap = await db.collection("stages").limit(20).get();
+        if (snap.empty) { alert("公開コースがありません。"); return; }
+        const docs = snap.docs.filter(d => !d.data().hidden);
+        const randomStage = docs[Math.floor(Math.random() * docs.length)].data();
+        modalVersusMenu.classList.add('hidden');
+        openVersusFriendSelect(randomStage, "ランダム公開コース");
+      } catch (e) {
+        alert("エラー: " + e.message);
+      }
+    };
+
+    // コース指定マッチ
+    document.getElementById('btn-vs-custom').onclick = () => {
+      modalVersusMenu.classList.add('hidden');
+      modalVsPickStage.classList.remove('hidden');
+      loadVsPublicStagesList();
+    };
+
+    const tabVsPickPublic = document.getElementById('tab-vs-pick-public');
+    const tabVsPickMy = document.getElementById('tab-vs-pick-my');
+
+    tabVsPickPublic.onclick = () => {
+      tabVsPickPublic.style.background = "#0284c7";
+      tabVsPickMy.style.background = "#334155";
+      loadVsPublicStagesList();
+    };
+
+    tabVsPickMy.onclick = () => {
+      tabVsPickMy.style.background = "#0284c7";
+      tabVsPickPublic.style.background = "#334155";
+      loadVsMyStagesList();
+    };
+
+    async function loadVsPublicStagesList() {
+      vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
+      try {
+        const snap = await db.collection("stages").limit(20).get();
+        if (snap.empty) {
+          vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">公開コースがありません</div>';
+          return;
+        }
+        vsPickStagesContainer.innerHTML = '';
+        snap.docs.forEach(doc => {
+          const s = doc.data();
+          if (s.hidden) return;
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `
+            <div>
+              <strong>${s.name}</strong><br>
+              <span style="font-size:11px; color:#94a3b8;">作者: ${s.author}</span>
+            </div>
+            <button class="btn-select-vs-stage" style="padding:4px 8px; font-size:11px; background:#0284c7;">選択</button>
+          `;
+          item.querySelector('.btn-select-vs-stage').onclick = () => {
+            modalVsPickStage.classList.add('hidden');
+            openVersusFriendSelect(s, s.name);
+          };
+          vsPickStagesContainer.appendChild(item);
+        });
+      } catch (e) {
+        vsPickStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    async function loadVsMyStagesList() {
+      vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
+      try {
+        const snap = await db.collection("users").doc(currentUser.uid).collection("custom_stages").get();
+        if (snap.empty) {
+          vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">保存されたスロットがありません</div>';
+          return;
+        }
+        vsPickStagesContainer.innerHTML = '';
+        snap.docs.forEach(doc => {
+          const s = doc.data();
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          item.innerHTML = `
+            <div>
+              <strong>${s.name}</strong> (下書き)<br>
+              <span style="font-size:11px; color:#94a3b8;">${s.size}×${s.size}</span>
+            </div>
+            <button class="btn-select-vs-stage" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">選択</button>
+          `;
+          item.querySelector('.btn-select-vs-stage').onclick = () => {
+            modalVsPickStage.classList.add('hidden');
+            openVersusFriendSelect(s, `${s.name} (下書き)`);
+          };
+          vsPickStagesContainer.appendChild(item);
+        });
+      } catch (e) {
+        vsPickStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    const modalVsInvite = document.getElementById('modal-vs-invite');
+    const vsOnlineFriendsContainer = document.getElementById('vs-online-friends-container');
+    const vsInviteStageNameLbl = document.getElementById('vs-invite-stage-name-lbl');
+    document.getElementById('btn-close-vs-invite').onclick = () => modalVsInvite.classList.add('hidden');
+
+    function openVersusFriendSelect(stageData, stageName) {
+      vsStageData = stageData;
+      vsInviteStageNameLbl.textContent = `コース: ${stageName}`;
+      modalVsInvite.classList.remove('hidden');
+      loadVsOnlineFriends();
+    }
+
+    function openVersusStagePickModal(friend) {
+      vsTargetFriend = friend;
+      modalVsPickStage.classList.remove('hidden');
+      loadVsPublicStagesList();
+    }
+
+    async function loadVsOnlineFriends() {
+      vsOnlineFriendsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読込中...</div>';
+      try {
+        const snap = await db.collection("users").doc(currentUser.uid).collection("friends").get();
+        if (snap.empty) {
+          vsOnlineFriendsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">フレンドがいません</div>';
+          return;
+        }
+        const now = Date.now();
+        vsOnlineFriendsContainer.innerHTML = '';
+        let foundOnline = false;
+
+        for (const doc of snap.docs) {
+          const f = doc.data();
+          const uDoc = await db.collection("users").doc(f.uid).get();
+          let isOnline = false;
+          if (uDoc.exists && uDoc.data().lastSeen) {
+            if (now - uDoc.data().lastSeen.toMillis() < 2 * 60 * 1000) isOnline = true;
+          }
+
+          if (isOnline) {
+            foundOnline = true;
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            item.innerHTML = `
+              <div>
+                <span class="status-dot status-online"></span>
+                <strong>${f.name}</strong>
+              </div>
+              <button class="btn-do-invite-vs" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">招待を送る</button>
+            `;
+            item.querySelector('.btn-do-invite-vs').onclick = () => sendVersusInvite(f);
+            vsOnlineFriendsContainer.appendChild(item);
+          }
+        }
+        if (!foundOnline) {
+          vsOnlineFriendsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">オンラインのフレンドがいません</div>';
+        }
+      } catch (e) {
+        vsOnlineFriendsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
+
+    async function sendVersusInvite(friend) {
+      modalVsInvite.classList.add('hidden');
+      alert(`${friend.name} に対戦招待を送信しました！相手が承認するまでお待ちください...`);
+
+      const roomRef = await db.collection("versus_rooms").add({
+        hostUid: currentUser.uid,
+        hostName: currentUsername,
+        guestUid: friend.uid,
+        guestName: friend.name,
+        stageData: vsStageData,
+        status: "WAITING",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      vsRoomId = roomRef.id;
+
+      // 招待した相手へ通知送信
+      await db.collection("users").doc(friend.uid).collection("versus_invites").doc(vsRoomId).set({
+        roomId: vsRoomId,
+        senderName: currentUsername,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      listenVersusRoom(vsRoomId, true);
+    }
+
+    let currentIncomingInviteDoc = null;
+    function listenIncomingMatchInvites() {
+      if (!currentUser) return;
+      db.collection("users").doc(currentUser.uid).collection("versus_invites").onSnapshot(snap => {
+        if (!snap.empty && !isVersusMatch) {
+          const invite = snap.docs[0].data();
+          currentIncomingInviteDoc = snap.docs[0];
+          incomingVsText.textContent = `${invite.senderName} からオンライン対戦の招待が届きました！`;
+          modalIncomingVs.classList.remove('hidden');
+        }
+      });
+    }
+
+    document.getElementById('btn-accept-vs').onclick = async () => {
+      if (!currentIncomingInviteDoc) return;
+      const invite = currentIncomingInviteDoc.data();
+      modalIncomingVs.classList.add('hidden');
+      vsRoomId = invite.roomId;
+
+      await currentIncomingInviteDoc.ref.delete();
+      await db.collection("versus_rooms").doc(vsRoomId).update({ status: "PLAYING" });
+      listenVersusRoom(vsRoomId, false);
+    };
+
+    document.getElementById('btn-decline-vs').onclick = async () => {
+      if (currentIncomingInviteDoc) {
+        await currentIncomingInviteDoc.ref.delete();
+      }
+      modalIncomingVs.classList.add('hidden');
+    };
+
+    function listenVersusRoom(roomId, isHost) {
+      if (vsRoomUnsub) vsRoomUnsub();
+      vsRoomUnsub = db.collection("versus_rooms").doc(roomId).onSnapshot(doc => {
+        if (!doc.exists) return;
+        const room = doc.data();
+
+        if (room.status === "PLAYING" && !isVersusMatch) {
+          startVersusMatch(room.stageData, isHost);
+        }
+
+        // 相手の位置をリアルタイム同期
+        if (isVersusMatch) {
+          const oppPos = isHost ? room.guestPos : room.hostPos;
+          if (oppPos) {
+            opponentMesh.visible = true;
+            opponentMesh.position.set(oppPos.x, oppPos.y + 0.5, oppPos.z);
+          }
+
+          // 相手が先にクリアしたかの監視
+          const oppTime = isHost ? room.guestClearTime : room.hostClearTime;
+          if (oppTime && !opponentFinished) {
+            opponentFinished = true;
+            opponentClearTime = oppTime;
+          }
+        }
+      });
+    }
+
+    let opponentMesh = null;
+    let opponentFinished = false;
+    let opponentClearTime = null;
+
+    function startVersusMatch(stageData, isHost) {
+      isVersusMatch = true;
+      opponentFinished = false;
+      opponentClearTime = null;
+
+      // 自分を青、相手を透明な赤に設定
+      cubeMesh.material.color.setHex(0x38bdf8); // 自分: 青
+      if (!opponentMesh) {
+        const oppGeo = new THREE.BoxGeometry(1, 1, 1);
+        const oppMat = new THREE.MeshStandardMaterial({
+          color: 0xef4444, // 相手: 赤
+          transparent: true,
+          opacity: 0.55,
+          roughness: 0.2
+        });
+        opponentMesh = new THREE.Mesh(oppGeo, oppMat);
+        scene.add(opponentMesh);
+      }
+      opponentMesh.visible = false;
+
+      startPlay(stageData, false, null, null, `VS_${vsRoomId}`);
+    }
+
+    function syncMyVersusPosition() {
+      if (!isVersusMatch || !vsRoomId || !db) return;
+      const posField = (activeStage.hostUid === currentUser.uid) ? "hostPos" : "guestPos";
+      db.collection("versus_rooms").doc(vsRoomId).update({
+        [posField]: { x: cubePos.x, y: cubePos.y, z: cubePos.z }
+      }).catch(() => {});
+    }
+
+    // ==========================================
+    // JSON ローカル書き出し & 読み込み
+    // ==========================================
+    document.getElementById('btn-export-json').onclick = () => {
+      const data = exportStageData();
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${data.name || "stage"}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    const fileImportJson = document.getElementById('file-import-json');
+    document.getElementById('btn-import-json-trigger').onclick = () => fileImportJson.click();
+    fileImportJson.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          if (!parsed.blocks || !parsed.size) throw new Error("無効なステージデータです");
+          loadStageIntoEditor(parsed);
+          inputEditorStageName.value = parsed.name || "インポートステージ";
+          alert("ローカルJSONからステージを読み込みました！");
+        } catch (err) {
+          alert("JSON読み込み失敗: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+      fileImportJson.value = '';
+    };
 
     const modalEditorSlots = document.getElementById('modal-editor-slots');
     const editorSlotsContainer = document.getElementById('editor-slots-container');
@@ -773,10 +1462,7 @@
     let currentEditingSlotId = null;
 
     document.getElementById('btn-to-editor-slots').onclick = () => {
-      if (!currentUser) {
-        alert("ステージエディタの利用（クラウド保存）にはGoogleログインが必要です。");
-        return;
-      }
+      if (!currentUser) { alert("ステージエディタの利用（クラウド保存）にはGoogleログインが必要です。"); return; }
       modalEditorSlots.classList.remove('hidden');
       loadEditorSlotsList();
     };
@@ -818,6 +1504,7 @@
       camera.position.copy(editorCamPos);
       camera.lookAt(editorCamTarget);
       updateTestSpawnOptions();
+      rebuildPathVisuals();
     }
 
     async function loadEditorSlotsList() {
@@ -966,12 +1653,40 @@
     };
 
     let activeStage = null;
+    let activeStageKey = null;
     let gameState = 'TITLE';
     let isTestPlay = false;
     let isPaused = false;
-
-    // プレイヤーが一度踏んだチェックポイントのマップ: cpIndex -> { x, y, z }
     let passedCheckpoints = new Map();
+
+    // タイマー管理
+    let playStartTime = 0;
+    let playElapsedTime = 0;
+    let timerRunning = false;
+
+    const hudTopLeft = document.getElementById('hud-top-left');
+    const hudLiveTime = document.getElementById('hud-live-time');
+    const hudBestTime = document.getElementById('hud-best-time');
+
+    function formatTime(ms) {
+      if (!ms || isNaN(ms)) return "--:--.--";
+      const totalSec = ms / 1000;
+      const min = Math.floor(totalSec / 60);
+      const sec = Math.floor(totalSec % 60);
+      const msec = Math.floor((ms % 1000) / 10);
+      return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}.${msec.toString().padStart(2, '0')}`;
+    }
+
+    function getBestTime(stageKey) {
+      if (!stageKey) return null;
+      const val = localStorage.getItem(`best_time_${stageKey}`);
+      return val ? parseInt(val, 10) : null;
+    }
+
+    function setBestTime(stageKey, timeMs) {
+      if (!stageKey) return;
+      localStorage.setItem(`best_time_${stageKey}`, timeMs.toString());
+    }
 
     const isMobileDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
@@ -989,7 +1704,7 @@
 
       if (screen === 'PLAYING') {
         userBar.classList.add('hidden');
-        btnBgmTrigger.classList.remove('hidden');
+        hudTopLeft.classList.remove('hidden');
         hudPauseBtn.classList.remove('hidden');
 
         if (isMobileDevice) {
@@ -998,7 +1713,7 @@
         }
       } else {
         dpad.classList.add('hidden');
-        btnBgmTrigger.classList.add('hidden');
+        hudTopLeft.classList.add('hidden');
         modalBgmPicker.classList.add('hidden');
         hudPauseBtn.classList.add('hidden');
         modalPause.classList.add('hidden');
@@ -1007,6 +1722,7 @@
           userBar.classList.add('hidden');
           editorUiContainer.classList.remove('hidden');
           updateTestSpawnOptions();
+          rebuildPathVisuals();
         } else {
           userBar.classList.remove('hidden');
           if (screen === 'MODES') screenModes.classList.remove('hidden');
@@ -1022,10 +1738,9 @@
     document.getElementById('btn-back-to-modes').onclick = () => switchScreen('MODES');
 
     document.querySelectorAll('.btn-official-stage').forEach(btn => {
-      btn.onclick = () => startPlay(STAGES[btn.getAttribute('data-stage')], false);
+      btn.onclick = () => startPlay(STAGES[btn.getAttribute('data-stage')], false, null, null, `OFFICIAL_${btn.getAttribute('data-stage')}`);
     });
 
-    // ポーズ機能
     function togglePause() {
       if (gameState !== 'PLAYING') return;
       isPaused = !isPaused;
@@ -1040,14 +1755,11 @@
 
     function updatePauseModalUI() {
       selectPauseCp.innerHTML = '';
-
-      // スタート地点
       const optStart = document.createElement('option');
       optStart.value = 'start';
       optStart.textContent = 'スタート地点';
       selectPauseCp.appendChild(optStart);
 
-      // 踏んだ中間地点の一覧
       const sortedKeys = Array.from(passedCheckpoints.keys()).sort((a, b) => a - b);
       sortedKeys.forEach(idx => {
         const opt = document.createElement('option');
@@ -1057,10 +1769,13 @@
       });
 
       if (sortedKeys.length > 0) {
-        selectPauseCp.value = sortedKeys[sortedKeys.length - 1]; // 直近のセーブを選択
+        selectPauseCp.value = sortedKeys[sortedKeys.length - 1];
       } else {
         selectPauseCp.value = 'start';
       }
+
+      // 対戦中はセーブポイント復帰を非表示
+      document.getElementById('pause-cp-group').style.display = isVersusMatch ? 'none' : 'flex';
     }
 
     hudPauseBtn.onclick = togglePause;
@@ -1087,8 +1802,15 @@
 
     document.getElementById('btn-pause-quit').onclick = () => {
       isPaused = false;
+      timerRunning = false;
       modalPause.classList.add('hidden');
-      if (isTestPlay) {
+
+      if (isVersusMatch) {
+        isVersusMatch = false;
+        if (opponentMesh) opponentMesh.visible = false;
+        gameState = 'MODES';
+        switchScreen('MODES');
+      } else if (isTestPlay) {
         returnToEditorView();
       } else {
         gameState = 'STAGES';
@@ -1130,7 +1852,7 @@
         const doc = await db.collection("stages").doc(stageId).get();
         if (!doc.exists) { alert("ステージが見つかりませんでした。"); return; }
         if (doc.data().hidden) { alert("非公開のステージです。"); return; }
-        startPlay(doc.data(), false);
+        startPlay(doc.data(), false, null, null, stageId);
       } catch (err) {
         alert("検索エラー: " + err.message);
       }
@@ -1143,7 +1865,8 @@
         if (snap.empty) { alert("公開ステージがまだありません。"); return; }
         const docs = snap.docs.filter(d => !d.data().hidden);
         if (docs.length === 0) { alert("公開中のステージがありません。"); return; }
-        startPlay(docs[Math.floor(Math.random() * docs.length)].data(), false);
+        const picked = docs[Math.floor(Math.random() * docs.length)];
+        startPlay(picked.data(), false, null, null, picked.id);
       } catch (err) {
         alert("ランダム取得エラー: " + err.message);
       }
@@ -1170,28 +1893,19 @@
     const fullBlockGeo = new THREE.BoxGeometry(1, 1, 1);
 
     const matFloor = new THREE.MeshLambertMaterial({ color: 0x64748b });
-    const matFull = new THREE.MeshLambertMaterial({ color: 0x475569 });
     const matGoal = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
     const matStart = new THREE.MeshLambertMaterial({ color: 0x06b6d4 });
     const matMover = new THREE.MeshLambertMaterial({ color: 0xa855f7 });
+    const matPathMover = new THREE.MeshLambertMaterial({ color: 0x6366f1 });
     const matFallFloor = new THREE.MeshLambertMaterial({ color: 0xf97316 });
 
     function createCheckpointMaterials(number = 1) {
       const cv = document.createElement('canvas');
-      cv.width = 128;
-      cv.height = 128;
+      cv.width = 128; cv.height = 128;
       const ctx = cv.getContext('2d');
-      ctx.fillStyle = '#ec4899';
-      ctx.fillRect(0, 0, 128, 128);
-
-      ctx.lineWidth = 8;
-      ctx.strokeStyle = '#ffffff';
-      ctx.strokeRect(4, 4, 120, 120);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 64px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ec4899'; ctx.fillRect(0, 0, 128, 128);
+      ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(4, 4, 120, 120);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 64px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(number.toString(), 64, 64);
 
       const tex = new THREE.CanvasTexture(cv);
@@ -1221,6 +1935,9 @@
     scene.add(editorGroup);
     editorGroup.visible = false;
 
+    const pathVisualsGroup = new THREE.Group();
+    editorGroup.add(pathVisualsGroup);
+
     let gridHelper = null;
     let raycastPlane = null;
     let editorBlocks = new Map();
@@ -1239,24 +1956,12 @@
       editorCamPos.z = editorCamTarget.z + editorCamRadius * Math.sin(editorCamPhi) * Math.cos(editorCamTheta);
     }
 
-    document.getElementById('btn-rot-left').onclick = () => {
-      editorCamTheta += Math.PI / 2;
-      updateEditorCamPos();
-    };
-    document.getElementById('btn-rot-right').onclick = () => {
-      editorCamTheta -= Math.PI / 2;
-      updateEditorCamPos();
-    };
+    document.getElementById('btn-rot-left').onclick = () => { editorCamTheta += Math.PI / 2; updateEditorCamPos(); };
+    document.getElementById('btn-rot-right').onclick = () => { editorCamTheta -= Math.PI / 2; updateEditorCamPos(); };
 
     function buildEditorGrid() {
-      if (gridHelper) {
-        editorGroup.remove(gridHelper);
-        gridHelper.geometry.dispose();
-      }
-      if (raycastPlane) {
-        editorGroup.remove(raycastPlane);
-        raycastPlane.geometry.dispose();
-      }
+      if (gridHelper) { editorGroup.remove(gridHelper); gridHelper.geometry.dispose(); }
+      if (raycastPlane) { editorGroup.remove(raycastPlane); raycastPlane.geometry.dispose(); }
 
       gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x0ea5e9, 0x334155);
       gridHelper.position.set(gridSize / 2 - 0.5, currentLayer - 0.01, gridSize / 2 - 0.5);
@@ -1281,15 +1986,13 @@
         const isCurrent = (y === currentLayer);
         const targetOpacity = isCurrent ? 1.0 : 0.35;
         if (Array.isArray(mesh.material)) {
-          mesh.material.forEach(m => {
-            m.transparent = true;
-            m.opacity = targetOpacity;
-          });
+          mesh.material.forEach(m => { m.transparent = true; m.opacity = targetOpacity; });
         } else {
           mesh.material.transparent = true;
           mesh.material.opacity = targetOpacity;
         }
       });
+      rebuildPathVisuals();
     }
 
     document.getElementById('btn-layer-up').onclick = () => {
@@ -1308,17 +2011,85 @@
       triggerAutoSave();
     };
 
-    function getNextCheckpointNumber() {
-      let maxNum = 0;
-      editorBlocks.forEach(val => {
-        if (val.type === 6 && val.cpIndex) {
-          if (val.cpIndex > maxNum) maxNum = val.cpIndex;
-        }
-      });
-      return maxNum + 1;
+    function countCheckpoints() {
+      let count = 0;
+      editorBlocks.forEach(val => { if (val.type === 6) count++; });
+      return count;
     }
 
-    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null, skipAutoSave = false, blockColor = null) {
+    function sanitizeCheckpointIndices() {
+      const list = [];
+      editorBlocks.forEach((val, key) => {
+        if (val.type === 6) list.push({ key, val });
+      });
+      list.sort((a, b) => (a.val.cpIndex || 1) - (b.val.cpIndex || 1));
+      list.forEach((item, idx) => {
+        const correctNum = idx + 1;
+        if (item.val.cpIndex !== correctNum) {
+          item.val.cpIndex = correctNum;
+          const [x, y, z] = item.key.split(',').map(Number);
+          const mesh = editorMeshMap.get(item.key);
+          if (mesh) {
+            mesh.material = createCheckpointMaterials(correctNum);
+            const isCurrent = (y === currentLayer);
+            mesh.material.forEach(m => { m.transparent = true; m.opacity = isCurrent ? 1.0 : 0.35; });
+          }
+        }
+      });
+    }
+
+    function rebuildPathVisuals() {
+      while (pathVisualsGroup.children.length > 0) {
+        const obj = pathVisualsGroup.children[0];
+        pathVisualsGroup.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+      }
+
+      editorBlocks.forEach((val, key) => {
+        if (val.type === 8 && val.pathConfig && val.pathConfig.steps && val.pathConfig.steps.length > 0) {
+          const [sx, sy, sz] = key.split(',').map(Number);
+          let cx = sx, cy = sy, cz = sz;
+
+          val.pathConfig.steps.forEach((step, idx) => {
+            let nx = cx, ny = cy, nz = cz;
+            if (step === 'UP') nz -= 1;
+            else if (step === 'DOWN') nz += 1;
+            else if (step === 'LEFT') nx -= 1;
+            else if (step === 'RIGHT') nx += 1;
+            else if (step === 'Y_UP') ny += 1;
+            else if (step === 'Y_DOWN') ny -= 1;
+
+            const tileGeo = new THREE.BoxGeometry(0.85, 0.05, 0.85);
+            const tileMat = new THREE.MeshBasicMaterial({
+              color: 0x818cf8,
+              transparent: true,
+              opacity: (ny === currentLayer) ? 0.45 : 0.15
+            });
+            const tile = new THREE.Mesh(tileGeo, tileMat);
+            tile.position.set(nx, ny - 0.05, nz);
+            pathVisualsGroup.add(tile);
+
+            const points = [
+              new THREE.Vector3(cx, cy + 0.1, cz),
+              new THREE.Vector3(nx, ny + 0.1, nz)
+            ];
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+            const lineMat = new THREE.LineBasicMaterial({
+              color: 0x38bdf8,
+              transparent: true,
+              opacity: (ny === currentLayer) ? 0.8 : 0.25,
+              linewidth: 2
+            });
+            const line = new THREE.Line(lineGeo, lineMat);
+            pathVisualsGroup.add(line);
+
+            cx = nx; cy = ny; cz = nz;
+          });
+        }
+      });
+    }
+
+    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null, skipAutoSave = false, blockColor = null, pathConfig = null) {
       const key = `${x},${y},${z}`;
 
       if (type === 3) {
@@ -1331,18 +2102,26 @@
       }
 
       if (type === 0) {
+        const wasCheckpoint = editorBlocks.has(key) && editorBlocks.get(key).type === 6;
         editorBlocks.delete(key);
         if (editorMeshMap.has(key)) {
           editorGroup.remove(editorMeshMap.get(key));
           editorMeshMap.delete(key);
         }
+        if (wasCheckpoint) sanitizeCheckpointIndices();
       } else {
-        const cNum = (type === 6) ? (cpIndex || getNextCheckpointNumber()) : null;
+        let cNum = null;
+        if (type === 6) {
+          cNum = cpIndex || (countCheckpoints() + 1);
+        }
+
         const color = (type === 1 || type === 5) ? (blockColor || inputBlockColor.value) : null;
+        const pCfg = (type === 8) ? (pathConfig || { steps: ['RIGHT', 'RIGHT'], speed: 0.035 }) : null;
 
         const data = {
           type,
           moverConfig: moverConfig || (type === 4 ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null),
+          pathConfig: pCfg,
           cpIndex: cNum,
           color: color
         };
@@ -1354,13 +2133,12 @@
         let m = matFloor.clone();
         let isMultiMat = false;
 
-        if (type === 1) {
-          m = new THREE.MeshLambertMaterial({ color: color || 0x64748b });
-        } else if (type === 5) {
-          m = new THREE.MeshLambertMaterial({ color: color || 0x475569 });
-        } else if (type === 2) m = matGoal.clone();
+        if (type === 1) m = new THREE.MeshLambertMaterial({ color: color || 0x64748b });
+        else if (type === 5) m = new THREE.MeshLambertMaterial({ color: color || 0x475569 });
+        else if (type === 2) m = matGoal.clone();
         else if (type === 3) m = matStart.clone();
         else if (type === 4) m = matMover.clone();
+        else if (type === 8) m = matPathMover.clone();
         else if (type === 7) m = matFallFloor.clone();
         else if (type === 6) {
           m = createCheckpointMaterials(cNum);
@@ -1373,10 +2151,7 @@
 
         const isCurrent = (y === currentLayer);
         if (isMultiMat) {
-          mesh.material.forEach(mat => {
-            mat.transparent = true;
-            mat.opacity = isCurrent ? 1.0 : 0.35;
-          });
+          mesh.material.forEach(mat => { mat.transparent = true; mat.opacity = isCurrent ? 1.0 : 0.35; });
         } else {
           mesh.material.transparent = true;
           mesh.material.opacity = isCurrent ? 1.0 : 0.35;
@@ -1384,8 +2159,11 @@
 
         editorGroup.add(mesh);
         editorMeshMap.set(key, mesh);
+
+        if (type === 6) sanitizeCheckpointIndices();
       }
       updateTestSpawnOptions();
+      rebuildPathVisuals();
       if (!skipAutoSave) triggerAutoSave();
     }
 
@@ -1397,9 +2175,7 @@
 
       const checkpoints = [];
       editorBlocks.forEach((val, key) => {
-        if (val.type === 6) {
-          checkpoints.push({ key, cpIndex: val.cpIndex || 1 });
-        }
+        if (val.type === 6) checkpoints.push({ key, cpIndex: val.cpIndex || 1 });
       });
 
       checkpoints.sort((a, b) => a.cpIndex - b.cpIndex);
@@ -1430,6 +2206,7 @@
         setEditorTile(x, y, z, 0, null, null, true);
       });
       triggerAutoSave();
+      rebuildPathVisuals();
     };
 
     function exportStageData() {
@@ -1445,6 +2222,8 @@
 
         if (val.type === 4) {
           movers.push({ x, y, z, ...val.moverConfig });
+        } else if (val.type === 8) {
+          movers.push({ x, y, z, isPathMover: true, ...val.pathConfig });
         } else {
           blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex, color: val.color });
         }
@@ -1484,6 +2263,67 @@
     };
     document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
 
+    let editingPathKey = null;
+    let tempPathSteps = [];
+    const modalPath = document.getElementById('modal-path-mover');
+    const pathStepsList = document.getElementById('path-steps-list');
+
+    function renderPathStepsUI() {
+      pathStepsList.innerHTML = '';
+      if (tempPathSteps.length === 0) {
+        pathStepsList.innerHTML = '<span style="color:#64748b; font-size:12px;">ステップが設定されていません</span>';
+        return;
+      }
+      const dirLabels = { UP: '↑(奥)', DOWN: '↓(手前)', LEFT: '←(左)', RIGHT: '→(右)', Y_UP: '▲(上)', Y_DOWN: '▼(下)' };
+      tempPathSteps.forEach((step, idx) => {
+        const pill = document.createElement('div');
+        pill.className = 'route-step-pill';
+        pill.textContent = `${idx + 1}. ${dirLabels[step] || step}`;
+        pathStepsList.appendChild(pill);
+      });
+    }
+
+    function openPathMoverModal(key) {
+      editingPathKey = key;
+      const b = editorBlocks.get(key);
+      if (b && b.pathConfig) {
+        tempPathSteps = [...(b.pathConfig.steps || [])];
+        document.getElementById('modal-path-speed').value = b.pathConfig.speed || 0.035;
+        renderPathStepsUI();
+        modalPath.classList.remove('hidden');
+      }
+    }
+
+    document.querySelectorAll('.btn-add-step').forEach(btn => {
+      btn.onclick = () => {
+        if (tempPathSteps.length >= 24) { alert("ルートは最大24ステップまでです。"); return; }
+        tempPathSteps.push(btn.dataset.dir);
+        renderPathStepsUI();
+      };
+    });
+
+    document.getElementById('btn-pop-step').onclick = () => {
+      tempPathSteps.pop();
+      renderPathStepsUI();
+    };
+
+    document.getElementById('btn-clear-path').onclick = () => {
+      tempPathSteps = [];
+      renderPathStepsUI();
+    };
+
+    document.getElementById('modal-path-save').onclick = () => {
+      if (editingPathKey && editorBlocks.has(editingPathKey)) {
+        const b = editorBlocks.get(editingPathKey);
+        b.pathConfig.steps = [...tempPathSteps];
+        b.pathConfig.speed = parseFloat(document.getElementById('modal-path-speed').value);
+        rebuildPathVisuals();
+        triggerAutoSave();
+      }
+      modalPath.classList.add('hidden');
+    };
+    document.getElementById('modal-path-cancel').onclick = () => modalPath.classList.add('hidden');
+
     let editingCpKey = null;
     const modalCp = document.getElementById('modal-checkpoint');
     const inputCpNumber = document.getElementById('cp-number-input');
@@ -1492,16 +2332,48 @@
       editingCpKey = key;
       const b = editorBlocks.get(key);
       if (b) {
+        const maxCp = countCheckpoints();
+        inputCpNumber.max = maxCp;
+        inputCpNumber.min = 1;
         inputCpNumber.value = b.cpIndex || 1;
+        document.getElementById('cp-max-desc').textContent = `置いた数 (${maxCp}個) 以上の数字は設定できません。重複時は自動で入れ替わります。`;
         modalCp.classList.remove('hidden');
       }
     }
 
     document.getElementById('cp-modal-save').onclick = () => {
       if (editingCpKey && editorBlocks.has(editingCpKey)) {
-        const [x, y, z] = editingCpKey.split(',').map(Number);
-        const newNum = parseInt(inputCpNumber.value, 10) || 1;
-        setEditorTile(x, y, z, 6, null, newNum);
+        const curBlock = editorBlocks.get(editingCpKey);
+        const maxCp = countCheckpoints();
+        let targetNum = parseInt(inputCpNumber.value, 10);
+        if (isNaN(targetNum) || targetNum < 1) targetNum = 1;
+        if (targetNum > maxCp) targetNum = maxCp;
+
+        const oldNum = curBlock.cpIndex;
+        if (targetNum !== oldNum) {
+          editorBlocks.forEach((otherBlock, otherKey) => {
+            if (otherKey !== editingCpKey && otherBlock.type === 6 && otherBlock.cpIndex === targetNum) {
+              otherBlock.cpIndex = oldNum;
+              const [ox, oy, oz] = otherKey.split(',').map(Number);
+              const otherMesh = editorMeshMap.get(otherKey);
+              if (otherMesh) {
+                otherMesh.material = createCheckpointMaterials(oldNum);
+                const isCur = (oy === currentLayer);
+                otherMesh.material.forEach(m => { m.transparent = true; m.opacity = isCur ? 1.0 : 0.35; });
+              }
+            }
+          });
+
+          curBlock.cpIndex = targetNum;
+          const [cx, cy, cz] = editingCpKey.split(',').map(Number);
+          const curMesh = editorMeshMap.get(editingCpKey);
+          if (curMesh) {
+            curMesh.material = createCheckpointMaterials(targetNum);
+            const isCur = (cy === currentLayer);
+            curMesh.material.forEach(m => { m.transparent = true; m.opacity = isCur ? 1.0 : 0.35; });
+          }
+          triggerAutoSave();
+        }
       }
       modalCp.classList.add('hidden');
     };
@@ -1522,7 +2394,7 @@
         startCpIndex = editorBlocks.get(spawnChoice).cpIndex;
       }
 
-      startPlay({ ...data, author: currentUsername }, true, startPoint, startCpIndex);
+      startPlay({ ...data, author: currentUsername }, true, startPoint, startCpIndex, "CUSTOM_TEST");
     };
 
     const raycaster = new THREE.Raycaster();
@@ -1540,11 +2412,8 @@
       } else if (e.button === 1) {
         isMiddleDown = true;
       } else if (e.button === 2) {
-        if (e.shiftKey) {
-          isMiddleDown = true;
-        } else {
-          isRightDown = true;
-        }
+        if (e.shiftKey) isMiddleDown = true;
+        else isRightDown = true;
       }
       prevMouse = { x: e.clientX, y: e.clientY };
     });
@@ -1568,8 +2437,7 @@
       if (isRightDown) {
         const panSpeed = editorCamRadius * 0.0016;
         const forward = new THREE.Vector3().subVectors(editorCamTarget, camera.position);
-        forward.y = 0;
-        forward.normalize();
+        forward.y = 0; forward.normalize();
         const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
 
         editorCamTarget.addScaledVector(right, -dx * panSpeed);
@@ -1607,6 +2475,8 @@
           const key = `${tx},${currentLayer},${tz}`;
           if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) {
             openMoverModal(key);
+          } else if (selectedPalette === 8 && editorBlocks.has(key) && editorBlocks.get(key).type === 8) {
+            openPathMoverModal(key);
           } else if (selectedPalette === 6 && editorBlocks.has(key) && editorBlocks.get(key).type === 6) {
             openCpModal(key);
           } else {
@@ -1627,22 +2497,45 @@
 
       stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex, true, b.color));
       if (stage.movers) {
-        stage.movers.forEach(m => setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }, null, true));
+        stage.movers.forEach(m => {
+          if (m.isPathMover) {
+            setEditorTile(m.x, m.y, m.z, 8, null, null, true, null, { steps: m.steps, speed: m.speed });
+          } else {
+            setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }, null, true);
+          }
+        });
       }
       if (stage.spawn) setEditorTile(stage.spawn.x, stage.spawn.y, stage.spawn.z, 3, null, null, true);
       updateLayerDisplay();
       updateTestSpawnOptions();
+      rebuildPathVisuals();
     }
 
     let currentCheckpoint = null;
 
-    function startPlay(stageData, testPlayMode = false, overrideStart = null, overrideCpIndex = null) {
+    function startPlay(stageData, testPlayMode = false, overrideStart = null, overrideCpIndex = null, stageKey = null) {
       activeStage = stageData;
+      activeStageKey = stageKey || stageData.name;
       isTestPlay = testPlayMode;
       currentCheckpoint = null;
       isPaused = false;
       modalPause.classList.add('hidden');
       passedCheckpoints.clear();
+
+      // タイマーの初期化
+      playStartTime = performance.now();
+      playElapsedTime = 0;
+      timerRunning = true;
+
+      const best = getBestTime(activeStageKey);
+      hudBestTime.textContent = formatTime(best);
+      hudLiveTime.textContent = "00:00.00";
+
+      // 通常プレイ時は白、対戦時は青
+      if (!isVersusMatch) {
+        cubeMesh.material.color.setHex(0xffffff);
+        if (opponentMesh) opponentMesh.visible = false;
+      }
 
       switchScreen('PLAYING');
       gameState = 'PLAYING';
@@ -1659,9 +2552,7 @@
 
       if (overrideStart) {
         currentCheckpoint = { x: targetStart.x, y: startY, z: targetStart.z };
-        if (overrideCpIndex) {
-          passedCheckpoints.set(overrideCpIndex, { x: targetStart.x, y: startY, z: targetStart.z });
-        }
+        if (overrideCpIndex) passedCheckpoints.set(overrideCpIndex, { x: targetStart.x, y: startY, z: targetStart.z });
       }
     }
 
@@ -1673,11 +2564,9 @@
       stage.blocks.forEach(b => {
         let geo = (b.type === 5) ? fullBlockGeo : thinTileGeo;
         let m = matFloor;
-        if (b.type === 1) {
-          m = new THREE.MeshLambertMaterial({ color: b.color || 0x64748b });
-        } else if (b.type === 5) {
-          m = new THREE.MeshLambertMaterial({ color: b.color || 0x475569 });
-        } else if (b.type === 2) m = matGoal;
+        if (b.type === 1) m = new THREE.MeshLambertMaterial({ color: b.color || 0x64748b });
+        else if (b.type === 5) m = new THREE.MeshLambertMaterial({ color: b.color || 0x475569 });
+        else if (b.type === 2) m = matGoal;
         else if (b.type === 3) m = matStart;
         else if (b.type === 7) m = matFallFloor.clone();
         else if (b.type === 6) m = createCheckpointMaterials(b.cpIndex || 1);
@@ -1690,37 +2579,65 @@
 
         if (b.type === 7) {
           activeFallingFloors.push({
-            x: b.x, y: b.y, z: b.z,
-            mesh: mesh,
-            state: 'IDLE',
-            timer: 0,
-            fallVelocity: 0,
-            initialY: b.y - 0.1
+            x: b.x, y: b.y, z: b.z, mesh: mesh, state: 'IDLE', timer: 0, fallVelocity: 0, initialY: b.y - 0.1
           });
         }
       });
 
       if (stage.movers) {
         stage.movers.forEach(m => {
-          const mesh = new THREE.Mesh(thinTileGeo, matMover);
-          mesh.position.set(m.x, m.y - 0.1, m.z);
-          mesh.receiveShadow = true;
-          tilesGroup.add(mesh);
+          if (m.isPathMover) {
+            const mesh = new THREE.Mesh(thinTileGeo, matPathMover);
+            mesh.position.set(m.x, m.y - 0.1, m.z);
+            mesh.receiveShadow = true;
+            tilesGroup.add(mesh);
 
-          let vecX = 0, vecY = 0, vecZ = 0;
-          if (m.dir === 'UP')     vecZ = -1;
-          if (m.dir === 'DOWN')   vecZ = 1;
-          if (m.dir === 'LEFT')   vecX = -1;
-          if (m.dir === 'RIGHT')  vecX = 1;
-          if (m.dir === 'Y_UP')   vecY = 1;
-          if (m.dir === 'Y_DOWN') vecY = -1;
+            const waypoints = [{ x: m.x, y: m.y, z: m.z }];
+            let curX = m.x, curY = m.y, curZ = m.z;
+            (m.steps || []).forEach(step => {
+              if (step === 'UP') curZ -= 1;
+              else if (step === 'DOWN') curZ += 1;
+              else if (step === 'LEFT') curX -= 1;
+              else if (step === 'RIGHT') curX += 1;
+              else if (step === 'Y_UP') curY += 1;
+              else if (step === 'Y_DOWN') curY -= 1;
+              waypoints.push({ x: curX, y: curY, z: curZ });
+            });
 
-          activeMovers.push({
-            originX: m.x, originY: m.y, originZ: m.z,
-            vecX: vecX, vecY: vecY, vecZ: vecZ,
-            dist: m.dist, speed: m.speed,
-            mesh: mesh, currentOffset: 0, direction: 1
-          });
+            activeMovers.push({
+              isPathMover: true,
+              waypoints: waypoints,
+              currentIndex: 0,
+              targetIndex: waypoints.length > 1 ? 1 : 0,
+              direction: 1,
+              progress: 0,
+              speed: m.speed || 0.035,
+              mesh: mesh,
+              stepX: 0, stepY: 0, stepZ: 0
+            });
+          } else {
+            const mesh = new THREE.Mesh(thinTileGeo, matMover);
+            mesh.position.set(m.x, m.y - 0.1, m.z);
+            mesh.receiveShadow = true;
+            tilesGroup.add(mesh);
+
+            let vecX = 0, vecY = 0, vecZ = 0;
+            if (m.dir === 'UP')     vecZ = -1;
+            if (m.dir === 'DOWN')   vecZ = 1;
+            if (m.dir === 'LEFT')   vecX = -1;
+            if (m.dir === 'RIGHT')  vecX = 1;
+            if (m.dir === 'Y_UP')   vecY = 1;
+            if (m.dir === 'Y_DOWN') vecY = -1;
+
+            activeMovers.push({
+              isPathMover: false,
+              originX: m.x, originY: m.y, originZ: m.z,
+              vecX: vecX, vecY: vecY, vecZ: vecZ,
+              dist: m.dist, speed: m.speed,
+              mesh: mesh, currentOffset: 0, direction: 1,
+              stepX: 0, stepY: 0, stepZ: 0
+            });
+          }
         });
       }
     }
@@ -1786,7 +2703,7 @@
         const dx = Math.abs(m.mesh.position.x - x);
         const dz = Math.abs(m.mesh.position.z - z);
         if (dx <= 0.85 && dz <= 0.85) {
-          surfaces.push({ type: 4, mover: m, surfaceY: m.mesh.position.y + 0.1 });
+          surfaces.push({ type: m.isPathMover ? 8 : 4, mover: m, surfaceY: m.mesh.position.y + 0.1 });
         }
       });
       return surfaces.sort((a, b) => b.surfaceY - a.surfaceY);
@@ -1797,7 +2714,20 @@
       return list.find(s => Math.abs(s.surfaceY - nearY) <= 0.6) || list[0] || null;
     }
 
-    function findTargetSurface(tx, tz, curY) {
+    function findTargetSurface(curX, curZ, curY, tx, tz) {
+      const currentLevelY = Math.round(curY);
+
+      if (isSolidAt(tx, tz, currentLevelY)) {
+        return { blocked: true };
+      }
+
+      if (isSolidAt(tx, tz, currentLevelY + 1)) {
+        const surfaces = getAllSurfacesAt(tx, tz);
+        if (!surfaces.some(s => s.surfaceY <= curY + 0.2)) {
+          return { blocked: true };
+        }
+      }
+
       const surfaces = getAllSurfacesAt(tx, tz);
       let best = null;
       let minDiff = 999;
@@ -1805,8 +2735,8 @@
       for (const s of surfaces) {
         const diff = s.surfaceY - curY;
         if (diff >= -1.4 && diff <= 1.25) {
-          const solidCheckY = Math.round(s.surfaceY);
-          if (!isSolidAt(tx, tz, solidCheckY)) {
+          const targetCubeY = Math.round(s.surfaceY);
+          if (!isSolidAt(tx, tz, targetCubeY)) {
             if (Math.abs(diff) < minDiff) {
               minDiff = Math.abs(diff);
               best = s;
@@ -1824,8 +2754,6 @@
         };
       }
 
-      if (isSolidAt(tx, tz, Math.round(curY))) return { blocked: true };
-
       return { dy: 0, targetY: curY, type: 0, mover: null, surfaceY: curY, isFall: true };
     }
 
@@ -1835,9 +2763,7 @@
         e.preventDefault();
         keysPressed[e.key] = true;
       }
-      if (e.key === 'Escape') {
-        togglePause();
-      }
+      if (e.key === 'Escape') togglePause();
     });
     window.addEventListener('keyup', (e) => {
       if (keysPressed[e.key]) keysPressed[e.key] = false;
@@ -1887,7 +2813,7 @@
       const tx = currentX + dx;
       const tz = currentZ + dz;
 
-      const surface = findTargetSurface(tx, tz, cubePos.y);
+      const surface = findTargetSurface(currentX, currentZ, cubePos.y, tx, tz);
       if (surface.blocked) {
         isRolling = false;
         return;
@@ -1917,12 +2843,10 @@
 
         currentAngle += rollSpeed;
 
-        if (surface.type === 4 && surface.mover) {
+        if ((surface.type === 4 || surface.type === 8) && surface.mover) {
           const liveMoverY = surface.mover.mesh.position.y + 0.1;
           const liveDy = liveMoverY - startY;
-          if (liveDy > 0.15) {
-            pivot.position.y = startY + liveDy;
-          }
+          if (liveDy > 0.15) pivot.position.y = startY + liveDy;
         }
 
         if (currentAngle < targetAngle) {
@@ -1932,7 +2856,7 @@
           cubePos.x = tx;
           cubePos.z = tz;
 
-          if (surface.type === 4 && surface.mover) {
+          if ((surface.type === 4 || surface.type === 8) && surface.mover) {
             cubePos.x = surface.mover.mesh.position.x;
             cubePos.z = surface.mover.mesh.position.z;
             cubePos.y = surface.mover.mesh.position.y + 0.1;
@@ -1946,7 +2870,8 @@
 
           isRolling = false;
 
-          // セーブ地点を踏んだ時の記録
+          syncMyVersusPosition();
+
           if (surface.type === 6) {
             currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
             const idx = (surface.blockRef && surface.blockRef.cpIndex) || 1;
@@ -1965,13 +2890,49 @@
             isFallingDown = true;
             fallVelocity = 0.05;
           } else if (surface.type === 2) {
+            timerRunning = false;
             resetInputBuffer();
-            alert("ステージクリア！おめでとうございます！");
-            if (isTestPlay) {
-              returnToEditorView();
+
+            const finalTimeMs = Math.round(playElapsedTime);
+            const bestMs = getBestTime(activeStageKey);
+            let isNewRecord = false;
+
+            if (!bestMs || finalTimeMs < bestMs) {
+              setBestTime(activeStageKey, finalTimeMs);
+              isNewRecord = true;
+            }
+
+            const currentBestStr = formatTime(getBestTime(activeStageKey));
+            const clearTimeStr = formatTime(finalTimeMs);
+
+            if (isVersusMatch) {
+              // 対戦時のゴール判定
+              const timeField = (activeStage.hostUid === currentUser.uid) ? "hostClearTime" : "guestClearTime";
+              db.collection("versus_rooms").doc(vsRoomId).update({ [timeField]: finalTimeMs });
+
+              let resultMsg = `🎉 ゴールしました！\nタイム: ${clearTimeStr}\n\n`;
+              if (opponentClearTime) {
+                if (finalTimeMs < opponentClearTime) {
+                  resultMsg += `🏆 相手(${formatTime(opponentClearTime)})に勝利しました！ (YOU WIN)`;
+                } else {
+                  resultMsg += `💥 相手(${formatTime(opponentClearTime)})の方が速かったです... (YOU LOSE)`;
+                }
+              } else {
+                resultMsg += `相手のゴールを待っています... (暫定首位)`;
+              }
+              alert(resultMsg);
+              isVersusMatch = false;
+              if (opponentMesh) opponentMesh.visible = false;
+              gameState = 'MODES';
+              switchScreen('MODES');
             } else {
-              gameState = 'STAGES';
-              switchScreen('STAGES');
+              // 通常プレイのゴール
+              let msg = `🎉 ステージクリア！おめでとうございます！\n\nタイム: ${clearTimeStr}\n自己ベスト: ${currentBestStr}`;
+              if (isNewRecord) msg += "\n✨ NEW RECORD 更新！ ✨";
+              alert(msg);
+
+              if (isTestPlay) returnToEditorView();
+              else { gameState = 'STAGES'; switchScreen('STAGES'); }
             }
           }
         }
@@ -1990,14 +2951,18 @@
 
       if (gameState === 'PLAYING') {
         if (!isPaused) {
+          // タイム加算
+          if (timerRunning) {
+            playElapsedTime = performance.now() - playStartTime;
+            hudLiveTime.textContent = formatTime(playElapsedTime);
+          }
+
+          // 落下床更新
           activeFallingFloors.forEach(ff => {
             if (ff.state === 'COUNTING') {
               ff.timer += 1 / 60;
-              if (Math.floor(ff.timer * 8) % 2 === 0) {
-                ff.mesh.material.color.setHex(0xef4444);
-              } else {
-                ff.mesh.material.color.setHex(0xf97316);
-              }
+              if (Math.floor(ff.timer * 8) % 2 === 0) ff.mesh.material.color.setHex(0xef4444);
+              else ff.mesh.material.color.setHex(0xf97316);
 
               if (ff.timer >= 1.0) {
                 ff.state = 'FALLING';
@@ -2020,46 +2985,85 @@
             }
           });
 
+          // 奈落落下死亡
           if (isFallingDown) {
             fallVelocity += 0.03;
             cubePos.y -= fallVelocity;
             pivot.position.y = cubePos.y;
+            syncMyVersusPosition();
 
-            if (cubePos.y <= -10) {
-              respawnPlayer();
-            }
+            if (cubePos.y <= -10) respawnPlayer();
           }
 
+          // 移動床の物理移動
           activeMovers.forEach(m => {
-            const delta = m.speed * m.direction;
-            m.currentOffset += Math.abs(delta);
+            let stepX = 0, stepY = 0, stepZ = 0;
 
-            const stepX = m.vecX * delta;
-            const stepY = m.vecY * delta;
-            const stepZ = m.vecZ * delta;
+            if (m.isPathMover) {
+              if (m.waypoints && m.waypoints.length > 1) {
+                const currentWp = m.waypoints[m.currentIndex];
+                const targetWp = m.waypoints[m.targetIndex];
 
-            m.mesh.position.x += stepX;
-            m.mesh.position.y += stepY;
-            m.mesh.position.z += stepZ;
+                m.progress += m.speed;
+                if (m.progress >= 1.0) {
+                  m.progress = 0;
+                  m.currentIndex = m.targetIndex;
+                  m.targetIndex += m.direction;
 
-            if (m.currentOffset >= m.dist) {
-              m.direction *= -1;
-              m.currentOffset = 0;
+                  if (m.targetIndex >= m.waypoints.length) {
+                    m.direction = -1;
+                    m.targetIndex = m.waypoints.length - 2;
+                  } else if (m.targetIndex < 0) {
+                    m.direction = 1;
+                    m.targetIndex = 1;
+                  }
+                }
+
+                const prevX = m.mesh.position.x;
+                const prevY = m.mesh.position.y;
+                const prevZ = m.mesh.position.z;
+
+                const interpX = currentWp.x + (targetWp.x - currentWp.x) * m.progress;
+                const interpY = currentWp.y + (targetWp.y - currentWp.y) * m.progress - 0.1;
+                const interpZ = currentWp.z + (targetWp.z - currentWp.z) * m.progress;
+
+                m.mesh.position.set(interpX, interpY, interpZ);
+                stepX = interpX - prevX;
+                stepY = interpY - prevY;
+                stepZ = interpZ - prevZ;
+              }
+            } else {
+              const delta = m.speed * m.direction;
+              m.currentOffset += Math.abs(delta);
+
+              stepX = m.vecX * delta;
+              stepY = m.vecY * delta;
+              stepZ = m.vecZ * delta;
+
+              m.mesh.position.x += stepX;
+              m.mesh.position.y += stepY;
+              m.mesh.position.z += stepZ;
+
+              if (m.currentOffset >= m.dist) {
+                m.direction *= -1;
+                m.currentOffset = 0;
+              }
             }
 
             if (!isRolling && !isFallingDown) {
-              const dx = Math.abs(m.mesh.position.x - cubePos.x);
-              const dz = Math.abs(m.mesh.position.z - cubePos.z);
+              const pX = Math.abs(m.mesh.position.x - cubePos.x);
+              const pZ = Math.abs(m.mesh.position.z - cubePos.z);
               const moverSurfaceY = m.mesh.position.y + 0.1;
-              const dy = Math.abs(moverSurfaceY - cubePos.y);
+              const pY = Math.abs(moverSurfaceY - cubePos.y);
 
-              if (dx <= 0.85 && dz <= 0.85 && dy <= 0.75) {
+              if (pX <= 0.85 && pZ <= 0.85 && pY <= 0.75) {
                 cubePos.x += stepX;
                 cubePos.y += stepY;
                 cubePos.z += stepZ;
                 pivot.position.x = cubePos.x;
                 pivot.position.y = cubePos.y;
                 pivot.position.z = cubePos.z;
+                syncMyVersusPosition();
               }
             }
           });
