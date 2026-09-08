@@ -383,7 +383,7 @@
     const tabUserDrafts = document.getElementById('tab-user-drafts');
 
     let currentUser = null;
-    let currentTab = 'PUBLIC'; // 'PUBLIC' or 'USER_DRAFTS'
+    let currentTab = 'PUBLIC';
     let currentEditingTarget = null; // { type: 'PUBLIC' | 'DRAFT', docId, userId }
 
     auth.onAuthStateChanged(user => {
@@ -430,7 +430,7 @@
       else loadUserDrafts();
     }
 
-    // 1. 公開ステージ一覧
+    // 1. 公開ステージ一覧（点滅なし）
     async function loadPublicStages() {
       if (!currentUser) return;
       stageList.innerHTML = '<div style="color:#64748b; text-align:center;">読み込み中...</div>';
@@ -503,43 +503,51 @@
       }
     }
 
-    // 2. ユーザー別作成中ステージ一覧
+    // 2. ユーザー別作成中ステージ一覧（collectionGroupで確実に全取得）
     async function loadUserDrafts() {
       if (!currentUser) return;
-      stageList.innerHTML = '<div style="color:#64748b; text-align:center;">ユーザーの作成中データを読み込み中...</div>';
+      stageList.innerHTML = '<div style="color:#64748b; text-align:center;">全ユーザーの作成中データを集約中...</div>';
       try {
-        const usersSnap = await db.collection("users").get();
-        if (usersSnap.empty) {
-          stageList.innerHTML = '<div style="color:#64748b; text-align:center;">ユーザーデータがありません</div>';
+        // custom_stages サブコレクションを全ユーザーから一括取得
+        const groupSnap = await db.collectionGroup("custom_stages").get();
+        if (groupSnap.empty) {
+          stageList.innerHTML = '<div style="color:#64748b; text-align:center;">作成中のステージデータはありません</div>';
           return;
         }
 
+        // ユーザーUIDごとにグループ化
+        const userGroupsMap = new Map();
+        groupSnap.forEach(doc => {
+          const d = doc.data();
+          // 親の users/{uid} ドキュメントIDを取得
+          const userId = doc.ref.parent.parent ? doc.ref.parent.parent.id : "不明UID";
+          if (!userGroupsMap.has(userId)) {
+            userGroupsMap.set(userId, {
+              userId: userId,
+              authorName: d.author || "名称未設定",
+              drafts: []
+            });
+          }
+          userGroupsMap.get(userId).drafts.push({ docId: doc.id, data: d });
+        });
+
         stageList.innerHTML = '';
-        let totalDrafts = 0;
 
-        for (const userDoc of usersSnap.docs) {
-          const uData = userDoc.data();
-          const userId = userDoc.id;
-          const uName = uData.username || "名称未設定";
-
-          const draftsSnap = await db.collection("users").doc(userId).collection("custom_stages").orderBy("updatedAt", "desc").get();
-          if (draftsSnap.empty) continue;
-
-          totalDrafts += draftsSnap.size;
+        userGroupsMap.forEach(group => {
           const userGroup = document.createElement('div');
           userGroup.className = 'user-group';
           userGroup.innerHTML = `
             <div class="user-group-title">
-              <span>👤 ${uName} <span style="font-size:11px; color:#94a3b8;">(UID: ${userId})</span></span>
-              <span class="badge badge-draft">${draftsSnap.size}件の下書き</span>
+              <span>👤 ${group.authorName} <span style="font-size:11px; color:#94a3b8;">(UID: ${group.userId})</span></span>
+              <span class="badge badge-draft">${group.drafts.length}件のスロット</span>
             </div>
             <div class="draft-items-container" style="display:flex; flex-direction:column; gap:6px;"></div>
           `;
 
           const container = userGroup.querySelector('.draft-items-container');
 
-          draftsSnap.forEach(dDoc => {
-            const d = dDoc.data();
+          group.drafts.forEach(draft => {
+            const d = draft.data;
             const item = document.createElement('div');
             item.className = 'stage-item';
             item.style.background = '#1e293b';
@@ -548,7 +556,7 @@
                 <strong style="color:#38bdf8;">${d.name || "名称未設定"}</strong>
                 <span style="font-size:11px; color:#94a3b8; margin-left:6px;">(${d.size}×${d.size})</span>
                 <div style="font-size:11px; color:#64748b; margin-top:2px;">
-                  更新: ${d.updatedAt ? new Date(d.updatedAt.toDate()).toLocaleString() : '不明'}
+                  更新: ${d.updatedAt ? new Date(d.updatedAt.toDate()).toLocaleString() : '自動同期中'}
                 </div>
               </div>
               <div style="display:flex; gap:6px;">
@@ -558,14 +566,14 @@
             `;
 
             item.querySelector('.btn-edit-draft').onclick = () => {
-              currentEditingTarget = { type: 'DRAFT', docId: dDoc.id, userId: userId };
+              currentEditingTarget = { type: 'DRAFT', docId: draft.docId, userId: group.userId };
               openEditorWithStage(d);
             };
 
             item.querySelector('.btn-del-draft').onclick = async () => {
-              if (confirm(`ユーザー「${uName}」のステージスロット「${d.name}」を削除しますか？`)) {
+              if (confirm(`ユーザー「${group.authorName}」のスロット「${d.name}」を削除しますか？`)) {
                 try {
-                  await db.collection("users").doc(userId).collection("custom_stages").doc(dDoc.id).delete();
+                  await db.collection("users").doc(group.userId).collection("custom_stages").doc(draft.docId).delete();
                   item.remove();
                 } catch(e) {
                   alert("削除エラー: " + e.message);
@@ -577,13 +585,9 @@
           });
 
           stageList.appendChild(userGroup);
-        }
-
-        if (totalDrafts === 0) {
-          stageList.innerHTML = '<div style="color:#64748b; text-align:center;">作成中のステージスロットは現在ありません</div>';
-        }
+        });
       } catch (e) {
-        stageList.innerHTML = `<div style="color:#ef4444; text-align:center;">読込エラー: ${e.message}</div>`;
+        stageList.innerHTML = `<div style="color:#ef4444; text-align:center;">読込エラー: ${e.message}<br><span style="font-size:11px; color:#94a3b8;">※Firestoreルールに custom_stages の collectionGroup 権限があるか確認してください</span></div>`;
       }
     }
 
