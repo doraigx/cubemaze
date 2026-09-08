@@ -299,6 +299,24 @@
     }
     .status-online { background-color: #10b981; }
     .status-offline { background-color: #64748b; }
+
+    .chat-bubble {
+      padding: 6px 10px;
+      border-radius: 6px;
+      max-width: 80%;
+      word-break: break-all;
+      font-size: 12px;
+    }
+    .chat-bubble-me {
+      align-self: flex-end;
+      background: #0284c7;
+      color: #fff;
+    }
+    .chat-bubble-other {
+      align-self: flex-start;
+      background: #334155;
+      color: #fff;
+    }
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -362,6 +380,22 @@
     <button id="btn-close-friends" style="align-self: flex-end;">閉じる</button>
   </div>
 
+  <!-- フレンドチャットモーダル -->
+  <div id="modal-friend-chat" class="modal-dialog hidden" style="min-width: 340px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0;" id="chat-friend-name-title">チャット</h3>
+      <span style="font-size: 11px; font-weight: bold; color: #ef4444;">⚠️ 検閲されています</span>
+    </div>
+    <div id="chat-messages-container" class="list-container" style="height: 220px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="color:#64748b; font-size:11px; text-align:center;">メッセージはありません</div>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <input type="text" id="input-chat-msg" placeholder="50文字以内で入力" maxlength="50" style="flex:1; text-align: left; font-size: 12px;">
+      <button id="btn-send-chat-msg" style="background: #0284c7; padding: 4px 12px; font-size: 12px;">送信</button>
+    </div>
+    <button id="btn-close-friend-chat" style="align-self: flex-end;">閉じる</button>
+  </div>
+
   <!-- フレンド申請一覧モーダル -->
   <div id="modal-friend-requests" class="modal-dialog hidden" style="min-width: 320px;">
     <h3 style="margin: 0;">フレンド申請一覧</h3>
@@ -379,9 +413,19 @@
     <div class="btn-group" style="width: 100%;">
       <button id="btn-vs-random" style="background: #10b981;">🎲 ランダムマッチ (公開コース)</button>
       <button id="btn-vs-custom" style="background: #8b5cf6;">🗺️ コース指定マッチ (公開 / 下書き)</button>
+      <button id="btn-vs-records" style="background: #3b82f6;">📜 対戦戦績 (履歴)</button>
     </div>
 
     <button id="btn-close-versus-menu" style="align-self: flex-end;">戻る</button>
+  </div>
+
+  <!-- 対戦戦績モーダル -->
+  <div id="modal-vs-records" class="modal-dialog hidden" style="min-width: 360px;">
+    <h3 style="margin: 0;">対戦戦績・履歴</h3>
+    <div id="vs-records-container" class="list-container" style="max-height: 260px;">
+      <div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>
+    </div>
+    <button id="btn-close-vs-records" style="align-self: flex-end;">戻る</button>
   </div>
 
   <!-- コース指定マッチのコース選択モーダル -->
@@ -391,7 +435,8 @@
       <button id="tab-vs-pick-public" style="background:#0284c7; flex:1; font-size:12px;">公開コース</button>
       <button id="tab-vs-pick-my" style="background:#334155; flex:1; font-size:12px;">自分の下書き</button>
     </div>
-    <div id="vs-pick-stages-container" class="list-container" style="max-height: 240px;">
+    <button id="btn-vs-pick-random-pub" style="background:#10b981; width:100%; margin-bottom:6px; font-size:12px;">🎲 公開コースからランダムに決定</button>
+    <div id="vs-pick-stages-container" class="list-container" style="max-height: 220px;">
       <div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>
     </div>
     <button id="btn-close-vs-pick" style="align-self: flex-end;">戻る</button>
@@ -628,10 +673,15 @@
     </div>
   </div>
 
-  <!-- ポーズモーダル -->
+  <!-- ポーズモーダル (製作者情報付き) -->
   <div id="modal-pause" class="modal-dialog hidden" style="min-width: 300px; text-align: center;">
-    <h3 style="margin: 0 0 10px 0;">一時停止 (PAUSE)</h3>
-    <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 6px;">
+    <h3 style="margin: 0 0 4px 0;">一時停止 (PAUSE)</h3>
+    <div id="pause-stage-info" style="background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 11px; color: #94a3b8; text-align: left; line-height: 1.4;">
+      <div>ステージID: <span id="pause-info-stage-id" style="color:#cbd5e1;">-</span></div>
+      <div>製作者名: <span id="pause-info-author-name" style="color:#facc15;">-</span></div>
+      <div>製作者ID: <span id="pause-info-author-id" style="color:#38bdf8;">-</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;">
       <button id="btn-pause-resume" style="background: #0284c7;">ステージに戻る (再開)</button>
       
       <div id="pause-cp-group" style="border-top: 1px solid #334155; padding-top: 10px; display: flex; flex-direction: column; gap: 6px;">
@@ -948,7 +998,7 @@
             </div>
             <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
           `;
-          item.querySelector('.btn-play-online').onclick = () => startPlay(s, false, null, null, doc.id);
+          item.querySelector('.btn-play-online').onclick = () => startPlay(s, false, null, null, doc.id, { id: doc.id, author: s.author, authorUid: s.authorUid });
           onlineStagesContainer.appendChild(item);
         });
       } catch (e) {
@@ -957,13 +1007,20 @@
     }
 
     // ==========================================
-    // フレンドシステム
+    // フレンドシステム & チャット
     // ==========================================
     const modalFriends = document.getElementById('modal-friends');
     const modalFriendRequests = document.getElementById('modal-friend-requests');
     const friendsListContainer = document.getElementById('friends-list-container');
     const friendRequestsContainer = document.getElementById('friend-requests-container');
     const reqCountBadge = document.getElementById('req-count-badge');
+
+    const modalFriendChat = document.getElementById('modal-friend-chat');
+    const chatFriendNameTitle = document.getElementById('chat-friend-name-title');
+    const chatMessagesContainer = document.getElementById('chat-messages-container');
+    const inputChatMsg = document.getElementById('input-chat-msg');
+    let currentChatFriendUid = null;
+    let chatUnsub = null;
 
     document.getElementById('btn-to-friends').onclick = () => {
       if (!currentUser) { alert("フレンド機能の利用にはログインが必要です。"); return; }
@@ -1094,8 +1151,13 @@
               <span style="font-size:11px; color:#94a3b8; margin-left:4px;">${isOnline ? '(オンライン)' : '(オフライン)'}</span><br>
               <span style="font-size:11px; color:#64748b;">ID: ${f.friendId}</span>
             </div>
-            ${isOnline ? `<button class="btn-invite-friend-vs" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">対戦に誘う</button>` : ''}
+            <div style="display:flex; gap:4px;">
+              <button class="btn-chat-friend" style="padding:4px 8px; font-size:11px; background:#0284c7;">チャット</button>
+              ${isOnline ? `<button class="btn-invite-friend-vs" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">対戦</button>` : ''}
+            </div>
           `;
+
+          item.querySelector('.btn-chat-friend').onclick = () => openFriendChat(f);
 
           if (isOnline) {
             item.querySelector('.btn-invite-friend-vs').onclick = () => {
@@ -1110,17 +1172,71 @@
       }
     }
 
+    function openFriendChat(friend) {
+      modalFriends.classList.add('hidden');
+      currentChatFriendUid = friend.uid;
+      chatFriendNameTitle.textContent = `${friend.name} とのチャット`;
+      modalFriendChat.classList.remove('hidden');
+
+      const chatId = [currentUser.uid, friend.uid].sort().join('_');
+      if (chatUnsub) chatUnsub();
+
+      chatUnsub = db.collection("friend_chats").doc(chatId).collection("messages")
+        .orderBy("createdAt", "asc").limit(40).onSnapshot(snap => {
+          chatMessagesContainer.innerHTML = '';
+          if (snap.empty) {
+            chatMessagesContainer.innerHTML = '<div style="color:#64748b; font-size:11px; text-align:center;">メッセージはありません</div>';
+            return;
+          }
+          snap.forEach(doc => {
+            const m = doc.data();
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${m.senderUid === currentUser.uid ? 'chat-bubble-me' : 'chat-bubble-other'}`;
+            bubble.textContent = m.text;
+            chatMessagesContainer.appendChild(bubble);
+          });
+          chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        });
+    }
+
+    document.getElementById('btn-send-chat-msg').onclick = async () => {
+      const text = inputChatMsg.value.trim();
+      if (!text) return;
+      if (text.length > 50) { alert("メッセージは50文字以内で入力してください。"); return; }
+      if (!currentChatFriendUid || !currentUser) return;
+
+      const chatId = [currentUser.uid, currentChatFriendUid].sort().join('_');
+      inputChatMsg.value = '';
+
+      await db.collection("friend_chats").doc(chatId).collection("messages").add({
+        senderUid: currentUser.uid,
+        text: text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    };
+
+    document.getElementById('btn-close-friend-chat').onclick = () => {
+      if (chatUnsub) chatUnsub();
+      modalFriendChat.classList.add('hidden');
+      modalFriends.classList.remove('hidden');
+    };
+
     // ==========================================
     // オンライン対戦システム
     // ==========================================
     let isVersusMatch = false;
-    let isRoomHost = false; // ホストかゲストかを保持
+    let isRoomHost = false;
     let vsRoomId = null;
     let vsRoomUnsub = null;
     let vsTargetFriend = null;
     let vsStageData = null;
+    let lastActionTime = Date.now();
+    let vsOpponentName = "対戦相手";
+    let vsOpponentId = "--------";
 
     const modalVersusMenu = document.getElementById('modal-versus-menu');
+    const modalVsRecords = document.getElementById('modal-vs-records');
+    const vsRecordsContainer = document.getElementById('vs-records-container');
     const modalVsPickStage = document.getElementById('modal-vs-pick-stage');
     const vsPickStagesContainer = document.getElementById('vs-pick-stages-container');
     const modalIncomingVs = document.getElementById('modal-incoming-vs');
@@ -1132,15 +1248,54 @@
     };
     document.getElementById('btn-close-versus-menu').onclick = () => modalVersusMenu.classList.add('hidden');
     document.getElementById('btn-close-vs-pick').onclick = () => modalVsPickStage.classList.add('hidden');
+    document.getElementById('btn-close-vs-records').onclick = () => modalVsRecords.classList.add('hidden');
+
+    document.getElementById('btn-vs-records').onclick = () => {
+      modalVersusMenu.classList.add('hidden');
+      modalVsRecords.classList.remove('hidden');
+      loadVsRecords();
+    };
+
+    async function loadVsRecords() {
+      vsRecordsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
+      try {
+        const snap = await db.collection("users").doc(currentUser.uid).collection("match_history")
+          .orderBy("createdAt", "desc").limit(20).get();
+        if (snap.empty) {
+          vsRecordsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">対戦履歴はありません</div>';
+          return;
+        }
+        vsRecordsContainer.innerHTML = '';
+        snap.forEach(doc => {
+          const r = doc.data();
+          const item = document.createElement('div');
+          item.className = 'list-item';
+          const isWin = r.result === 'WIN';
+          item.innerHTML = `
+            <div>
+              <strong style="color: ${isWin ? '#10b981' : '#ef4444'}; font-size:13px;">${isWin ? '👑 WIN (勝利)' : '💀 LOSE (敗北)'}</strong><br>
+              <span style="font-size:11px; color:#cbd5e1;">ステージ: ${r.stageName} (ID: ${r.stageId || '公式/下書き'})</span><br>
+              <span style="font-size:11px; color:#94a3b8;">相手: ${r.opponentName} (ID: ${r.opponentFriendId})</span>
+            </div>
+            <div style="font-size:11px; color:#38bdf8; text-align:right;">
+              ${r.time ? formatTime(r.time) : '--:--.--'}
+            </div>
+          `;
+          vsRecordsContainer.appendChild(item);
+        });
+      } catch (e) {
+        vsRecordsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
+      }
+    }
 
     document.getElementById('btn-vs-random').onclick = async () => {
       try {
         const snap = await db.collection("stages").limit(20).get();
         if (snap.empty) { alert("公開コースがありません。"); return; }
         const docs = snap.docs.filter(d => !d.data().hidden);
-        const randomStage = docs[Math.floor(Math.random() * docs.length)].data();
+        const randomDoc = docs[Math.floor(Math.random() * docs.length)];
         modalVersusMenu.classList.add('hidden');
-        openVersusFriendSelect(randomStage, "ランダム公開コース");
+        openVersusFriendSelect(randomDoc.data(), "ランダム公開コース", randomDoc.id);
       } catch (e) {
         alert("エラー: " + e.message);
       }
@@ -1158,13 +1313,29 @@
     tabVsPickPublic.onclick = () => {
       tabVsPickPublic.style.background = "#0284c7";
       tabVsPickMy.style.background = "#334155";
+      document.getElementById('btn-vs-pick-random-pub').style.display = 'block';
       loadVsPublicStagesList();
     };
 
     tabVsPickMy.onclick = () => {
       tabVsPickMy.style.background = "#0284c7";
       tabVsPickPublic.style.background = "#334155";
+      document.getElementById('btn-vs-pick-random-pub').style.display = 'none';
       loadVsMyStagesList();
+    };
+
+    // 公開タブ最上部のランダム選択ボタン
+    document.getElementById('btn-vs-pick-random-pub').onclick = async () => {
+      try {
+        const snap = await db.collection("stages").limit(25).get();
+        if (snap.empty) { alert("公開コースがありません。"); return; }
+        const docs = snap.docs.filter(d => !d.data().hidden);
+        const randomDoc = docs[Math.floor(Math.random() * docs.length)];
+        modalVsPickStage.classList.add('hidden');
+        openVersusFriendSelect(randomDoc.data(), `${randomDoc.data().name} (ランダム決定)`, randomDoc.id);
+      } catch(e) {
+        alert("エラー: " + e.message);
+      }
     };
 
     async function loadVsPublicStagesList() {
@@ -1190,7 +1361,7 @@
           `;
           item.querySelector('.btn-select-vs-stage').onclick = () => {
             modalVsPickStage.classList.add('hidden');
-            openVersusFriendSelect(s, s.name);
+            openVersusFriendSelect(s, s.name, doc.id);
           };
           vsPickStagesContainer.appendChild(item);
         });
@@ -1221,7 +1392,7 @@
           `;
           item.querySelector('.btn-select-vs-stage').onclick = () => {
             modalVsPickStage.classList.add('hidden');
-            openVersusFriendSelect(s, `${s.name} (下書き)`);
+            openVersusFriendSelect(s, `${s.name} (下書き)`, doc.id);
           };
           vsPickStagesContainer.appendChild(item);
         });
@@ -1233,10 +1404,13 @@
     const modalVsInvite = document.getElementById('modal-vs-invite');
     const vsOnlineFriendsContainer = document.getElementById('vs-online-friends-container');
     const vsInviteStageNameLbl = document.getElementById('vs-invite-stage-name-lbl');
+    let vsStagePickedId = null;
+
     document.getElementById('btn-close-vs-invite').onclick = () => modalVsInvite.classList.add('hidden');
 
-    function openVersusFriendSelect(stageData, stageName) {
+    function openVersusFriendSelect(stageData, stageName, stageId = null) {
       vsStageData = stageData;
+      vsStagePickedId = stageId;
       vsInviteStageNameLbl.textContent = `コース: ${stageName}`;
       modalVsInvite.classList.remove('hidden');
       loadVsOnlineFriends();
@@ -1293,15 +1467,22 @@
 
     async function sendVersusInvite(friend) {
       modalVsInvite.classList.add('hidden');
+      vsOpponentName = friend.name;
+      vsOpponentId = friend.friendId;
       alert(`${friend.name} に対戦招待を送信しました！相手が承認するまでお待ちください...`);
 
       const roomRef = await db.collection("versus_rooms").add({
         hostUid: currentUser.uid,
         hostName: currentUsername,
+        hostFriendId: myFriendId,
         guestUid: friend.uid,
         guestName: friend.name,
+        guestFriendId: friend.friendId,
         stageData: vsStageData,
+        stageId: vsStagePickedId || 'custom',
         status: "WAITING",
+        hostLastActive: Date.now(),
+        guestLastActive: Date.now(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
@@ -1310,6 +1491,7 @@
       await db.collection("users").doc(friend.uid).collection("versus_invites").doc(vsRoomId).set({
         roomId: vsRoomId,
         senderName: currentUsername,
+        senderFriendId: myFriendId,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
@@ -1323,6 +1505,8 @@
         if (!snap.empty && !isVersusMatch) {
           const invite = snap.docs[0].data();
           currentIncomingInviteDoc = snap.docs[0];
+          vsOpponentName = invite.senderName;
+          vsOpponentId = invite.senderFriendId || '--------';
           incomingVsText.textContent = `${invite.senderName} からオンライン対戦の招待が届きました！`;
           modalIncomingVs.classList.remove('hidden');
         }
@@ -1336,7 +1520,10 @@
       vsRoomId = invite.roomId;
 
       await currentIncomingInviteDoc.ref.delete();
-      await db.collection("versus_rooms").doc(vsRoomId).update({ status: "PLAYING" });
+      await db.collection("versus_rooms").doc(vsRoomId).update({
+        status: "PLAYING",
+        guestLastActive: Date.now()
+      });
       listenVersusRoom(vsRoomId, false);
     };
 
@@ -1353,17 +1540,39 @@
         if (!doc.exists) return;
         const room = doc.data();
 
+        if (isHost) {
+          vsOpponentName = room.guestName;
+          vsOpponentId = room.guestFriendId || '--------';
+        } else {
+          vsOpponentName = room.hostName;
+          vsOpponentId = room.hostFriendId || '--------';
+        }
+
         if (room.status === "PLAYING" && !isVersusMatch) {
           startVersusMatch(room.stageData, isHost);
         }
 
         if (isVersusMatch) {
+          // 相手の位置同期（自分がホストならguestPos、自分がゲストならhostPos）
           const oppPos = isHost ? room.guestPos : room.hostPos;
           if (oppPos && opponentMesh) {
             opponentMesh.visible = true;
             opponentMesh.position.set(oppPos.x, oppPos.y + 0.5, oppPos.z);
           }
 
+          // 不戦勝判定
+          const oppLastActive = isHost ? room.guestLastActive : room.hostLastActive;
+          if (room.forfeitUid && room.forfeitUid !== currentUser.uid) {
+            handleVersusForfeitWin("相手が対戦から退出または2分以上無操作のため、あなたの不戦勝です！");
+            return;
+          }
+
+          if (oppLastActive && (Date.now() - oppLastActive > 120000)) { // 2分放置
+            handleVersusForfeitWin("相手が2分以上操作しなかったため、あなたの不戦勝です！");
+            return;
+          }
+
+          // 相手が先にクリアしたか
           const oppTime = isHost ? room.guestClearTime : room.hostClearTime;
           if (oppTime && !opponentFinished) {
             opponentFinished = true;
@@ -1371,6 +1580,34 @@
           }
         }
       });
+    }
+
+    async function recordMatchHistory(result, clearTime) {
+      if (!currentUser || !db) return;
+      await db.collection("users").doc(currentUser.uid).collection("match_history").add({
+        result: result,
+        stageName: activeStage?.name || "対戦コース",
+        stageId: vsStagePickedId || 'custom',
+        opponentName: vsOpponentName,
+        opponentFriendId: vsOpponentId,
+        time: clearTime,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    function handleVersusForfeitWin(reason) {
+      alert(`🏆 YOU WIN!\n\n${reason}`);
+      recordMatchHistory('WIN', Math.round(playElapsedTime));
+      endVersusMatch();
+    }
+
+    function endVersusMatch() {
+      isVersusMatch = false;
+      timerRunning = false;
+      if (opponentMesh) opponentMesh.visible = false;
+      if (vsRoomUnsub) vsRoomUnsub();
+      gameState = 'MODES';
+      switchScreen('MODES');
     }
 
     let opponentMesh = null;
@@ -1382,12 +1619,13 @@
       isRoomHost = isHost;
       opponentFinished = false;
       opponentClearTime = null;
+      lastActionTime = Date.now();
 
       cubeMesh.material.color.setHex(0x38bdf8); // 自分は青
       if (!opponentMesh) {
         const oppGeo = new THREE.BoxGeometry(1, 1, 1);
         const oppMat = new THREE.MeshStandardMaterial({
-          color: 0xef4444, // 相手は赤
+          color: 0xef4444, // 相手は半透明赤
           transparent: true,
           opacity: 0.55,
           roughness: 0.2
@@ -1397,14 +1635,17 @@
       }
       opponentMesh.visible = false;
 
-      startPlay(stageData, false, null, null, `VS_${vsRoomId}`);
+      startPlay(stageData, false, null, null, `VS_${vsRoomId}`, { id: vsStagePickedId, author: stageData.author || "対戦", authorUid: stageData.authorUid || "vs" });
     }
 
     function syncMyVersusPosition() {
       if (!isVersusMatch || !vsRoomId || !db || !currentUser) return;
+      lastActionTime = Date.now();
       const posField = isRoomHost ? "hostPos" : "guestPos";
+      const activeField = isRoomHost ? "hostLastActive" : "guestLastActive";
       db.collection("versus_rooms").doc(vsRoomId).update({
-        [posField]: { x: cubePos.x, y: cubePos.y, z: cubePos.z }
+        [posField]: { x: cubePos.x, y: cubePos.y, z: cubePos.z },
+        [activeField]: lastActionTime
       }).catch(() => {});
     }
 
@@ -1612,6 +1853,7 @@
       1: {
         name: "ステージ 1",
         author: "Official",
+        authorUid: "OFFICIAL",
         size: 16,
         spawn: { x: 0, y: 0, z: 0 },
         blocks: [
@@ -1629,6 +1871,7 @@
       2: {
         name: "ステージ 2",
         author: "Official",
+        authorUid: "OFFICIAL",
         size: 16,
         spawn: { x: 0, y: 0, z: 0 },
         blocks: [
@@ -1646,6 +1889,7 @@
 
     let activeStage = null;
     let activeStageKey = null;
+    let activeStageMeta = null;
     let gameState = 'TITLE';
     let isTestPlay = false;
     let isPaused = false;
@@ -1729,7 +1973,8 @@
     document.getElementById('btn-back-to-modes').onclick = () => switchScreen('MODES');
 
     document.querySelectorAll('.btn-official-stage').forEach(btn => {
-      btn.onclick = () => startPlay(STAGES[btn.getAttribute('data-stage')], false, null, null, `OFFICIAL_${btn.getAttribute('data-stage')}`);
+      const stageIdx = btn.getAttribute('data-stage');
+      btn.onclick = () => startPlay(STAGES[stageIdx], false, null, null, `OFFICIAL_${stageIdx}`, { id: `OFFICIAL_${stageIdx}`, author: "公式", authorUid: "OFFICIAL" });
     });
 
     function togglePause() {
@@ -1745,6 +1990,11 @@
     }
 
     function updatePauseModalUI() {
+      // 製作者情報の反映
+      document.getElementById('pause-info-stage-id').textContent = (activeStageMeta && activeStageMeta.id) ? activeStageMeta.id : '非公開/テスト';
+      document.getElementById('pause-info-author-name').textContent = (activeStageMeta && activeStageMeta.author) ? activeStageMeta.author : (activeStage?.author || '不明');
+      document.getElementById('pause-info-author-id').textContent = (activeStageMeta && activeStageMeta.authorUid) ? activeStageMeta.authorUid : (activeStage?.authorUid || 'なし');
+
       selectPauseCp.innerHTML = '';
       const optStart = document.createElement('option');
       optStart.value = 'start';
@@ -1790,16 +2040,18 @@
       modalPause.classList.add('hidden');
     };
 
-    document.getElementById('btn-pause-quit').onclick = () => {
+    document.getElementById('btn-pause-quit').onclick = async () => {
       isPaused = false;
       timerRunning = false;
       modalPause.classList.add('hidden');
 
       if (isVersusMatch) {
-        isVersusMatch = false;
-        if (opponentMesh) opponentMesh.visible = false;
-        gameState = 'MODES';
-        switchScreen('MODES');
+        // 対戦中に退出した場合、即座に不戦敗扱いにする
+        if (vsRoomId && db && currentUser) {
+          await db.collection("versus_rooms").doc(vsRoomId).update({ forfeitUid: currentUser.uid });
+        }
+        recordMatchHistory('LOSE', Math.round(playElapsedTime));
+        endVersusMatch();
       } else if (isTestPlay) {
         returnToEditorView();
       } else {
@@ -1842,7 +2094,7 @@
         const doc = await db.collection("stages").doc(stageId).get();
         if (!doc.exists) { alert("ステージが見つかりませんでした。"); return; }
         if (doc.data().hidden) { alert("非公開のステージです。"); return; }
-        startPlay(doc.data(), false, null, null, stageId);
+        startPlay(doc.data(), false, null, null, stageId, { id: doc.id, author: doc.data().author, authorUid: doc.data().authorUid });
       } catch (err) {
         alert("検索エラー: " + err.message);
       }
@@ -1856,7 +2108,7 @@
         const docs = snap.docs.filter(d => !d.data().hidden);
         if (docs.length === 0) { alert("公開中のステージがありません。"); return; }
         const picked = docs[Math.floor(Math.random() * docs.length)];
-        startPlay(picked.data(), false, null, null, picked.id);
+        startPlay(picked.data(), false, null, null, picked.id, { id: picked.id, author: picked.data().author, authorUid: picked.data().authorUid });
       } catch (err) {
         alert("ランダム取得エラー: " + err.message);
       }
@@ -1904,7 +2156,6 @@
       return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
     }
 
-    // 経由地番号マーカーマテリアルの作成（エディター限定の半透明数字）
     function createWaypointMarkerMaterial(number) {
       const cv = document.createElement('canvas');
       cv.width = 128; cv.height = 128;
@@ -1957,7 +2208,6 @@
     let editorMeshMap = new Map();
     let selectedPalette = 1;
 
-    // 直接グリッド描画モード管理
     let isDrawingRouteMode = false;
     let activeRouteEditKey = null;
 
@@ -2098,7 +2348,6 @@
       });
     }
 
-    // エディター上でのみ表示される経由地番号つきルート可視化
     function rebuildPathVisuals() {
       while (pathVisualsGroup.children.length > 0) {
         const obj = pathVisualsGroup.children[0];
@@ -2113,8 +2362,6 @@
 
           for (let i = 0; i < waypoints.length; i++) {
             const wp = waypoints[i];
-
-            // 経由地マーカー（番号付き円盤）
             const markerGeo = new THREE.PlaneGeometry(0.7, 0.7);
             const markerMat = createWaypointMarkerMaterial(i + 1);
             const marker = new THREE.Mesh(markerGeo, markerMat);
@@ -2122,7 +2369,6 @@
             marker.position.set(wp.x, wp.y + 0.05, wp.z);
             pathVisualsGroup.add(marker);
 
-            // 経由地を結ぶライン
             if (i > 0) {
               const prevWp = waypoints[i - 1];
               const points = [
@@ -2454,7 +2700,7 @@
         startCpIndex = editorBlocks.get(spawnChoice).cpIndex;
       }
 
-      startPlay({ ...data, author: currentUsername }, true, startPoint, startCpIndex, "CUSTOM_TEST");
+      startPlay({ ...data, author: currentUsername }, true, startPoint, startCpIndex, "CUSTOM_TEST", { id: "CUSTOM_TEST", author: currentUsername, authorUid: currentUser ? currentUser.uid : "LOCAL" });
     };
 
     const raycaster = new THREE.Raycaster();
@@ -2534,7 +2780,6 @@
         if (tx >= 0 && tx < gridSize && tz >= 0 && tz < gridSize) {
           const key = `${tx},${currentLayer},${tz}`;
 
-          // グリッド直接ルート描画モード中
           if (isDrawingRouteMode) {
             if (activeRouteEditKey && editorBlocks.has(activeRouteEditKey)) {
               const b = editorBlocks.get(activeRouteEditKey);
@@ -2553,7 +2798,6 @@
             return;
           }
 
-          // 通常エディット
           if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) {
             openMoverModal(key);
           } else if (selectedPalette === 8 && editorBlocks.has(key) && editorBlocks.get(key).type === 8) {
@@ -2598,9 +2842,10 @@
 
     let currentCheckpoint = null;
 
-    function startPlay(stageData, testPlayMode = false, overrideStart = null, overrideCpIndex = null, stageKey = null) {
+    function startPlay(stageData, testPlayMode = false, overrideStart = null, overrideCpIndex = null, stageKey = null, metaInfo = null) {
       activeStage = stageData;
       activeStageKey = stageKey || stageData.name;
+      activeStageMeta = metaInfo || { id: stageKey || 'CUSTOM', author: stageData.author || currentUsername, authorUid: stageData.authorUid || (currentUser ? currentUser.uid : '') };
       isTestPlay = testPlayMode;
       currentCheckpoint = null;
       isPaused = false;
@@ -2787,36 +3032,30 @@
       return list.find(s => Math.abs(s.surfaceY - nearY) <= 0.6) || list[0] || null;
     }
 
-    // 直方体の挟まれ判定 & 階段昇降処理
     function findTargetSurface(curX, curZ, curY, tx, tz) {
       const currentLevelY = Math.round(curY);
       const dx = tx - curX;
       const dz = tz - curZ;
 
-      // 1. 直方体に挟まれているか判定（左右に直方体がある場合）
       const hasSolidAtTarget = isSolidAt(tx, tz, currentLevelY);
       let isPinched = false;
 
-      if (dx !== 0) { // X軸移動時、両側に直方体があるか
+      if (dx !== 0) {
         if (isSolidAt(curX - 1, curZ, currentLevelY) && isSolidAt(curX + 1, curZ, currentLevelY)) {
           isPinched = true;
         }
-      } else if (dz !== 0) { // Z軸移動時、前後両側に直方体があるか
+      } else if (dz !== 0) {
         if (isSolidAt(curX, curZ - 1, currentLevelY) && isSolidAt(curX, curZ + 1, currentLevelY)) {
           isPinched = true;
         }
       }
 
-      // 挟まれている場合は進めない
       if (isPinched && hasSolidAtTarget) {
         return { blocked: true };
       }
 
-      // 2. 挟まれておらず、進行先が直方体（Type 5）の場合:
-      // その直方体の上面が空いていれば、階段のように登れるようにする
       if (hasSolidAtTarget) {
         const targetTopY = currentLevelY + 1;
-        // 上に乗れるかチェック（上に直方体がないこと）
         if (!isSolidAt(tx, tz, targetTopY)) {
           return {
             dy: 1,
@@ -2826,11 +3065,10 @@
             mover: null
           };
         } else {
-          return { blocked: true }; // 2段以上の壁は登れない
+          return { blocked: true };
         }
       }
 
-      // 3. 通常のサーフェス判定
       const surfaces = getAllSurfacesAt(tx, tz);
       let best = null;
       let minDiff = 999;
@@ -2934,7 +3172,8 @@
       cubeMesh.position.set(currentX - pivotX, startY + 0.5 - pivotY, currentZ - pivotZ);
 
       const targetAngle = (Math.abs(dy) > 0.25) ? Math.PI : (Math.PI / 2);
-      const rollSpeed = (Math.abs(dy) > 0.25) ? 0.20 : 0.16;
+      // 一定の速度で転がるよう固定（ダッシュ等による変動を完全撤廃）
+      const rollSpeed = 0.16;
       let currentAngle = 0;
       const axis = new THREE.Vector3(dz, 0, -dx).normalize();
 
@@ -3013,20 +3252,22 @@
               db.collection("versus_rooms").doc(vsRoomId).update({ [timeField]: finalTimeMs });
 
               let resultMsg = `🎉 ゴールしました！\nタイム: ${clearTimeStr}\n\n`;
+              let matchResult = 'WIN';
               if (opponentClearTime) {
                 if (finalTimeMs < opponentClearTime) {
                   resultMsg += `🏆 相手(${formatTime(opponentClearTime)})に勝利しました！ (YOU WIN)`;
+                  matchResult = 'WIN';
                 } else {
                   resultMsg += `💥 相手(${formatTime(opponentClearTime)})の方が速かったです... (YOU LOSE)`;
+                  matchResult = 'LOSE';
                 }
               } else {
                 resultMsg += `相手のゴールを待っています... (暫定首位)`;
+                matchResult = 'WIN';
               }
               alert(resultMsg);
-              isVersusMatch = false;
-              if (opponentMesh) opponentMesh.visible = false;
-              gameState = 'MODES';
-              switchScreen('MODES');
+              recordMatchHistory(matchResult, finalTimeMs);
+              endVersusMatch();
             } else {
               let msg = `🎉 ステージクリア！おめでとうございます！\n\nタイム: ${clearTimeStr}\n自己ベスト: ${currentBestStr}`;
               if (isNewRecord) msg += "\n✨ NEW RECORD 更新！ ✨";
@@ -3055,6 +3296,17 @@
           if (timerRunning) {
             playElapsedTime = performance.now() - playStartTime;
             hudLiveTime.textContent = formatTime(playElapsedTime);
+          }
+
+          // 対戦中の2分無操作チェック
+          if (isVersusMatch && (Date.now() - lastActionTime > 120000)) {
+            alert("2分間操作がなかったため、時間切れで敗北となりました。");
+            if (vsRoomId && db && currentUser) {
+              db.collection("versus_rooms").doc(vsRoomId).update({ forfeitUid: currentUser.uid });
+            }
+            recordMatchHistory('LOSE', Math.round(playElapsedTime));
+            endVersusMatch();
+            return;
           }
 
           activeFallingFloors.forEach(ff => {
@@ -3093,6 +3345,7 @@
             if (cubePos.y <= -10) respawnPlayer();
           }
 
+          // 動く床の滑らかな更新
           activeMovers.forEach(m => {
             let stepX = 0, stepY = 0, stepZ = 0;
 
@@ -3101,7 +3354,9 @@
                 const currentWp = m.waypoints[m.currentIndex];
                 const targetWp = m.waypoints[m.targetIndex];
 
-                m.progress += m.speed;
+                const segDist = Math.hypot(targetWp.x - currentWp.x, targetWp.y - currentWp.y, targetWp.z - currentWp.z) || 1;
+                m.progress += m.speed / segDist;
+
                 if (m.progress >= 1.0) {
                   m.progress = 0;
                   m.currentIndex = m.targetIndex;
@@ -3116,18 +3371,18 @@
                   }
                 }
 
-                const prevX = m.mesh.position.x;
-                const prevY = m.mesh.position.y;
-                const prevZ = m.mesh.position.z;
+                const fromWp = m.waypoints[m.currentIndex];
+                const toWp = m.waypoints[m.targetIndex];
 
-                const interpX = currentWp.x + (targetWp.x - currentWp.x) * m.progress;
-                const interpY = currentWp.y + (targetWp.y - currentWp.y) * m.progress - 0.1;
-                const interpZ = currentWp.z + (targetWp.z - currentWp.z) * m.progress;
+                const interpX = fromWp.x + (toWp.x - fromWp.x) * m.progress;
+                const interpY = fromWp.y + (toWp.y - fromWp.y) * m.progress - 0.1;
+                const interpZ = fromWp.z + (toWp.z - fromWp.z) * m.progress;
+
+                stepX = interpX - m.mesh.position.x;
+                stepY = interpY - m.mesh.position.y;
+                stepZ = interpZ - m.mesh.position.z;
 
                 m.mesh.position.set(interpX, interpY, interpZ);
-                stepX = interpX - prevX;
-                stepY = interpY - prevY;
-                stepZ = interpZ - prevZ;
               }
             } else {
               const delta = m.speed * m.direction;
