@@ -480,6 +480,7 @@
 
   <div id="modal-checkpoint" class="modal-dialog hidden">
     <h3 style="margin: 0;">セーブ地点の設定</h3>
+    <div id="cp-max-desc" style="font-size: 12px; color: #94a3b8;"></div>
     <label>セーブ番号: <input type="number" id="cp-number-input" min="1" max="1" value="1" style="width: 80px;"></label>
     <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
       <input type="checkbox" id="chk-cp-show-label" checked style="width:16px; height:16px;">
@@ -2123,7 +2124,7 @@
         const targetOpacity = (y === currentLayer) ? 1.0 : 0.35;
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach(m => { m.transparent = true; m.opacity = targetOpacity; });
-        } else {
+        } else if (mesh.material) {
           mesh.material.transparent = true;
           mesh.material.opacity = targetOpacity;
         }
@@ -2161,7 +2162,13 @@
           if (mesh) {
             mesh.material = createCheckpointMaterials(correctNum, item.val.gimmickConfig?.showLabel !== false);
             const isCur = (y === currentLayer);
-            mesh.material.forEach(m => { m.transparent = true; m.opacity = isCur ? 1.0 : 0.35; });
+            const targetOpacity = isCur ? 1.0 : 0.35;
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach(m => { m.transparent = true; m.opacity = targetOpacity; });
+            } else if (mesh.material) {
+              mesh.material.transparent = true;
+              mesh.material.opacity = targetOpacity;
+            }
           }
         }
       });
@@ -2267,8 +2274,6 @@
         else if (type === 5) {
           const baseColor = color || 0x475569;
           if (data.blastConfig) {
-            // 直方体の側面に吹き飛ばし装着時、エディタ上で指定面を赤くする
-            // BoxGeometry faces: [right(+x), left(-x), top(+y), bottom(-y), front(+z), back(-z)]
             const fMat = new THREE.MeshLambertMaterial({ color: baseColor });
             const blastFace = createBlastFaceMaterial(data.blastConfig.dir, data.blastConfig.group);
             const mats = [fMat.clone(), fMat.clone(), fMat.clone(), fMat.clone(), fMat.clone(), fMat.clone()];
@@ -2302,11 +2307,12 @@
         mesh.position.set(x, y + yOffset, z);
 
         const isCurrent = (y === currentLayer);
-        if (isMultiMat) {
-          mesh.material.forEach(mat => { mat.transparent = true; mat.opacity = isCurrent ? 1.0 : 0.35; });
-        } else {
+        const targetOpacity = isCurrent ? 1.0 : 0.35;
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(mat => { mat.transparent = true; mat.opacity = targetOpacity; });
+        } else if (mesh.material) {
           mesh.material.transparent = true;
-          mesh.material.opacity = isCurrent ? 1.0 : 0.35;
+          mesh.material.opacity = targetOpacity;
         }
 
         editorGroup.add(mesh);
@@ -2368,15 +2374,32 @@
         if (val.type === 3) spawn = { x, y, z };
         if (val.type === 2) hasGoal = true;
 
-        if (val.type === 4) movers.push({ x, y, z, ...val.moverConfig });
-        else if (val.type === 8 || val.type === 12) movers.push({ x, y, z, type: val.type, isPathMover: true, ...val.pathConfig, gimmickConfig: val.gimmickConfig });
-        else blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex, color: val.color, warpLetter: val.warpLetter, gimmickConfig: val.gimmickConfig, blastConfig: val.blastConfig });
+        if (val.type === 4) {
+          movers.push({ x, y, z, ...val.moverConfig });
+        } else if (val.type === 8 || val.type === 12) {
+          const mData = {
+            x, y, z,
+            type: val.type,
+            isPathMover: true,
+            ...val.pathConfig
+          };
+          if (val.gimmickConfig) mData.gimmickConfig = val.gimmickConfig;
+          movers.push(mData);
+        } else {
+          const bData = { x, y, z, type: val.type };
+          if (val.cpIndex != null) bData.cpIndex = val.cpIndex;
+          if (val.color != null) bData.color = val.color;
+          if (val.warpLetter != null) bData.warpLetter = val.warpLetter;
+          if (val.gimmickConfig != null) bData.gimmickConfig = val.gimmickConfig;
+          if (val.blastConfig != null) bData.blastConfig = val.blastConfig;
+          blocks.push(bData);
+        }
       });
 
       return {
         name: inputEditorStageName.value.trim() || "マイステージ",
         size: gridSize,
-        spawn,
+        spawn: spawn || { x: 0, y: 0, z: 0 },
         hasGoal,
         blocks,
         movers
@@ -2786,7 +2809,10 @@
         inputCpNumber.min = 1;
         inputCpNumber.value = b.cpIndex || 1;
         chkCpShowLabel.checked = b.gimmickConfig?.showLabel !== false;
-        document.getElementById('cp-max-desc').textContent = `置いた数 (${maxCp}個) 以上の数字は設定できません。重複時は自動で入れ替わります。`;
+        const cpDesc = document.getElementById('cp-max-desc');
+        if (cpDesc) {
+          cpDesc.textContent = `置いた数 (${maxCp}個) 以上の数字は設定できません。重複時は自動で入れ替わります。`;
+        }
         modalCp.classList.remove('hidden');
       }
     }
@@ -2810,7 +2836,13 @@
               if (otherMesh) {
                 otherMesh.material = createCheckpointMaterials(oldNum, otherBlock.gimmickConfig?.showLabel !== false);
                 const isCur = (oy === currentLayer);
-                otherMesh.material.forEach(m => { m.transparent = true; m.opacity = isCur ? 1.0 : 0.35; });
+                const targetOpacity = isCur ? 1.0 : 0.35;
+                if (Array.isArray(otherMesh.material)) {
+                  otherMesh.material.forEach(m => { m.transparent = true; m.opacity = targetOpacity; });
+                } else if (otherMesh.material) {
+                  otherMesh.material.transparent = true;
+                  otherMesh.material.opacity = targetOpacity;
+                }
               }
             }
           });
@@ -2822,7 +2854,13 @@
           if (curMesh) {
             curMesh.material = createCheckpointMaterials(targetNum, showL);
             const isCur = (cy === currentLayer);
-            curMesh.material.forEach(m => { m.transparent = true; m.opacity = isCur ? 1.0 : 0.35; });
+            const targetOpacity = isCur ? 1.0 : 0.35;
+            if (Array.isArray(curMesh.material)) {
+              curMesh.material.forEach(m => { m.transparent = true; m.opacity = targetOpacity; });
+            } else if (curMesh.material) {
+              curMesh.material.transparent = true;
+              curMesh.material.opacity = targetOpacity;
+            }
           }
           triggerAutoSave();
         } else {
@@ -2982,7 +3020,7 @@
         else if (b.type === 9) openWarpModal(key);
         else if (b.type === 6) openCpModal(key);
         else if (b.type === 10) openSwitchModal(key);
-        else if (b.type === 5) openBlastModal(key); // 直方体の右クリックで吹き飛ばし設定
+        else if (b.type === 5) openBlastModal(key);
         else if (b.type === 12) openSwitchFloorModal(key);
         else if (b.type === 13) openAppearModal(key);
       }
@@ -3028,11 +3066,9 @@
         return;
       }
 
-      // ワープ床(Type 9)と吹き飛ばし(Type 11)はドラッグ設置防止
       if ((selectedPalette === 9 || selectedPalette === 11) && isDragging) return;
 
       if (selectedPalette === 11) {
-        // 吹き飛ばしパレット選択時は、クリックしたマスが直方体(Type 5)ならその面に設定
         if (editorBlocks.has(key) && editorBlocks.get(key).type === 5) {
           openBlastModal(key);
         } else {
@@ -3503,13 +3539,27 @@
           }
           if (warpLet) {
             const targetPartner = activeStage.blocks.find(b => {
-              const bLet = (b.type === 9) ? b.warpLetter : (b.type === 13 && b.gimmickConfig?.shape === 9 ? b.gimmickConfig.warpLetter : null);
-              return bLet === warpLet && !(b.x === tx && b.z === tz && b.y === Math.round(targetY));
+              if (b.type === 13) {
+                if (!switchStates[b.gimmickConfig?.group]) return false;
+                if (b.gimmickConfig?.shape !== 9) return false;
+                if (b.gimmickConfig?.warpLetter !== warpLet) return false;
+              } else if (b.type === 9) {
+                if (b.warpLetter !== warpLet) return false;
+              } else {
+                return false;
+              }
+              return !(b.x === tx && b.z === tz && b.y === Math.round(targetY));
             });
             if (targetPartner) {
               cubePos.x = targetPartner.x; cubePos.y = targetPartner.y; cubePos.z = targetPartner.z;
               pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
               syncMyVersusPosition();
+
+              const warpSurface = getTopSurfaceAt(cubePos.x, cubePos.z, cubePos.y);
+              if (!warpSurface) {
+                isFallingDown = true;
+                fallVelocity = 0.05;
+              }
             }
           }
 
