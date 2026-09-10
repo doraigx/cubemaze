@@ -305,7 +305,6 @@
       line-height: 1.5;
     }
 
-    /* パレットカラー */
     .palette-btn {
       border: 2px solid transparent;
       border-radius: 6px;
@@ -671,7 +670,7 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
         左ドラッグ: 配置 / 削除 | 右クリック: 属性・速度・グループ設定<br>
-        「吹き飛ばし」: 直方体を選択して面(側面)に装着設定
+        「吹き飛ばし」: パレット選択後、直方体の面を左クリックで装着 / 右クリックで風力設定
       </div>
       <div class="editor-bar">
         <span id="route-editing-status" style="font-size:12px; font-weight:bold; color:#facc15; display:none;">✍️ ルート描画中 (グリッドをクリックで経由地追加)</span>
@@ -702,7 +701,13 @@
         <option value="UP">↑ (奥へ移動)</option><option value="DOWN">↓ (手前へ移動)</option><option value="LEFT">← (左へ移動)</option><option value="RIGHT">→ (右へ移動)</option><option value="Y_UP">▲ (上へ上昇)</option><option value="Y_DOWN">▼ (下へ下降)</option>
       </select>
     </label>
-    <label>往復距離: <input type="number" id="modal-dist-num" min="1" max="30" value="3" style="width: 80px;"></label>
+    <label>動作タイプ:
+      <select id="modal-loop-mode" style="width: 100%; margin-top: 4px;">
+        <option value="LOOP">往復移動 (行ったり来たりループ)</option>
+        <option value="ONCE">片道移動 (所定の距離まで進んだら停止)</option>
+      </select>
+    </label>
+    <label>移動距離: <input type="number" id="modal-dist-num" min="1" max="30" value="3" style="width: 80px;"></label>
     <label>速度 (1〜100):
       <div style="display:flex; align-items:center; gap:8px; margin-top: 4px;">
         <input type="range" id="modal-speed-range" min="1" max="100" value="25" style="flex:1;">
@@ -770,24 +775,24 @@
   <div id="modal-blast" class="modal-dialog hidden" style="min-width: 340px;">
     <h3>吹き飛ばし面の設定</h3>
     <div style="font-size: 12px; color: #94a3b8;">
-      直方体の側面に取り付けられ、作動するとその面が赤くなりプレイヤーを突き飛ばします。<br>
-      プレイ中はスイッチ作動時のみ突風が出現し、マスとしてはカウントされません。
+      直方体の指定された側面から赤い突風が吹き出します。<br>
+      風は赤い面の向き（前方向）へ向かってプレイヤーを突き飛ばします。
     </div>
     <label>連動スイッチグループ: <select id="select-blast-group" style="width: 100%; margin-top: 4px;"></select></label>
-    <label>装着する側面:
+    <label>装着側面:
       <select id="select-blast-dir" style="width: 100%; margin-top: 4px;">
-        <option value="UP">奥の面 (North)</option>
-        <option value="DOWN">手前の面 (South)</option>
-        <option value="LEFT">左の面 (West)</option>
-        <option value="RIGHT">右の面 (East)</option>
+        <option value="UP">奥の面 (North: ↑奥へ吹き飛ばす)</option>
+        <option value="DOWN">手前の面 (South: ↓手前へ吹き飛ばす)</option>
+        <option value="LEFT">左の面 (West: ←左へ吹き飛ばす)</option>
+        <option value="RIGHT">右の面 (East: →右へ吹き飛ばす)</option>
       </select>
     </label>
     <label>吹き飛ばし距離 (マス):
       <input type="number" id="input-blast-power" min="1" max="10" value="2" style="width: 80px;">
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-      <button id="btn-remove-blast" style="background: #dc2626;">側面を解除</button>
-      <button id="btn-save-blast" style="background: #0284c7;">装着決定</button>
+      <button id="btn-remove-blast" style="background: #dc2626;">装着解除</button>
+      <button id="btn-save-blast" style="background: #0284c7;">設定決定</button>
       <button id="btn-cancel-blast">閉じる</button>
     </div>
   </div>
@@ -2001,7 +2006,7 @@
           { x: 2, y: 0, z: 0, type: 7 }, { x: 6, y: 0, z: 0, type: 1, color: "#64748b" },
           { x: 7, y: 0, z: 0, type: 2 }
         ],
-        movers: [{ x: 3, y: 0, z: 0, dir: 'RIGHT', dist: 2, speed: 0.03 }]
+        movers: [{ x: 3, y: 0, z: 0, dir: 'RIGHT', dist: 2, speed: 0.03, loopMode: 'LOOP' }]
       }
     };
 
@@ -2291,7 +2296,7 @@
       ctx.font = 'bold 48px sans-serif';
       ctx.fillText(`[${group}]`, 64, 88);
       const tex = new THREE.CanvasTexture(cv);
-      return new THREE.MeshLambertMaterial({ map: tex });
+      return new THREE.MeshLambertMaterial({ map: tex, emissive: 0x7f1d1d });
     }
 
     function createLabeledMaterial(group = 'A', showLabel = true, bgColor = '#8b5cf6') {
@@ -2623,12 +2628,12 @@
           if (type === 10) gCfg = { group: 'A', mode: 'TOGGLE', showLabel: true };
           else if (type === 11) gCfg = { group: 'A', dir: 'UP', power: 2 };
           else if (type === 12) gCfg = { group: 'A', mode: 'MOVE_ON', showLabel: true };
-          else if (type === 13) gCfg = { group: 'A', shape: 1, showLabel: true, warpLetter: 'A', cpIndex: 1, moverConfig: { dir: 'RIGHT', dist: 3, speed: 0.035 } };
+          else if (type === 13) gCfg = { group: 'A', shape: 1, showLabel: true, warpLetter: 'A', cpIndex: 1, moverConfig: { dir: 'RIGHT', dist: 3, speed: 0.035, loopMode: 'LOOP' } };
         }
 
         const data = {
           type,
-          moverConfig: moverConfig || ((type === 4 || type === 14) ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null),
+          moverConfig: moverConfig || ((type === 4 || type === 14) ? { dir: 'RIGHT', dist: 3, speed: 0.035, loopMode: 'LOOP' } : null),
           pathConfig: pCfg,
           warpLetter: wLet,
           gimmickConfig: gCfg,
@@ -2787,6 +2792,7 @@
     let editingMoverKey = null;
     const modal = document.getElementById('editor-modal');
     const modalDistNum = document.getElementById('modal-dist-num');
+    const modalLoopMode = document.getElementById('modal-loop-mode');
     const modalSpeedRange = document.getElementById('modal-speed-range');
     const modalSpeedVal = document.getElementById('modal-speed-val');
     modalSpeedRange.oninput = (e) => { modalSpeedVal.textContent = e.target.value; };
@@ -2797,6 +2803,7 @@
       if (b && b.moverConfig) {
         document.getElementById('modal-mover-title').textContent = (b.type === 14) ? "動く直方体の設定" : "動く床の設定";
         document.getElementById('modal-dir').value = b.moverConfig.dir;
+        modalLoopMode.value = b.moverConfig.loopMode || 'LOOP';
         modalDistNum.value = b.moverConfig.dist || 3;
         const scale = speedValToScale(b.moverConfig.speed);
         modalSpeedRange.value = scale;
@@ -2809,6 +2816,7 @@
         pushEditorHistory();
         const b = editorBlocks.get(editingMoverKey);
         b.moverConfig.dir = document.getElementById('modal-dir').value;
+        b.moverConfig.loopMode = modalLoopMode.value;
         b.moverConfig.dist = parseInt(modalDistNum.value, 10) || 3;
         b.moverConfig.speed = speedScaleToVal(modalSpeedRange.value);
         triggerAutoSave();
@@ -3095,7 +3103,7 @@
         populateLetterSelect('select-appear-warp');
         document.getElementById('select-appear-warp').value = cfg.warpLetter || 'A';
       } else if (shape === 4 || shape === 14) {
-        const mCfg = cfg.moverConfig || { dir: 'RIGHT', dist: 3, speed: 0.035 };
+        const mCfg = cfg.moverConfig || { dir: 'RIGHT', dist: 3, speed: 0.035, loopMode: 'LOOP' };
         const scale = speedValToScale(mCfg.speed);
         appearExtraOptions.innerHTML = `
           <label>進行方向:
@@ -3105,7 +3113,13 @@
               <option value="Y_UP">▲ (上へ上昇)</option><option value="Y_DOWN">▼ (下へ下降)</option>
             </select>
           </label>
-          <label>往復距離: <input type="number" id="input-appear-mover-dist" min="1" max="30" value="${mCfg.dist || 3}" style="width: 80px;"></label>
+          <label>動作タイプ:
+            <select id="select-appear-mover-loop" style="width:100%; margin-top:4px;">
+              <option value="LOOP">往復移動 (行ったり来たりループ)</option>
+              <option value="ONCE">片道移動 (所定の距離まで進んだら停止)</option>
+            </select>
+          </label>
+          <label>移動距離: <input type="number" id="input-appear-mover-dist" min="1" max="30" value="${mCfg.dist || 3}" style="width: 80px;"></label>
           <label>速度 (1〜100):
             <div style="display:flex; align-items:center; gap:8px; margin-top: 4px;">
               <input type="range" id="input-appear-mover-speed" min="1" max="100" value="${scale}" style="flex:1;">
@@ -3114,6 +3128,7 @@
           </label>
         `;
         document.getElementById('select-appear-mover-dir').value = mCfg.dir || 'RIGHT';
+        document.getElementById('select-appear-mover-loop').value = mCfg.loopMode || 'LOOP';
         const rng = document.getElementById('input-appear-mover-speed');
         const rngVal = document.getElementById('input-appear-mover-speed-val');
         rng.oninput = (e) => { rngVal.textContent = e.target.value; };
@@ -3147,6 +3162,7 @@
         } else if (b.gimmickConfig.shape === 4 || b.gimmickConfig.shape === 14) {
           b.gimmickConfig.moverConfig = {
             dir: document.getElementById('select-appear-mover-dir').value,
+            loopMode: document.getElementById('select-appear-mover-loop').value,
             dist: parseInt(document.getElementById('input-appear-mover-dist').value, 10) || 3,
             speed: speedScaleToVal(document.getElementById('input-appear-mover-speed').value)
           };
@@ -3402,6 +3418,29 @@
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
+
+      const meshList = Array.from(editorMeshMap.values());
+      const hitMeshes = raycaster.intersectObjects(meshList);
+      if (hitMeshes.length > 0) {
+        const hit = hitMeshes[0];
+        let foundKey = null;
+        for (let [k, m] of editorMeshMap.entries()) {
+          if (m === hit.object) { foundKey = k; break; }
+        }
+        if (foundKey) {
+          const [bx, by, bz] = foundKey.split(',').map(Number);
+          let faceDir = null;
+          if (hit.face) {
+            const n = hit.face.normal.clone().applyQuaternion(hit.object.quaternion);
+            if (n.z < -0.5) faceDir = 'UP';
+            else if (n.z > 0.5) faceDir = 'DOWN';
+            else if (n.x < -0.5) faceDir = 'LEFT';
+            else if (n.x > 0.5) faceDir = 'RIGHT';
+          }
+          return { tx: bx, tz: bz, y: by, key: foundKey, hitMesh: hit.object, faceDir };
+        }
+      }
+
       if (!raycastPlane) return null;
       const intersects = raycaster.intersectObject(raycastPlane);
       if (intersects.length > 0) {
@@ -3409,7 +3448,7 @@
         const tx = Math.floor(pt.x + 0.5);
         const tz = Math.floor(pt.z + 0.5);
         if (tx >= 0 && tx < gridSize && tz >= 0 && tz < gridSize) {
-          return { tx, tz, key: `${tx},${currentLayer},${tz}` };
+          return { tx, tz, y: currentLayer, key: `${tx},${currentLayer},${tz}`, hitMesh: null, faceDir: null };
         }
       }
       return null;
@@ -3421,6 +3460,11 @@
       const key = tile.key;
       if (editorBlocks.has(key)) {
         const b = editorBlocks.get(key);
+        if (selectedPalette === 11) {
+          if (b.type === 5) openBlastModal(key);
+          else alert("「吹き飛ばし」は直方体（壁）の側面に装着するギミックです。");
+          return;
+        }
         if (b.type === 4 || b.type === 14) openMoverModal(key);
         else if (b.type === 8) openPathMoverModal(key);
         else if (b.type === 9) openWarpModal(key);
@@ -3435,7 +3479,7 @@
     function handleEditorClick(e, isDragging = false) {
       const tile = getRaycastGridTile(e);
       if (!tile) return;
-      const { tx, tz, key } = tile;
+      const { tx, tz, key, faceDir } = tile;
 
       if (selectedPalette === 99) {
         if (editorBlocks.has(key) && !grabbedBlockData) {
@@ -3476,9 +3520,18 @@
 
       if (selectedPalette === 11) {
         if (editorBlocks.has(key) && editorBlocks.get(key).type === 5) {
-          openBlastModal(key);
+          const b = editorBlocks.get(key);
+          const targetFace = faceDir || (b.blastConfig?.dir || 'UP');
+          pushEditorHistory();
+          b.blastConfig = {
+            group: b.blastConfig?.group || 'A',
+            dir: targetFace,
+            power: b.blastConfig?.power || 2
+          };
+          const [x, y, z] = key.split(',').map(Number);
+          setEditorTile(x, y, z, 5, null, null, false, b.color, null, null, null);
         } else {
-          alert("「吹き飛ばし」は直方体（壁）の側面に装着するギミックです。直方体の上をクリックしてください。");
+          alert("「吹き飛ばし」は直方体（壁）の側面に装着するギミックです。直方体の面をクリックしてください。");
         }
         return;
       }
@@ -3524,7 +3577,7 @@
             setEditorTile(m.x, m.y, m.z, m.type || 8, null, null, true, null, { waypoints: m.waypoints || [{ x: m.x, y: m.y, z: m.z }], speed: m.speed, segmentSpeeds: m.segmentSpeeds }, null, m.gimmickConfig);
           } else {
             const mType = (m.type === 14 || m.isSolid) ? 14 : 4;
-            setEditorTile(m.x, m.y, m.z, mType, { dir: m.dir, dist: m.dist, speed: m.speed }, null, true);
+            setEditorTile(m.x, m.y, m.z, mType, { dir: m.dir, dist: m.dist, speed: m.speed, loopMode: m.loopMode || 'LOOP' }, null, true);
           }
         });
       }
@@ -3640,7 +3693,7 @@
           activeGimmicks.push({ type: b.type, x: b.x, y: b.y, z: b.z, config: b.gimmickConfig, mesh: mesh });
 
           if (isAppearMover) {
-            const mCfg = b.gimmickConfig.moverConfig || { dir: 'RIGHT', dist: 3, speed: 0.035 };
+            const mCfg = b.gimmickConfig.moverConfig || { dir: 'RIGHT', dist: 3, speed: 0.035, loopMode: 'LOOP' };
             let vecX = 0, vecY = 0, vecZ = 0;
             if (mCfg.dir === 'UP') vecZ = -1;
             if (mCfg.dir === 'DOWN') vecZ = 1;
@@ -3654,6 +3707,8 @@
               isSolid: (b.gimmickConfig.shape === 14),
               isAppearMover: true,
               appearGroup: b.gimmickConfig.group,
+              loopMode: mCfg.loopMode || 'LOOP',
+              isStopped: false,
               originX: b.x, originY: b.y, originZ: b.z,
               vecX, vecY, vecZ, dist: mCfg.dist || 3, speed: mCfg.speed || 0.035,
               mesh: mesh, currentOffset: 0, direction: 1,
@@ -3720,6 +3775,8 @@
             activeMovers.push({
               isPathMover: false,
               isSolid: isSolid,
+              loopMode: m.loopMode || 'LOOP',
+              isStopped: false,
               originX: m.x, originY: m.y, originZ: m.z,
               vecX, vecY, vecZ, dist: m.dist, speed: m.speed,
               mesh: mesh, currentOffset: 0, direction: 1,
@@ -3915,27 +3972,38 @@
       checkBlastCollision();
     }
 
+    // プレイヤーが吹き飛ばし面の正面にいるかチェック
     function checkBlastCollision() {
-      if (isFallingDown) return;
+      if (isFallingDown || isRolling) return;
       const curLvlY = Math.round(cubePos.y);
       const px = Math.round(cubePos.x);
       const pz = Math.round(cubePos.z);
 
       activeGimmicks.forEach(g => {
         if (g.type === 11 && switchStates[g.config.group] && g.y === curLvlY) {
-          let triggerX = g.x;
-          let triggerZ = g.z;
-          let pushDx = 0;
-          let pushDz = 0;
+          const power = g.config.power || 2;
+          let pushVecX = 0;
+          let pushVecZ = 0;
+          if (g.config.dir === 'UP') pushVecZ = -1;
+          else if (g.config.dir === 'DOWN') pushVecZ = 1;
+          else if (g.config.dir === 'LEFT') pushVecX = -1;
+          else if (g.config.dir === 'RIGHT') pushVecX = 1;
 
-          if (g.config.dir === 'UP') { triggerZ = g.z - 1; pushDz = -g.config.power; }
-          else if (g.config.dir === 'DOWN') { triggerZ = g.z + 1; pushDz = g.config.power; }
-          else if (g.config.dir === 'LEFT') { triggerX = g.x - 1; pushDx = -g.config.power; }
-          else if (g.config.dir === 'RIGHT') { triggerX = g.x + 1; pushDx = g.config.power; }
+          let inWindPath = false;
+          for (let dist = 1; dist <= power; dist++) {
+            const checkX = g.x + pushVecX * dist;
+            const checkZ = g.z + pushVecZ * dist;
+            if (px === checkX && pz === checkZ) {
+              inWindPath = true;
+              break;
+            }
+          }
 
-          if (px === triggerX && pz === triggerZ) {
-            cubePos.x += pushDx;
-            cubePos.z += pushDz;
+          if (inWindPath) {
+            const finalX = px + pushVecX * power;
+            const finalZ = pz + pushVecZ * power;
+            cubePos.x = finalX;
+            cubePos.z = finalZ;
             pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
             syncMyVersusPosition();
 
@@ -4157,6 +4225,9 @@
               allowMove = isAppearON;
             }
 
+            // 片道設定ですでに終点到達していれば移動処理をスキップ
+            if (m.isStopped) allowMove = false;
+
             if (allowMove) {
               if (m.isPathMover) {
                 if (m.waypoints && m.waypoints.length > 1) {
@@ -4192,14 +4263,25 @@
                   m.mesh.position.set(interpX, interpY, interpZ);
                 }
               } else {
-                const delta = m.speed * m.direction;
+                let delta = m.speed * m.direction;
+                if (m.loopMode === 'ONCE') {
+                  const remaining = m.dist - m.currentOffset;
+                  if (Math.abs(delta) >= remaining) {
+                    delta = remaining * m.direction;
+                    m.isStopped = true;
+                  }
+                }
                 m.currentOffset += Math.abs(delta);
                 stepX = m.vecX * delta; stepY = m.vecY * delta; stepZ = m.vecZ * delta;
                 m.mesh.position.x += stepX; m.mesh.position.y += stepY; m.mesh.position.z += stepZ;
-                if (m.currentOffset >= m.dist) { m.direction *= -1; m.currentOffset = 0; }
+                if (!m.isStopped && m.currentOffset >= m.dist) {
+                  m.direction *= -1;
+                  m.currentOffset = 0;
+                }
               }
             }
 
+            // 乗車判定
             if (!m.isAppearMover || switchStates[m.appearGroup]) {
               const moverSurfaceY = m.isSolid ? (m.mesh.position.y + 0.5) : (m.mesh.position.y + 0.1);
               const dx = Math.abs(m.mesh.position.x - cubePos.x);
@@ -4221,6 +4303,9 @@
               }
             }
           });
+
+          // 毎フレーム風の判定を実行
+          checkBlastCollision();
 
           if (isFallingDown) {
             fallVelocity += 0.03;
