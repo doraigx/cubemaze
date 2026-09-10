@@ -98,6 +98,27 @@
       border-radius: 6px;
     }
 
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      background: #334155;
+      border-radius: 4px;
+      outline: none;
+      padding: 0;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+    }
+
     #user-bar {
       position: absolute;
       top: 12px;
@@ -160,6 +181,11 @@
     .p-warp { background: #14b8a6; color: #fff; }
     .p-checkpoint { background: #ec4899; color: #fff; }
     .p-fallfloor { background: #f97316; color: #fff; }
+    .p-switch { background: #eab308; color: #000; font-weight: 900; }
+    .p-blast { background: #dc2626; color: #fff; }
+    .p-sw-floor { background: #8b5cf6; color: #fff; }
+    .p-appear { background: #059669; color: #fff; }
+    .p-grab { background: #475569; border: 1px solid #38bdf8; color: #38bdf8; }
 
     .modal-dialog {
       position: absolute;
@@ -638,10 +664,15 @@
       <button class="palette-btn p-mover" data-type="4">動く床</button>
       <button class="palette-btn p-path-mover" data-type="8">動く床(ルート)</button>
       <button class="palette-btn p-warp" data-type="9">ワープ床</button>
+      <button class="palette-btn p-switch" data-type="10">スイッチ</button>
+      <button class="palette-btn p-blast" data-type="11">吹き飛ばし</button>
+      <button class="palette-btn p-sw-floor" data-type="12">スイッチ床</button>
+      <button class="palette-btn p-appear" data-type="13">出現床</button>
       <button class="palette-btn p-checkpoint" data-type="6">セーブ</button>
       <button class="palette-btn p-fallfloor" data-type="7">落下床</button>
       <button class="palette-btn p-start" data-type="3">スタート</button>
       <button class="palette-btn p-goal" data-type="2">ゴール</button>
+      <button class="palette-btn p-grab" data-type="99">🖐️ 移動</button>
       <button class="palette-btn p-empty" data-type="0">消去</button>
 
       <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">ブロック色:</span>
@@ -650,8 +681,8 @@
 
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
-        左ドラッグ: 配置 / 削除 | 「動く床」「ルート床」右クリックで設定編集（速度1-100等）<br>
-        「ワープ床」配置でA-Zワープ設定 | 右ドラッグ: 移動 / ホイール回転: 視点回転
+        左ドラッグ: 配置 / 削除 | 右クリック: 各ブロックの属性・速度・グループ編集<br>
+        「🖐️ 移動」: ブロックを掴んで移動 | 右ドラッグ: 視点平行移動
       </div>
       <div class="editor-bar">
         <span id="route-editing-status" style="font-size:12px; font-weight:bold; color:#facc15; display:none;">✍️ ルート描画中 (グリッドをクリックで経由地追加)</span>
@@ -679,7 +710,7 @@
     </div>
   </div>
 
-  <!-- 動く床設定ポップアップ (速度1〜100、高さ調整等対応) -->
+  <!-- 動く床設定ポップアップ (速度1〜100、高さ調整等) -->
   <div id="editor-modal" class="modal-dialog hidden">
     <h3 style="margin: 0;">動く床の設定</h3>
     <label>進行方向:
@@ -707,21 +738,21 @@
     </div>
   </div>
 
-  <!-- ルート移動床設定モーダル (順番入替・稼働領域追加・速度1〜100対応) -->
-  <div id="modal-path-mover" class="modal-dialog hidden" style="min-width: 380px;">
+  <!-- ルート移動床設定モーダル (地点別個別速度設定対応) -->
+  <div id="modal-path-mover" class="modal-dialog hidden" style="min-width: 420px;">
     <h3 style="margin: 0;">動く床（ルート指定）の詳細設定</h3>
     <div style="font-size: 12px; color: #94a3b8;">
       エディター上で直接グリッドをクリックして経由地を追加できます。<br>
-      番号順（① → ② → ③...）に巡回移動します。
+      各区間（地点間）ごとに個別の速度シークバー（1〜100）を設定可能です。
     </div>
-    <div id="path-steps-list" style="display: flex; flex-direction: column; gap: 6px; background: #0f172a; padding: 10px; border-radius: 6px; max-height: 160px; overflow-y: auto;">
+    <div id="path-steps-list" style="display: flex; flex-direction: column; gap: 6px; background: #0f172a; padding: 10px; border-radius: 6px; max-height: 180px; overflow-y: auto;">
     </div>
     <div style="display: flex; gap: 6px; flex-wrap: wrap;">
       <button id="btn-draw-grid-route" style="background:#0284c7; padding: 4px 8px; font-size: 12px;">✍️ グリッド直接描き</button>
       <button id="btn-pop-step" style="background:#dc2626; padding: 4px 8px; font-size: 12px;">末尾削除</button>
       <button id="btn-clear-path" style="background:#475569; padding: 4px 8px; font-size: 12px;">全クリア</button>
     </div>
-    <label style="font-size: 13px;">移動速度 (1〜100):
+    <label style="font-size: 13px;">全体基本速度 (1〜100):
       <div style="display:flex; align-items:center; gap:8px;">
         <input type="range" id="modal-path-speed-range" min="1" max="100" value="25" style="flex:1;">
         <span id="modal-path-speed-val" style="width:40px; text-align:right;">25</span>
@@ -733,16 +764,123 @@
     </div>
   </div>
 
-  <!-- ワープ床設定モーダル (A〜Z) -->
+  <!-- 区間速度専用シークバーポップアップ -->
+  <div id="modal-segment-speed" class="modal-dialog hidden" style="min-width: 280px; z-index: 35;">
+    <h3 style="margin: 0; font-size: 1.1rem;" id="lbl-segment-speed-title">区間速度設定</h3>
+    <label style="font-size: 13px;">この区間の速度 (1〜100):
+      <div style="display:flex; align-items:center; gap:8px; margin-top: 6px;">
+        <input type="range" id="seg-speed-range" min="1" max="100" value="25" style="flex:1;">
+        <span id="seg-speed-val" style="width:40px; text-align:right;">25</span>
+      </div>
+    </label>
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top: 8px;">
+      <button id="btn-save-seg-speed" style="background:#0284c7; padding:4px 10px;">OK</button>
+      <button id="btn-cancel-seg-speed" style="background:#475569; padding:4px 10px;">閉じる</button>
+    </div>
+  </div>
+
+  <!-- スイッチ編集モーダル -->
+  <div id="modal-switch" class="modal-dialog hidden" style="min-width: 320px;">
+    <h3 style="margin: 0;">スイッチの設定</h3>
+    <label>スイッチグループ:
+      <select id="select-switch-group" style="width: 100%; margin-top: 4px;"></select>
+    </label>
+    <label>動作タイプ:
+      <select id="select-switch-mode" style="width: 100%; margin-top: 4px;">
+        <option value="TOGGLE">踏むたびにON/OFF切り替え</option>
+        <option value="ONCE">一度踏むとONのまま固定</option>
+      </select>
+    </label>
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+      <input type="checkbox" id="chk-switch-show-label" checked style="width:16px; height:16px;">
+      プレイ中スイッチにグループ文字(A,B...)を表示
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="btn-save-switch" style="background: #0284c7;">決定</button>
+      <button id="btn-cancel-switch">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 吹き飛ばしギミック設定モーダル -->
+  <div id="modal-blast" class="modal-dialog hidden" style="min-width: 320px;">
+    <h3 style="margin: 0;">吹き飛ばし面の設定</h3>
+    <div style="font-size: 12px; color: #94a3b8;">
+      作動すると指定された面からプレイヤーを吹き飛ばします。<br>プレイ中は不可視となり1マスにはカウントされません。
+    </div>
+    <label>連動スイッチグループ:
+      <select id="select-blast-group" style="width: 100%; margin-top: 4px;"></select>
+    </label>
+    <label>吹き飛ばし方向 (面の向き):
+      <select id="select-blast-dir" style="width: 100%; margin-top: 4px;">
+        <option value="UP">奥方向へ吹き飛ばす</option>
+        <option value="DOWN">手前方向へ吹き飛ばす</option>
+        <option value="LEFT">左方向へ吹き飛ばす</option>
+        <option value="RIGHT">右方向へ吹き飛ばす</option>
+      </select>
+    </label>
+    <label>吹き飛ばし距離 (マス):
+      <input type="number" id="input-blast-power" min="1" max="10" value="2" style="width: 80px;">
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="btn-save-blast" style="background: #0284c7;">決定</button>
+      <button id="btn-cancel-blast">閉じる</button>
+    </div>
+  </div>
+
+  <!-- スイッチ床設定モーダル -->
+  <div id="modal-switch-floor" class="modal-dialog hidden" style="min-width: 380px;">
+    <h3 style="margin: 0;">スイッチ床の設定</h3>
+    <label>連動スイッチグループ:
+      <select id="select-swfloor-group" style="width: 100%; margin-top: 4px;"></select>
+    </label>
+    <label>動作モード:
+      <select id="select-swfloor-mode" style="width: 100%; margin-top: 4px;">
+        <option value="MOVE_ON">スイッチONで動く (OFF時は停止固定)</option>
+        <option value="STOP_ON">スイッチONで止まる (OFF時は稼働)</option>
+      </select>
+    </label>
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+      <input type="checkbox" id="chk-swfloor-show-label" checked style="width:16px; height:16px;">
+      プレイ中床の上にグループ文字を表示
+    </label>
+    <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">
+      ※動き方は「動く床(ルート)」同様、エディタ上でグリッド直接描きが可能です。
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="btn-swfloor-edit-route" style="background:#8b5cf6;">経路を編集</button>
+      <button id="btn-save-swfloor" style="background: #0284c7;">決定</button>
+      <button id="btn-cancel-swfloor">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 出現ブロック設定モーダル -->
+  <div id="modal-appear" class="modal-dialog hidden" style="min-width: 300px;">
+    <h3 style="margin: 0;">出現ブロックの設定</h3>
+    <label>連動スイッチグループ:
+      <select id="select-appear-group" style="width: 100%; margin-top: 4px;"></select>
+    </label>
+    <label>ブロック形状:
+      <select id="select-appear-shape" style="width: 100%; margin-top: 4px;">
+        <option value="1">薄い床</option>
+        <option value="5">直方体</option>
+      </select>
+    </label>
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+      <input type="checkbox" id="chk-appear-show-label" checked style="width:16px; height:16px;">
+      プレイ中出現ブロックにグループ文字を表示
+    </label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="btn-save-appear" style="background: #0284c7;">決定</button>
+      <button id="btn-cancel-appear">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ワープ床設定モーダル -->
   <div id="modal-warp" class="modal-dialog hidden" style="min-width: 300px;">
     <h3 style="margin: 0;">ワープ床の設定</h3>
-    <div style="font-size: 12px; color: #94a3b8;">
-      同じ文字（例: AとA）同士が双方向でワープします。<br>各文字はステージ内に最大2マスまでです。
-    </div>
+    <div style="font-size: 12px; color: #94a3b8;">同じ文字（例: AとA）同士が双方向でワープします。<br>各文字はステージ内に最大2マスまでです。</div>
     <label>ワープ文字:
-      <select id="select-warp-letter" style="width: 100px; font-size: 1.1rem; text-align:center;">
-        <!-- A〜ZをJSで生成 -->
-      </select>
+      <select id="select-warp-letter" style="width: 100px; font-size: 1.1rem; text-align:center;"></select>
     </label>
     <div id="warp-pair-status" style="font-size: 11px; color: #38bdf8;"></div>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
@@ -764,7 +902,7 @@
     </div>
   </div>
 
-  <!-- ポーズモーダル (製作者フレンドID表示) -->
+  <!-- ポーズモーダル -->
   <div id="modal-pause" class="modal-dialog hidden" style="min-width: 300px; text-align: center;">
     <h3 style="margin: 0 0 4px 0;">一時停止 (PAUSE)</h3>
     <div id="pause-stage-info" style="background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 11px; color: #94a3b8; text-align: left; line-height: 1.4;">
@@ -774,18 +912,16 @@
     </div>
     <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;">
       <button id="btn-pause-resume" style="background: #0284c7;">ステージに戻る (再開)</button>
-      
       <div id="pause-cp-group" style="border-top: 1px solid #334155; padding-top: 10px; display: flex; flex-direction: column; gap: 6px;">
         <label style="font-size: 13px; color: #94a3b8;">セーブポイントからやり直す:</label>
         <select id="select-pause-checkpoint" style="background: #0f172a; border: 1px solid #38bdf8;"></select>
         <button id="btn-pause-restart-cp" style="background: #ec4899;">指定セーブからリトライ</button>
       </div>
-
       <button id="btn-pause-quit" style="background: #475569; margin-top: 4px;">終了して戻る</button>
     </div>
   </div>
 
-  <!-- HUD 左上コンテナ (BGM + タイム) -->
+  <!-- HUD 左上コンテナ -->
   <div id="hud-top-left" class="hidden">
     <button id="btn-bgm-trigger">▶️ BGM: 停止中</button>
     <div id="hud-timer-card">
@@ -794,35 +930,30 @@
     </div>
   </div>
 
-  <!-- BGM ピッカー (音量1〜100%に拡張) -->
+  <!-- BGM ピッカー (シークバー1〜100) -->
   <div id="modal-bgm-picker" class="modal-dialog hidden">
     <h3 style="margin: 0; font-size: 1.1rem;">BGM 選択</h3>
     <div class="list-container">
       <div class="list-item" style="cursor:pointer;" onclick="playBGM('tombi.mp3', 'tombi.mp3')">
-        <span>🎵 tombi.mp3</span>
-        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+        <span>🎵 tombi.mp3</span><button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
       </div>
       <div class="list-item" style="cursor:pointer;" onclick="playBGM('tsuiraku.mp3', 'tsuiraku.mp3')">
-        <span>🎵 tsuiraku.mp3</span>
-        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+        <span>🎵 tsuiraku.mp3</span><button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
       </div>
       <div class="list-item" style="cursor:pointer;" onclick="playBGM('シャイニングスター.mp3', 'シャイニングスター.mp3')">
-        <span>🎵 シャイニングスター.mp3</span>
-        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+        <span>🎵 シャイニングスター.mp3</span><button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
       </div>
       <div class="list-item" style="cursor:pointer;" onclick="playBGM('白銀の小舟.mp3', '白銀の小舟.mp3')">
-        <span>🎵 白銀の小舟.mp3</span>
-        <button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
+        <span>🎵 白銀の小舟.mp3</span><button style="padding:3px 8px; font-size:11px; background:#0284c7;">再生</button>
       </div>
       <div class="list-item" style="cursor:pointer;" onclick="stopBGM()">
-        <span style="color:#ef4444;">⏹ 再生停止</span>
-        <button style="padding:3px 8px; font-size:11px; background:#475569;">停止</button>
+        <span style="color:#ef4444;">⏹ 再生停止</span><button style="padding:3px 8px; font-size:11px; background:#475569;">停止</button>
       </div>
     </div>
     <label style="font-size:12px; display:flex; align-items:center; gap:8px;">
-      音量 (1%〜100%):
-      <input type="range" id="bgm-volume" min="0.01" max="1.0" step="0.01" value="0.5" style="flex:1;">
-      <span id="bgm-volume-val" style="width:40px; text-align:right;">50%</span>
+      音量 (1〜100):
+      <input type="range" id="bgm-volume" min="1" max="100" value="50" style="flex:1;">
+      <span id="bgm-volume-val" style="width:40px; text-align:right;">50</span>
     </label>
     <button id="btn-close-bgm" style="align-self: flex-end; padding:4px 12px; font-size:12px;">閉じる</button>
   </div>
@@ -831,20 +962,13 @@
 
   <!-- 6. モバイル専用 D-PAD -->
   <div id="dpad" class="hidden">
-    <div></div>
-    <div class="dpad-btn" id="dpad-up">▲</div>
-    <div></div>
-    <div class="dpad-btn" id="dpad-left">◀</div>
-    <div></div>
-    <div class="dpad-btn" id="dpad-right">▶</div>
-    <div></div>
-    <div class="dpad-btn" id="dpad-down">▼</div>
-    <div></div>
+    <div></div><div class="dpad-btn" id="dpad-up">▲</div><div></div>
+    <div class="dpad-btn" id="dpad-left">◀</div><div></div><div class="dpad-btn" id="dpad-right">▶</div>
+    <div></div><div class="dpad-btn" id="dpad-down">▼</div><div></div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
-    // A〜Z 26色のカラーパレット生成（ワープ床用）
     const WARP_COLORS = [
       '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6',
       '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
@@ -852,12 +976,7 @@
       '#c084fc', '#e879f9'
     ];
 
-    window.addEventListener('contextmenu', (e) => {
-      // エディタ内の床クリック時のみカスタムコンテキストメニュー処理を行うためデフォルト抑止
-      e.preventDefault();
-      return false;
-    }, { passive: false });
-
+    window.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; }, { passive: false });
     window.addEventListener('dragstart', (e) => { e.preventDefault(); });
     window.addEventListener('copy', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
     window.addEventListener('cut', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
@@ -892,9 +1011,7 @@
         db = firebase.firestore();
         auth = firebase.auth();
       }
-    } catch(e) {
-      console.warn("Firebase初期化失敗:", e);
-    }
+    } catch(e) { console.warn("Firebase初期化失敗:", e); }
 
     const inputUsername = document.getElementById('input-username');
     let currentUsername = localStorage.getItem('cube_username') || "NoName";
@@ -902,9 +1019,7 @@
     inputUsername.onchange = () => {
       currentUsername = inputUsername.value.trim() || "NoName";
       localStorage.setItem('cube_username', currentUsername);
-      if (currentUser && db) {
-        db.collection("users").doc(currentUser.uid).set({ username: currentUsername }, { merge: true });
-      }
+      if (currentUser && db) db.collection("users").doc(currentUser.uid).set({ username: currentUsername }, { merge: true });
     };
 
     const userBar = document.getElementById('user-bar');
@@ -928,26 +1043,14 @@
           userStatusText.textContent = `${user.displayName || "ログイン済"}`;
           btnAuth.textContent = "ログアウト";
           btnAuth.style.background = "#475569";
-
           const userDocRef = db.collection("users").doc(user.uid);
           const doc = await userDocRef.get();
-          if (doc.exists && doc.data().friendId) {
-            myFriendId = doc.data().friendId;
-          } else {
-            myFriendId = generateFriendId();
-            await userDocRef.set({ friendId: myFriendId }, { merge: true });
-          }
-
-          if (doc.exists && doc.data().username) {
-            currentUsername = doc.data().username;
-            inputUsername.value = currentUsername;
-            localStorage.setItem('cube_username', currentUsername);
-          }
-
+          if (doc.exists && doc.data().friendId) myFriendId = doc.data().friendId;
+          else { myFriendId = generateFriendId(); await userDocRef.set({ friendId: myFriendId }, { merge: true }); }
+          if (doc.exists && doc.data().username) { currentUsername = doc.data().username; inputUsername.value = currentUsername; localStorage.setItem('cube_username', currentUsername); }
           userFriendIdBadge.style.display = "inline";
           userFriendIdBadge.textContent = `ID: ${myFriendId}`;
           lblMyFriendId.textContent = myFriendId;
-
           startHeartbeat();
           listenIncomingMatchInvites();
           listenFriendRequests();
@@ -964,45 +1067,27 @@
 
     btnAuth.onclick = () => {
       if (!auth) { alert("Firebaseが設定されていません。"); return; }
-      if (currentUser) {
-        auth.signOut();
-      } else {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(err => alert("ログインエラー: " + err.message));
-      }
+      if (currentUser) auth.signOut();
+      else auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => alert("ログインエラー: " + err.message));
     };
 
     let heartbeatTimer = null;
     function startHeartbeat() {
       if (!currentUser || !db) return;
-      const sendBeat = () => {
-        db.collection("users").doc(currentUser.uid).set({
-          username: currentUsername,
-          friendId: myFriendId,
-          lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      };
+      const sendBeat = () => { db.collection("users").doc(currentUser.uid).set({ username: currentUsername, friendId: myFriendId, lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); };
       sendBeat();
       if (heartbeatTimer) clearInterval(heartbeatTimer);
       heartbeatTimer = setInterval(sendBeat, 30000);
     }
 
     async function getAuthorFriendId(authorUid, fallbackFriendId) {
-      if (fallbackFriendId && fallbackFriendId !== '公開' && fallbackFriendId !== 'なし') {
-        return fallbackFriendId;
-      }
-      if (!authorUid || authorUid === 'OFFICIAL' || authorUid === 'vs' || authorUid === 'LOCAL') {
-        return 'OFFICIAL';
-      }
+      if (fallbackFriendId && fallbackFriendId !== '公開' && fallbackFriendId !== 'なし') return fallbackFriendId;
+      if (!authorUid || authorUid === 'OFFICIAL' || authorUid === 'vs' || authorUid === 'LOCAL') return 'OFFICIAL';
       if (!db) return '--------';
       try {
         const userDoc = await db.collection("users").doc(authorUid).get();
-        if (userDoc.exists && userDoc.data().friendId) {
-          return userDoc.data().friendId;
-        }
-      } catch (e) {
-        return fallbackFriendId || '--------';
-      }
+        if (userDoc.exists && userDoc.data().friendId) return userDoc.data().friendId;
+      } catch (e) { return fallbackFriendId || '--------'; }
       return '--------';
     }
 
@@ -1018,9 +1103,9 @@
     btnBgmTrigger.onclick = () => modalBgmPicker.classList.toggle('hidden');
     document.getElementById('btn-close-bgm').onclick = () => modalBgmPicker.classList.add('hidden');
     bgmVolume.oninput = (e) => {
-      const vol = parseFloat(e.target.value);
-      currentAudio.volume = vol;
-      bgmVolumeVal.textContent = `${Math.round(vol * 100)}%`;
+      const val = parseInt(e.target.value, 10);
+      currentAudio.volume = val / 100;
+      bgmVolumeVal.textContent = val;
     };
 
     function playBGM(src, title) {
@@ -1052,13 +1137,9 @@
       dpad.style.width = `${dpadSettings.size}px`;
       dpad.style.height = `${dpadSettings.size}px`;
       dpad.style.left = 'auto'; dpad.style.right = 'auto'; dpad.style.transform = 'none';
-
       if (dpadSettings.pos === 'left') dpad.style.left = '25px';
       else if (dpadSettings.pos === 'right') dpad.style.right = '25px';
-      else if (dpadSettings.pos === 'center') {
-        dpad.style.left = '50%';
-        dpad.style.transform = 'translateX(-50%)';
-      }
+      else if (dpadSettings.pos === 'center') { dpad.style.left = '50%'; dpad.style.transform = 'translateX(-50%)'; }
     }
     applyDpadSettings();
 
@@ -1070,10 +1151,8 @@
       optDpadScaleVal.textContent = `${dpadSettings.size}px`;
       modalOptions.classList.remove('hidden');
     };
-
     optDpadBottom.oninput = (e) => { optDpadBottomVal.textContent = `${e.target.value}px`; };
     optDpadScale.oninput = (e) => { optDpadScaleVal.textContent = `${e.target.value}px`; };
-
     document.getElementById('btn-save-options').onclick = () => {
       dpadSettings.pos = optDpadPos.value;
       dpadSettings.bottom = parseInt(optDpadBottom.value, 10);
@@ -1105,17 +1184,11 @@
     };
 
     async function loadPublicStagesList() {
-      if (!db) {
-        onlineStagesContainer.innerHTML = '<div style="color:#ef4444; font-size:12px; text-align:center;">Firebase未設定です</div>';
-        return;
-      }
+      if (!db) { onlineStagesContainer.innerHTML = '<div style="color:#ef4444; font-size:12px; text-align:center;">Firebase未設定です</div>'; return; }
       onlineStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
       try {
         const snap = await db.collection("stages").orderBy("createdAt", "desc").limit(25).get();
-        if (snap.empty) {
-          onlineStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">投稿されたステージはありません</div>';
-          return;
-        }
+        if (snap.empty) { onlineStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">投稿されたステージはありません</div>'; return; }
         onlineStagesContainer.innerHTML = '';
         snap.forEach(doc => {
           const s = doc.data();
@@ -1132,21 +1205,16 @@
               <button class="btn-play-online" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">プレイ</button>
             </div>
           `;
-
           item.querySelector('.btn-stage-history').onclick = () => openStageHistoryModal(doc.id, s.name);
-
           item.querySelector('.btn-play-online').onclick = async () => {
             const fId = await getAuthorFriendId(s.authorUid, s.authorFriendId);
             startPlay(s, false, null, null, doc.id, { id: doc.id, author: s.author, authorUid: s.authorUid, authorFriendId: fId });
           };
           onlineStagesContainer.appendChild(item);
         });
-      } catch (e) {
-        onlineStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
-      }
+      } catch (e) { onlineStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`; }
     }
 
-    // ステージクリア履歴（ベストタイムのみ・ユーザー重複排除ランキング）
     const modalStageHistory = document.getElementById('modal-stage-history');
     const stageHistoryTitle = document.getElementById('stage-history-title');
     const stageHistoryContainer = document.getElementById('stage-history-container');
@@ -1156,33 +1224,17 @@
       modalStageHistory.classList.remove('hidden');
       stageHistoryTitle.textContent = `「${stageName}」ランキング`;
       stageHistoryContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">クリア履歴を読み込み中...</div>';
-
-      if (!db) {
-        stageHistoryContainer.innerHTML = '<div style="color:#ef4444; font-size:12px;">Firebaseが未設定です</div>';
-        return;
-      }
-
+      if (!db) { stageHistoryContainer.innerHTML = '<div style="color:#ef4444; font-size:12px;">Firebaseが未設定です</div>'; return; }
       try {
-        const snap = await db.collection("stages").doc(stageId).collection("clear_records")
-          .orderBy("time", "asc").limit(100).get();
-
-        if (snap.empty) {
-          stageHistoryContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">まだクリアしたプレイヤーはいません</div>';
-          return;
-        }
-
-        // ユーザーごとのベストタイムのみを抽出（重複排除）
+        const snap = await db.collection("stages").doc(stageId).collection("clear_records").orderBy("time", "asc").limit(100).get();
+        if (snap.empty) { stageHistoryContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">まだクリアしたプレイヤーはいません</div>'; return; }
         const userBestMap = new Map();
         snap.docs.forEach(doc => {
           const rec = doc.data();
           const userKey = rec.userId || rec.userFriendId || rec.userName;
-          if (!userBestMap.has(userKey)) {
-            userBestMap.set(userKey, rec);
-          }
+          if (!userBestMap.has(userKey)) userBestMap.set(userKey, rec);
         });
-
         const rankingList = Array.from(userBestMap.values()).sort((a, b) => a.time - b.time).slice(0, 30);
-
         stageHistoryContainer.innerHTML = '';
         rankingList.forEach((rec, idx) => {
           const item = document.createElement('div');
@@ -1190,21 +1242,15 @@
           const dtStr = rec.clearedAt ? new Date(rec.clearedAt.toDate()).toLocaleString() : '不明';
           item.innerHTML = `
             <div>
-              <strong style="color: ${idx === 0 ? '#facc15' : (idx === 1 ? '#cbd5e1' : (idx === 2 ? '#b45309' : '#fff'))}; font-size: 13px;">
-                #${idx + 1} ${rec.userName}
-              </strong>
+              <strong style="color: ${idx === 0 ? '#facc15' : (idx === 1 ? '#cbd5e1' : (idx === 2 ? '#b45309' : '#fff'))}; font-size: 13px;">#${idx + 1} ${rec.userName}</strong>
               <span style="font-size:10px; color:#94a3b8; margin-left:4px;">(ID: ${rec.userFriendId || '----'})</span><br>
               <span style="font-size:10px; color:#64748b;">達成日: ${dtStr}</span>
             </div>
-            <div style="font-size:13px; font-weight:bold; color:#38bdf8;">
-              ${formatTime(rec.time)}
-            </div>
+            <div style="font-size:13px; font-weight:bold; color:#38bdf8;">${formatTime(rec.time)}</div>
           `;
           stageHistoryContainer.appendChild(item);
         });
-      } catch (e) {
-        stageHistoryContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">履歴読込エラー: ${e.message}</div>`;
-      }
+      } catch (e) { stageHistoryContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">履歴読込エラー: ${e.message}</div>`; }
     }
 
     // ==========================================
@@ -1222,7 +1268,6 @@
     const inputChatMsg = document.getElementById('input-chat-msg');
     let currentChatFriendUid = null;
     let chatUnsub = null;
-
     const unreadChatFriends = new Set();
     let totalPendingRequests = 0;
 
@@ -1258,24 +1303,19 @@
       const searchId = document.getElementById('input-search-friend-id').value.trim().toUpperCase();
       if (!searchId || searchId.length !== 8) { alert("8桁のフレンドIDを入力してください。"); return; }
       if (searchId === myFriendId) { alert("自分自身には申請できません。"); return; }
-
       try {
         const snap = await db.collection("users").where("friendId", "==", searchId).limit(1).get();
         if (snap.empty) { alert("ユーザーが見つかりませんでした。"); return; }
         const targetUid = snap.docs[0].id;
-
         await db.collection("users").doc(targetUid).collection("friend_requests").doc(currentUser.uid).set({
           senderUid: currentUser.uid,
           senderName: currentUsername,
           senderFriendId: myFriendId,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-
         alert("フレンド申請を送信しました！");
         document.getElementById('input-search-friend-id').value = '';
-      } catch (e) {
-        alert("申請エラー: " + e.message);
-      }
+      } catch (e) { alert("申請エラー: " + e.message); }
     };
 
     function listenFriendRequests() {
@@ -1291,20 +1331,14 @@
       friendRequestsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
       try {
         const snap = await db.collection("users").doc(currentUser.uid).collection("friend_requests").get();
-        if (snap.empty) {
-          friendRequestsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">届いている申請はありません</div>';
-          return;
-        }
+        if (snap.empty) { friendRequestsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">届いている申請はありません</div>'; return; }
         friendRequestsContainer.innerHTML = '';
         snap.forEach(doc => {
           const req = doc.data();
           const item = document.createElement('div');
           item.className = 'list-item';
           item.innerHTML = `
-            <div>
-              <strong>${req.senderName}</strong><br>
-              <span style="font-size:11px; color:#94a3b8;">ID: ${req.senderFriendId}</span>
-            </div>
+            <div><strong>${req.senderName}</strong><br><span style="font-size:11px; color:#94a3b8;">ID: ${req.senderFriendId}</span></div>
             <div style="display:flex; gap:6px;">
               <button class="btn-accept-req" style="padding: 4px 8px; font-size:11px; background:#059669;">承認</button>
               <button class="btn-decline-req" style="padding: 4px 8px; font-size:11px; background:#dc2626;">拒絶</button>
@@ -1312,54 +1346,35 @@
           `;
           item.querySelector('.btn-accept-req').onclick = async () => {
             await db.collection("users").doc(currentUser.uid).collection("friends").doc(req.senderUid).set({
-              uid: req.senderUid,
-              name: req.senderName,
-              friendId: req.senderFriendId,
-              addedAt: firebase.firestore.FieldValue.serverTimestamp()
+              uid: req.senderUid, name: req.senderName, friendId: req.senderFriendId, addedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             await db.collection("users").doc(req.senderUid).collection("friends").doc(currentUser.uid).set({
-              uid: currentUser.uid,
-              name: currentUsername,
-              friendId: myFriendId,
-              addedAt: firebase.firestore.FieldValue.serverTimestamp()
+              uid: currentUser.uid, name: currentUsername, friendId: myFriendId, addedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             await doc.ref.delete();
             loadFriendRequestsList();
           };
-          item.querySelector('.btn-decline-req').onclick = async () => {
-            await doc.ref.delete();
-            loadFriendRequestsList();
-          };
+          item.querySelector('.btn-decline-req').onclick = async () => { await doc.ref.delete(); loadFriendRequestsList(); };
           friendRequestsContainer.appendChild(item);
         });
-      } catch (e) {
-        friendRequestsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
-      }
+      } catch (e) { friendRequestsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`; }
     }
 
     async function loadFriendsList() {
       friendsListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">フレンド読込中...</div>';
       try {
         const snap = await db.collection("users").doc(currentUser.uid).collection("friends").get();
-        if (snap.empty) {
-          friendsListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">フレンドはいません</div>';
-          return;
-        }
-
+        if (snap.empty) { friendsListContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">フレンドはいません</div>'; return; }
         const now = Date.now();
         friendsListContainer.innerHTML = '';
-
         for (const doc of snap.docs) {
           const f = doc.data();
           const userDoc = await db.collection("users").doc(f.uid).get();
           let isOnline = false;
           if (userDoc.exists && userDoc.data().lastSeen) {
-            const last = userDoc.data().lastSeen.toMillis();
-            if (now - last < 2 * 60 * 1000) isOnline = true;
+            if (now - userDoc.data().lastSeen.toMillis() < 2 * 60 * 1000) isOnline = true;
           }
-
           const hasUnread = unreadChatFriends.has(f.uid);
-
           const item = document.createElement('div');
           item.className = 'list-item';
           item.innerHTML = `
@@ -1376,9 +1391,7 @@
               ${isOnline ? `<button class="btn-invite-friend-vs" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">対戦</button>` : ''}
             </div>
           `;
-
           item.querySelector('.btn-chat-friend').onclick = () => openFriendChat(f);
-
           if (isOnline) {
             item.querySelector('.btn-invite-friend-vs').onclick = () => {
               modalFriends.classList.add('hidden');
@@ -1387,9 +1400,7 @@
           }
           friendsListContainer.appendChild(item);
         }
-      } catch (e) {
-        friendsListContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
-      }
+      } catch (e) { friendsListContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`; }
     }
 
     function listenAllFriendChatUnread() {
@@ -1398,16 +1409,13 @@
         snap.forEach(fDoc => {
           const fUid = fDoc.id;
           const chatId = [currentUser.uid, fUid].sort().join('_');
-          db.collection("friend_chats").doc(chatId).collection("messages")
-            .orderBy("createdAt", "desc").limit(1).onSnapshot(mSnap => {
-              if (!mSnap.empty) {
-                const latest = mSnap.docs[0].data();
-                if (latest.senderUid !== currentUser.uid && currentChatFriendUid !== fUid) {
-                  unreadChatFriends.add(fUid);
-                }
-              }
-              updateMenuFriendBadge();
-            }, err => console.warn("Chat unread listener:", err.message));
+          db.collection("friend_chats").doc(chatId).collection("messages").orderBy("createdAt", "desc").limit(1).onSnapshot(mSnap => {
+            if (!mSnap.empty) {
+              const latest = mSnap.docs[0].data();
+              if (latest.senderUid !== currentUser.uid && currentChatFriendUid !== fUid) unreadChatFriends.add(fUid);
+            }
+            updateMenuFriendBadge();
+          }, err => console.warn("Chat unread listener:", err.message));
         });
       });
     }
@@ -1417,44 +1425,29 @@
       currentChatFriendUid = friend.uid;
       unreadChatFriends.delete(friend.uid);
       updateMenuFriendBadge();
-
       chatFriendNameTitle.textContent = `${friend.name} とのチャット`;
       modalFriendChat.classList.remove('hidden');
 
       const chatId = [currentUser.uid, friend.uid].sort().join('_');
       if (chatUnsub) chatUnsub();
-
-      chatUnsub = db.collection("friend_chats").doc(chatId).collection("messages")
-        .orderBy("createdAt", "asc").limit(40).onSnapshot(snap => {
-          chatMessagesContainer.innerHTML = '';
-          if (snap.empty) {
-            chatMessagesContainer.innerHTML = '<div style="color:#64748b; font-size:11px; text-align:center;">メッセージはありません</div>';
-            return;
+      chatUnsub = db.collection("friend_chats").doc(chatId).collection("messages").orderBy("createdAt", "asc").limit(40).onSnapshot(snap => {
+        chatMessagesContainer.innerHTML = '';
+        if (snap.empty) { chatMessagesContainer.innerHTML = '<div style="color:#64748b; font-size:11px; text-align:center;">メッセージはありません</div>'; return; }
+        snap.forEach(doc => {
+          const m = doc.data();
+          const wrap = document.createElement('div');
+          const isMe = (m.senderUid === currentUser.uid);
+          wrap.className = `chat-bubble-wrap ${isMe ? 'me' : 'other'}`;
+          let timeStr = '';
+          if (m.createdAt && m.createdAt.toDate) {
+            const dt = m.createdAt.toDate();
+            timeStr = `${dt.getHours().toString().padStart(2, '0')}:${dt.getMinutes().toString().padStart(2, '0')}`;
           }
-          snap.forEach(doc => {
-            const m = doc.data();
-            const wrap = document.createElement('div');
-            const isMe = (m.senderUid === currentUser.uid);
-            wrap.className = `chat-bubble-wrap ${isMe ? 'me' : 'other'}`;
-
-            let timeStr = '';
-            if (m.createdAt && m.createdAt.toDate) {
-              const dt = m.createdAt.toDate();
-              const hrs = dt.getHours().toString().padStart(2, '0');
-              const mins = dt.getMinutes().toString().padStart(2, '0');
-              timeStr = `${hrs}:${mins}`;
-            }
-
-            wrap.innerHTML = `
-              <div class="chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}">
-                ${m.text}
-              </div>
-              <span class="chat-time">${timeStr}</span>
-            `;
-            chatMessagesContainer.appendChild(wrap);
-          });
-          chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-        }, err => console.warn("Chat listener:", err.message));
+          wrap.innerHTML = `<div class="chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-other'}">${m.text}</div><span class="chat-time">${timeStr}</span>`;
+          chatMessagesContainer.appendChild(wrap);
+        });
+        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+      }, err => console.warn("Chat listener:", err.message));
     }
 
     document.getElementById('btn-send-chat-msg').onclick = async () => {
@@ -1462,19 +1455,13 @@
       if (!text) return;
       if (text.length > 50) { alert("メッセージは50文字以内で入力してください。"); return; }
       if (!currentChatFriendUid || !currentUser) return;
-
       const chatId = [currentUser.uid, currentChatFriendUid].sort().join('_');
       inputChatMsg.value = '';
-
       try {
         await db.collection("friend_chats").doc(chatId).collection("messages").add({
-          senderUid: currentUser.uid,
-          text: text,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          senderUid: currentUser.uid, text: text, createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-      } catch(e) {
-        alert("チャット送信エラー: " + e.message);
-      }
+      } catch(e) { alert("チャット送信エラー: " + e.message); }
     };
 
     document.getElementById('btn-close-friend-chat').onclick = () => {
@@ -1505,7 +1492,6 @@
     const vsPickStagesContainer = document.getElementById('vs-pick-stages-container');
     const modalIncomingVs = document.getElementById('modal-incoming-vs');
     const incomingVsText = document.getElementById('incoming-vs-text');
-
     const vsCountdownOverlay = document.getElementById('vs-countdown-overlay');
     const vsCountdownNumber = document.getElementById('vs-countdown-number');
     const vsCountdownStage = document.getElementById('vs-countdown-stage');
@@ -1517,22 +1503,13 @@
     document.getElementById('btn-close-versus-menu').onclick = () => modalVersusMenu.classList.add('hidden');
     document.getElementById('btn-close-vs-pick').onclick = () => modalVsPickStage.classList.add('hidden');
     document.getElementById('btn-close-vs-records').onclick = () => modalVsRecords.classList.add('hidden');
-
-    document.getElementById('btn-vs-records').onclick = () => {
-      modalVersusMenu.classList.add('hidden');
-      modalVsRecords.classList.remove('hidden');
-      loadVsRecords();
-    };
+    document.getElementById('btn-vs-records').onclick = () => { modalVersusMenu.classList.add('hidden'); modalVsRecords.classList.remove('hidden'); loadVsRecords(); };
 
     async function loadVsRecords() {
       vsRecordsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
       try {
-        const snap = await db.collection("users").doc(currentUser.uid).collection("match_history")
-          .orderBy("createdAt", "desc").limit(20).get();
-        if (snap.empty) {
-          vsRecordsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">対戦履歴はありません</div>';
-          return;
-        }
+        const snap = await db.collection("users").doc(currentUser.uid).collection("match_history").orderBy("createdAt", "desc").limit(20).get();
+        if (snap.empty) { vsRecordsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">対戦履歴はありません</div>'; return; }
         vsRecordsContainer.innerHTML = '';
         snap.forEach(doc => {
           const r = doc.data();
@@ -1545,15 +1522,11 @@
               <span style="font-size:11px; color:#cbd5e1;">ステージ: ${r.stageName} (ID: ${r.stageId || '公式/下書き'})</span><br>
               <span style="font-size:11px; color:#94a3b8;">相手: ${r.opponentName} (ID: ${r.opponentFriendId})</span>
             </div>
-            <div style="font-size:11px; color:#38bdf8; text-align:right;">
-              ${r.time ? formatTime(r.time) : '--:--.--'}
-            </div>
+            <div style="font-size:11px; color:#38bdf8; text-align:right;">${r.time ? formatTime(r.time) : '--:--.--'}</div>
           `;
           vsRecordsContainer.appendChild(item);
         });
-      } catch (e) {
-        vsRecordsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
-      }
+      } catch (e) { vsRecordsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`; }
     }
 
     document.getElementById('btn-vs-random').onclick = async () => {
@@ -1564,9 +1537,7 @@
         const randomDoc = docs[Math.floor(Math.random() * docs.length)];
         modalVersusMenu.classList.add('hidden');
         openVersusFriendSelect(randomDoc.data(), "ランダム公開コース", randomDoc.id);
-      } catch (e) {
-        alert("エラー: " + e.message);
-      }
+      } catch (e) { alert("エラー: " + e.message); }
     };
 
     document.getElementById('btn-vs-custom').onclick = () => {
@@ -1577,14 +1548,12 @@
 
     const tabVsPickPublic = document.getElementById('tab-vs-pick-public');
     const tabVsPickMy = document.getElementById('tab-vs-pick-my');
-
     tabVsPickPublic.onclick = () => {
       tabVsPickPublic.style.background = "#0284c7";
       tabVsPickMy.style.background = "#334155";
       document.getElementById('btn-vs-pick-random-pub').style.display = 'block';
       loadVsPublicStagesList();
     };
-
     tabVsPickMy.onclick = () => {
       tabVsPickMy.style.background = "#0284c7";
       tabVsPickPublic.style.background = "#334155";
@@ -1600,19 +1569,14 @@
         const randomDoc = docs[Math.floor(Math.random() * docs.length)];
         modalVsPickStage.classList.add('hidden');
         openVersusFriendSelect(randomDoc.data(), `${randomDoc.data().name} (ランダム決定)`, randomDoc.id);
-      } catch(e) {
-        alert("エラー: " + e.message);
-      }
+      } catch(e) { alert("エラー: " + e.message); }
     };
 
     async function loadVsPublicStagesList() {
       vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
       try {
         const snap = await db.collection("stages").limit(20).get();
-        if (snap.empty) {
-          vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">公開コースがありません</div>';
-          return;
-        }
+        if (snap.empty) { vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">公開コースがありません</div>'; return; }
         vsPickStagesContainer.innerHTML = '';
         snap.docs.forEach(doc => {
           const s = doc.data();
@@ -1620,10 +1584,7 @@
           const item = document.createElement('div');
           item.className = 'list-item';
           item.innerHTML = `
-            <div>
-              <strong>${s.name}</strong><br>
-              <span style="font-size:11px; color:#94a3b8;">作者: ${s.author}</span>
-            </div>
+            <div><strong>${s.name}</strong><br><span style="font-size:11px; color:#94a3b8;">作者: ${s.author}</span></div>
             <button class="btn-select-vs-stage" style="padding:4px 8px; font-size:11px; background:#0284c7;">選択</button>
           `;
           item.querySelector('.btn-select-vs-stage').onclick = () => {
@@ -1632,29 +1593,21 @@
           };
           vsPickStagesContainer.appendChild(item);
         });
-      } catch (e) {
-        vsPickStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
-      }
+      } catch (e) { vsPickStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`; }
     }
 
     async function loadVsMyStagesList() {
       vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
       try {
         const snap = await db.collection("users").doc(currentUser.uid).collection("custom_stages").get();
-        if (snap.empty) {
-          vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">保存されたスロットがありません</div>';
-          return;
-        }
+        if (snap.empty) { vsPickStagesContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">保存されたスロットがありません</div>'; return; }
         vsPickStagesContainer.innerHTML = '';
         snap.docs.forEach(doc => {
           const s = doc.data();
           const item = document.createElement('div');
           item.className = 'list-item';
           item.innerHTML = `
-            <div>
-              <strong>${s.name}</strong> (下書き)<br>
-              <span style="font-size:11px; color:#94a3b8;">${s.size}×${s.size}</span>
-            </div>
+            <div><strong>${s.name}</strong> (下書き)<br><span style="font-size:11px; color:#94a3b8;">${s.size}×${s.size}</span></div>
             <button class="btn-select-vs-stage" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">選択</button>
           `;
           item.querySelector('.btn-select-vs-stage').onclick = () => {
@@ -1663,9 +1616,7 @@
           };
           vsPickStagesContainer.appendChild(item);
         });
-      } catch (e) {
-        vsPickStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
-      }
+      } catch (e) { vsPickStagesContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`; }
     }
 
     const modalVsInvite = document.getElementById('modal-vs-invite');
@@ -1693,14 +1644,10 @@
       vsOnlineFriendsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読込中...</div>';
       try {
         const snap = await db.collection("users").doc(currentUser.uid).collection("friends").get();
-        if (snap.empty) {
-          vsOnlineFriendsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">フレンドがいません</div>';
-          return;
-        }
+        if (snap.empty) { vsOnlineFriendsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">フレンドがいません</div>'; return; }
         const now = Date.now();
         vsOnlineFriendsContainer.innerHTML = '';
         let foundOnline = false;
-
         for (const doc of snap.docs) {
           const f = doc.data();
           const uDoc = await db.collection("users").doc(f.uid).get();
@@ -1708,32 +1655,22 @@
           if (uDoc.exists && uDoc.data().lastSeen) {
             if (now - uDoc.data().lastSeen.toMillis() < 2 * 60 * 1000) isOnline = true;
           }
-
           if (isOnline) {
             foundOnline = true;
             const item = document.createElement('div');
             item.className = 'list-item';
             item.innerHTML = `
-              <div>
-                <span class="status-dot status-online"></span>
-                <strong>${f.name}</strong>
-              </div>
+              <div><span class="status-dot status-online"></span><strong>${f.name}</strong></div>
               <button class="btn-do-invite-vs" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">招待を送る</button>
             `;
             item.querySelector('.btn-do-invite-vs').onclick = () => {
-              if (confirm(`${f.name} に対戦招待を送信しますか？`)) {
-                sendVersusInvite(f);
-              }
+              if (confirm(`${f.name} に対戦招待を送信しますか？`)) sendVersusInvite(f);
             };
             vsOnlineFriendsContainer.appendChild(item);
           }
         }
-        if (!foundOnline) {
-          vsOnlineFriendsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">オンラインのフレンドがいません</div>';
-        }
-      } catch (e) {
-        vsOnlineFriendsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
-      }
+        if (!foundOnline) vsOnlineFriendsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">オンラインのフレンドがいません</div>';
+      } catch (e) { vsOnlineFriendsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`; }
     }
 
     async function sendVersusInvite(friend) {
@@ -1757,15 +1694,12 @@
       });
 
       vsRoomId = roomRef.id;
-
-      // 招待を即時に相手に通知
       await db.collection("users").doc(friend.uid).collection("versus_invites").doc(vsRoomId).set({
         roomId: vsRoomId,
         senderName: currentUsername,
         senderFriendId: myFriendId,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-
       listenVersusRoom(vsRoomId, true);
     }
 
@@ -1789,9 +1723,7 @@
       const invite = currentIncomingInviteDoc.data();
       modalIncomingVs.classList.add('hidden');
       vsRoomId = invite.roomId;
-
       await currentIncomingInviteDoc.ref.delete();
-      // 招待を承認したら 10秒後にスタートする絶対時刻を同期
       const startTimestamp = Date.now() + 10000;
       await db.collection("versus_rooms").doc(vsRoomId).update({
         status: "COUNTDOWN",
@@ -1802,9 +1734,7 @@
     };
 
     document.getElementById('btn-decline-vs').onclick = async () => {
-      if (currentIncomingInviteDoc) {
-        await currentIncomingInviteDoc.ref.delete();
-      }
+      if (currentIncomingInviteDoc) await currentIncomingInviteDoc.ref.delete();
       modalIncomingVs.classList.add('hidden');
     };
 
@@ -1812,14 +1742,11 @@
     function start10sCountdown(startTime, stageData, isHost) {
       vsCountdownOverlay.classList.remove('hidden');
       vsCountdownStage.textContent = `コース: ${stageData.name || '対戦ステージ'}`;
-
       if (countdownInterval) clearInterval(countdownInterval);
 
       countdownInterval = setInterval(() => {
-        // 同一の絶対タイムスタンプから残り秒数を同期計算
         const remaining = Math.max(0, Math.ceil((startTime - Date.now()) / 1000));
         vsCountdownNumber.textContent = remaining;
-
         if (remaining <= 0) {
           clearInterval(countdownInterval);
           vsCountdownOverlay.classList.add('hidden');
@@ -1864,12 +1791,10 @@
             return;
           }
 
-          // 片方がゴールした瞬間に即座に強制終了
           const oppTime = isHost ? room.guestClearTime : room.hostClearTime;
           if (oppTime && !opponentFinished) {
             opponentFinished = true;
             opponentClearTime = oppTime;
-            // 相手ゴールで即座に終了処理
             recordMatchHistory('LOSE', Math.round(playElapsedTime));
             endVersusMatch();
             alert(`💥 相手(${formatTime(oppTime)})が先にゴールしました！ (YOU LOSE)`);
@@ -1890,9 +1815,7 @@
           time: clearTime,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-      } catch(e) {
-        console.warn("戦績保存エラー:", e.message);
-      }
+      } catch(e) { console.warn("戦績保存エラー:", e.message); }
     }
 
     function handleVersusForfeitWin(reason) {
@@ -1977,9 +1900,7 @@
           loadStageIntoEditor(parsed);
           inputEditorStageName.value = parsed.name || "インポートステージ";
           alert("ローカルJSONからステージを読み込みました！");
-        } catch (err) {
-          alert("JSON読み込み失敗: " + err.message);
-        }
+        } catch (err) { alert("JSON読み込み失敗: " + err.message); }
       };
       reader.readAsText(file);
       fileImportJson.value = '';
@@ -2043,10 +1964,7 @@
       editorSlotsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>';
       try {
         const snap = await db.collection("users").doc(currentUser.uid).collection("custom_stages").orderBy("updatedAt", "desc").get();
-        if (snap.empty) {
-          editorSlotsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">保存されたスロットはありません</div>';
-          return;
-        }
+        if (snap.empty) { editorSlotsContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">保存されたスロットはありません</div>'; return; }
         editorSlotsContainer.innerHTML = '';
         snap.forEach(doc => {
           const s = doc.data();
@@ -2059,45 +1977,30 @@
               <button class="btn-del-slot" style="padding: 3px 8px; font-size: 11px; background: #dc2626;">削除</button>
             </div>
           `;
-          item.querySelector('.btn-open-slot').onclick = () => {
-            currentEditingSlotId = doc.id;
-            openEditorWithStage(s);
-          };
+          item.querySelector('.btn-open-slot').onclick = () => { currentEditingSlotId = doc.id; openEditorWithStage(s); };
           item.querySelector('.btn-del-slot').onclick = async () => {
-            if (confirm(`「${s.name}」を削除しますか？`)) {
-              await doc.ref.delete();
-              loadEditorSlotsList();
-            }
+            if (confirm(`「${s.name}」を削除しますか？`)) { await doc.ref.delete(); loadEditorSlotsList(); }
           };
           editorSlotsContainer.appendChild(item);
         });
-      } catch (e) {
-        editorSlotsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`;
-      }
+      } catch (e) { editorSlotsContainer.innerHTML = `<div style="color:#ef4444; font-size:12px;">エラー: ${e.message}</div>`; }
     }
 
     document.getElementById('btn-create-new-slot').onclick = async () => {
       const name = inputNewSlotName.value.trim() || `ステージ_${new Date().toLocaleDateString()}`;
       const defaultStage = {
-        name: name,
-        size: 32,
-        spawn: { x: 0, y: 0, z: 0 },
+        name: name, size: 32, spawn: { x: 0, y: 0, z: 0 },
         blocks: [{ x: 0, y: 0, z: 0, type: 3 }, { x: 1, y: 0, z: 0, type: 2 }],
         movers: []
       };
       try {
         const ref = await db.collection("users").doc(currentUser.uid).collection("custom_stages").add({
-          ...defaultStage,
-          author: currentUsername,
-          authorFriendId: myFriendId,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          ...defaultStage, author: currentUsername, authorFriendId: myFriendId, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         currentEditingSlotId = ref.id;
         inputNewSlotName.value = '';
         openEditorWithStage(defaultStage);
-      } catch (e) {
-        alert("作成エラー: " + e.message);
-      }
+      } catch (e) { alert("作成エラー: " + e.message); }
     };
 
     let isAutoSyncEnabled = true;
@@ -2119,10 +2022,7 @@
         try {
           const data = exportStageData();
           await db.collection("users").doc(currentUser.uid).collection("custom_stages").doc(currentEditingSlotId).set({
-            ...data,
-            author: currentUsername,
-            authorFriendId: myFriendId,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            ...data, author: currentUsername, authorFriendId: myFriendId, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
           if (autosaveStatus) autosaveStatus.textContent = "自動保存済";
         } catch (e) {
@@ -2137,15 +2037,10 @@
       const data = exportStageData();
       try {
         await db.collection("users").doc(currentUser.uid).collection("custom_stages").doc(currentEditingSlotId).update({
-          ...data,
-          author: currentUsername,
-          authorFriendId: myFriendId,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          ...data, author: currentUsername, authorFriendId: myFriendId, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         alert("手動上書き保存しました！");
-      } catch (e) {
-        alert("保存エラー: " + e.message);
-      }
+      } catch (e) { alert("保存エラー: " + e.message); }
     };
 
     document.getElementById('btn-editor-back').onclick = () => {
@@ -2164,41 +2059,22 @@
 
     const STAGES = {
       1: {
-        name: "ステージ 1",
-        author: "Official",
-        authorFriendId: "OFFICIAL",
-        authorUid: "OFFICIAL",
-        size: 16,
-        spawn: { x: 0, y: 0, z: 0 },
+        name: "ステージ 1", author: "Official", authorFriendId: "OFFICIAL", authorUid: "OFFICIAL", size: 16, spawn: { x: 0, y: 0, z: 0 },
         blocks: [
-          { x: 0, y: 0, z: 0, type: 3 },
-          { x: 1, y: 0, z: 0, type: 1, color: "#64748b" },
-          { x: 2, y: 0, z: 0, type: 6, cpIndex: 1 },
-          { x: 3, y: 0, z: 0, type: 7 },
-          { x: 4, y: 0, z: 0, type: 5, color: "#475569" },
-          { x: 5, y: 1, z: 0, type: 5, color: "#475569" },
-          { x: 6, y: 2, z: 0, type: 1, color: "#64748b" },
-          { x: 6, y: 2, z: 1, type: 2 }
-        ],
-        movers: []
+          { x: 0, y: 0, z: 0, type: 3 }, { x: 1, y: 0, z: 0, type: 1, color: "#64748b" },
+          { x: 2, y: 0, z: 0, type: 6, cpIndex: 1 }, { x: 3, y: 0, z: 0, type: 7 },
+          { x: 4, y: 0, z: 0, type: 5, color: "#475569" }, { x: 5, y: 1, z: 0, type: 5, color: "#475569" },
+          { x: 6, y: 2, z: 0, type: 1, color: "#64748b" }, { x: 6, y: 2, z: 1, type: 2 }
+        ], movers: []
       },
       2: {
-        name: "ステージ 2",
-        author: "Official",
-        authorFriendId: "OFFICIAL",
-        authorUid: "OFFICIAL",
-        size: 16,
-        spawn: { x: 0, y: 0, z: 0 },
+        name: "ステージ 2", author: "Official", authorFriendId: "OFFICIAL", authorUid: "OFFICIAL", size: 16, spawn: { x: 0, y: 0, z: 0 },
         blocks: [
-          { x: 0, y: 0, z: 0, type: 3 },
-          { x: 1, y: 0, z: 0, type: 1, color: "#64748b" },
-          { x: 2, y: 0, z: 0, type: 7 },
-          { x: 6, y: 0, z: 0, type: 1, color: "#64748b" },
+          { x: 0, y: 0, z: 0, type: 3 }, { x: 1, y: 0, z: 0, type: 1, color: "#64748b" },
+          { x: 2, y: 0, z: 0, type: 7 }, { x: 6, y: 0, z: 0, type: 1, color: "#64748b" },
           { x: 7, y: 0, z: 0, type: 2 }
         ],
-        movers: [
-          { x: 3, y: 0, z: 0, dir: 'RIGHT', dist: 2, speed: 0.03 }
-        ]
+        movers: [{ x: 3, y: 0, z: 0, dir: 'RIGHT', dist: 2, speed: 0.03 }]
       }
     };
 
@@ -2209,6 +2085,9 @@
     let isTestPlay = false;
     let isPaused = false;
     let passedCheckpoints = new Map();
+
+    // スイッチとギミックのステート管理
+    let switchStates = {}; // 'A': true/false
 
     let playStartTime = 0;
     let playElapsedTime = 0;
@@ -2256,18 +2135,13 @@
         userBar?.classList.add('hidden');
         hudTopLeft?.classList.remove('hidden');
         hudPauseBtn?.classList.remove('hidden');
-
-        if (isMobileDevice) {
-          dpad?.classList.remove('hidden');
-          applyDpadSettings();
-        }
+        if (isMobileDevice) { dpad?.classList.remove('hidden'); applyDpadSettings(); }
       } else {
         dpad?.classList.add('hidden');
         hudTopLeft?.classList.add('hidden');
         modalBgmPicker?.classList.add('hidden');
         hudPauseBtn?.classList.add('hidden');
         modalPause?.classList.add('hidden');
-
         if (screen === 'EDITOR') {
           userBar?.classList.add('hidden');
           editorUiContainer?.classList.remove('hidden');
@@ -2322,22 +2196,12 @@
         opt.textContent = `セーブポイント ${idx}`;
         selectPauseCp.appendChild(opt);
       });
-
-      if (sortedKeys.length > 0) {
-        selectPauseCp.value = sortedKeys[sortedKeys.length - 1];
-      } else {
-        selectPauseCp.value = 'start';
-      }
-
+      selectPauseCp.value = (sortedKeys.length > 0) ? sortedKeys[sortedKeys.length - 1] : 'start';
       document.getElementById('pause-cp-group').style.display = isVersusMatch ? 'none' : 'flex';
     }
 
     hudPauseBtn.onclick = togglePause;
-    document.getElementById('btn-pause-resume').onclick = () => {
-      isPaused = false;
-      modalPause.classList.add('hidden');
-    };
-
+    document.getElementById('btn-pause-resume').onclick = () => { isPaused = false; modalPause.classList.add('hidden'); };
     document.getElementById('btn-pause-restart-cp').onclick = () => {
       const val = selectPauseCp.value;
       if (val === 'start') {
@@ -2345,10 +2209,7 @@
         resetCubePosition(activeStage.spawn.x, spawnSurf ? spawnSurf.surfaceY : activeStage.spawn.y, activeStage.spawn.z);
       } else {
         const targetCp = passedCheckpoints.get(parseInt(val, 10));
-        if (targetCp) {
-          currentCheckpoint = targetCp;
-          resetCubePosition(targetCp.x, targetCp.y, targetCp.z);
-        }
+        if (targetCp) { currentCheckpoint = targetCp; resetCubePosition(targetCp.x, targetCp.y, targetCp.z); }
       }
       isPaused = false;
       modalPause.classList.add('hidden');
@@ -2358,33 +2219,22 @@
       isPaused = false;
       timerRunning = false;
       modalPause.classList.add('hidden');
-
       if (isVersusMatch) {
-        if (vsRoomId && db && currentUser) {
-          await db.collection("versus_rooms").doc(vsRoomId).update({ forfeitUid: currentUser.uid });
-        }
+        if (vsRoomId && db && currentUser) await db.collection("versus_rooms").doc(vsRoomId).update({ forfeitUid: currentUser.uid });
         recordMatchHistory('LOSE', Math.round(playElapsedTime));
         endVersusMatch();
-      } else if (isTestPlay) {
-        returnToEditorView();
-      } else {
-        gameState = 'STAGES';
-        switchScreen('STAGES');
-      }
+      } else if (isTestPlay) returnToEditorView();
+      else { gameState = 'STAGES'; switchScreen('STAGES'); }
     };
 
-    // ネット投稿確認ポップアップ
     document.getElementById('btn-online-publish').onclick = async () => {
       if (!db || !auth) { alert("Firebaseが設定されていません。"); return; }
       if (!currentUser) { alert("ステージを投稿するにはGoogleログインが必要です。"); return; }
-
       const data = exportStageData();
       if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
       if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
 
-      if (!confirm(`ステージ「${data.name}」をネットに全体公開しますか？\n（投稿後は誰でもプレイ可能になります）`)) {
-        return;
-      }
+      if (!confirm(`ステージ「${data.name}」をネットに全体公開しますか？\n（投稿後は誰でもプレイ可能になります）`)) return;
 
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       let stageId = '';
@@ -2392,17 +2242,10 @@
 
       try {
         await db.collection("stages").doc(stageId).set({
-          ...data,
-          author: currentUsername,
-          authorUid: currentUser.uid,
-          authorFriendId: myFriendId || '--------',
-          hidden: false,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          ...data, author: currentUsername, authorUid: currentUser.uid, authorFriendId: myFriendId || '--------', hidden: false, createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         alert(`ステージを公開しました！\n\nステージ名: ${data.name}\nステージID: ${stageId}`);
-      } catch (err) {
-        alert("投稿エラー: " + err.message);
-      }
+      } catch (err) { alert("投稿エラー: " + err.message); }
     };
 
     document.getElementById('btn-search-stage').onclick = async () => {
@@ -2416,9 +2259,7 @@
         const sData = doc.data();
         const fId = await getAuthorFriendId(sData.authorUid, sData.authorFriendId);
         startPlay(sData, false, null, null, stageId, { id: doc.id, author: sData.author, authorFriendId: fId });
-      } catch (err) {
-        alert("検索エラー: " + err.message);
-      }
+      } catch (err) { alert("検索エラー: " + err.message); }
     };
 
     document.getElementById('btn-random-stage').onclick = async () => {
@@ -2432,14 +2273,11 @@
         const sData = picked.data();
         const fId = await getAuthorFriendId(sData.authorUid, sData.authorFriendId);
         startPlay(sData, false, null, null, picked.id, { id: picked.id, author: sData.author, authorFriendId: fId });
-      } catch (err) {
-        alert("ランダム取得エラー: " + err.message);
-      }
+      } catch (err) { alert("ランダム取得エラー: " + err.message); }
     };
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111118);
-
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -2448,7 +2286,6 @@
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
-
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
     dirLight.position.set(50, 100, 50);
     dirLight.castShadow = true;
@@ -2472,18 +2309,15 @@
       ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(4, 4, 120, 120);
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 64px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(number.toString(), 64, 64);
-
       const tex = new THREE.CanvasTexture(cv);
       const topMat = new THREE.MeshLambertMaterial({ map: tex });
       const sideMat = new THREE.MeshLambertMaterial({ color: 0xec4899 });
       return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
     }
 
-    // ワープ床用マテリアル（A〜Z対応・英字描画）
     function createWarpMaterials(letter = 'A') {
       const charCode = letter.charCodeAt(0) - 65;
       const hexColor = WARP_COLORS[Math.max(0, Math.min(25, charCode))] || '#14b8a6';
-
       const cv = document.createElement('canvas');
       cv.width = 128; cv.height = 128;
       const ctx = cv.getContext('2d');
@@ -2491,10 +2325,49 @@
       ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(4, 4, 120, 120);
       ctx.fillStyle = '#ffffff'; ctx.font = '900 68px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(letter, 64, 64);
-
       const tex = new THREE.CanvasTexture(cv);
       const topMat = new THREE.MeshLambertMaterial({ map: tex });
       const sideMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(hexColor) });
+      return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
+    }
+
+    function createSwitchMaterials(group = 'A', isON = false, showLabel = true) {
+      const cv = document.createElement('canvas');
+      cv.width = 128; cv.height = 128;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = isON ? '#10b981' : '#f59e0b';
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(4, 4, 120, 120);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 36px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(isON ? 'ON' : 'OFF', 64, 40);
+
+      if (showLabel) {
+        ctx.font = 'bold 44px sans-serif';
+        ctx.fillText(`[${group}]`, 64, 88);
+      }
+
+      const tex = new THREE.CanvasTexture(cv);
+      const topMat = new THREE.MeshLambertMaterial({ map: tex });
+      const sideMat = new THREE.MeshLambertMaterial({ color: isON ? 0x10b981 : 0xf59e0b });
+      return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
+    }
+
+    function createLabeledMaterial(group = 'A', showLabel = true, bgColor = '#8b5cf6') {
+      if (!showLabel) return new THREE.MeshLambertMaterial({ color: new THREE.Color(bgColor) });
+      const cv = document.createElement('canvas');
+      cv.width = 128; cv.height = 128;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = bgColor; ctx.fillRect(0, 0, 128, 128);
+      ctx.lineWidth = 6; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(4, 4, 120, 120);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 64px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(group, 64, 64);
+      const tex = new THREE.CanvasTexture(cv);
+      const topMat = new THREE.MeshLambertMaterial({ map: tex });
+      const sideMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(bgColor) });
       return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
     }
 
@@ -2502,31 +2375,17 @@
       const cv = document.createElement('canvas');
       cv.width = 128; cv.height = 128;
       const ctx = cv.getContext('2d');
-      ctx.fillStyle = '#6366f1';
-      ctx.beginPath();
-      ctx.arc(64, 64, 54, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 56px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#6366f1'; ctx.beginPath(); ctx.arc(64, 64, 54, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 6; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 56px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(number.toString(), 64, 64);
-
       const tex = new THREE.CanvasTexture(cv);
       return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
     }
 
     let cubePos = { x: 0, y: 0, z: 0 };
-    const cubeMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15, metalness: 0.1 })
-    );
+    const cubeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15, metalness: 0.1 }));
     cubeMesh.castShadow = true;
-
     const pivot = new THREE.Group();
     scene.add(pivot);
     pivot.add(cubeMesh);
@@ -2536,11 +2395,11 @@
     scene.add(tilesGroup);
     let activeMovers = [];
     let activeFallingFloors = [];
+    let activeGimmicks = [];
 
     const editorGroup = new THREE.Group();
     scene.add(editorGroup);
     editorGroup.visible = false;
-
     const pathVisualsGroup = new THREE.Group();
     editorGroup.add(pathVisualsGroup);
 
@@ -2550,17 +2409,27 @@
     let editorMeshMap = new Map();
     let selectedPalette = 1;
 
-    // ワープ設定モーダル用初期化
-    const selectWarpLetter = document.getElementById('select-warp-letter');
-    for (let i = 0; i < 26; i++) {
-      const char = String.fromCharCode(65 + i);
-      const opt = document.createElement('option');
-      opt.value = char;
-      opt.textContent = char;
-      selectWarpLetter.appendChild(opt);
-    }
+    let grabbedBlockData = null;
+    let grabbedBlockOrigKey = null;
+    let dragPreviewMesh = null;
 
-    // Undo / Redo スタック
+    function populateLetterSelect(elId) {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      el.innerHTML = '';
+      for (let i = 0; i < 26; i++) {
+        const char = String.fromCharCode(65 + i);
+        const opt = document.createElement('option');
+        opt.value = char; opt.textContent = char;
+        el.appendChild(opt);
+      }
+    }
+    populateLetterSelect('select-warp-letter');
+    populateLetterSelect('select-switch-group');
+    populateLetterSelect('select-blast-group');
+    populateLetterSelect('select-swfloor-group');
+    populateLetterSelect('select-appear-group');
+
     const undoStack = [];
     const redoStack = [];
     let isHistoryOperating = false;
@@ -2568,12 +2437,7 @@
     function pushEditorHistory() {
       if (isHistoryOperating) return;
       const snapshot = [];
-      editorBlocks.forEach((val, key) => {
-        snapshot.push({
-          key,
-          val: JSON.parse(JSON.stringify(val))
-        });
-      });
+      editorBlocks.forEach((val, key) => snapshot.push({ key, val: JSON.parse(JSON.stringify(val)) }));
       undoStack.push(snapshot);
       if (undoStack.length > 50) undoStack.shift();
       redoStack.length = 0;
@@ -2581,14 +2445,10 @@
 
     function applyEditorSnapshot(snapshot) {
       isHistoryOperating = true;
-      editorBlocks.forEach((_, k) => {
-        const [x, y, z] = k.split(',').map(Number);
-        setEditorTile(x, y, z, 0, null, null, true);
-      });
-
+      editorBlocks.forEach((_, k) => { const [x, y, z] = k.split(',').map(Number); setEditorTile(x, y, z, 0, null, null, true); });
       snapshot.forEach(item => {
         const [x, y, z] = item.key.split(',').map(Number);
-        setEditorTile(x, y, z, item.val.type, item.val.moverConfig, item.val.cpIndex, true, item.val.color, item.val.pathConfig, item.val.warpLetter);
+        setEditorTile(x, y, z, item.val.type, item.val.moverConfig, item.val.cpIndex, true, item.val.color, item.val.pathConfig, item.val.warpLetter, item.val.gimmickConfig);
       });
       rebuildPathVisuals();
       isHistoryOperating = false;
@@ -2597,22 +2457,17 @@
 
     document.getElementById('btn-editor-undo').onclick = () => {
       if (undoStack.length === 0) return;
-      const currentSnapshot = [];
-      editorBlocks.forEach((val, key) => currentSnapshot.push({ key, val: JSON.parse(JSON.stringify(val)) }));
-      redoStack.push(currentSnapshot);
-
-      const prev = undoStack.pop();
-      applyEditorSnapshot(prev);
+      const cur = [];
+      editorBlocks.forEach((val, key) => cur.push({ key, val: JSON.parse(JSON.stringify(val)) }));
+      redoStack.push(cur);
+      applyEditorSnapshot(undoStack.pop());
     };
-
     document.getElementById('btn-editor-redo').onclick = () => {
       if (redoStack.length === 0) return;
-      const currentSnapshot = [];
-      editorBlocks.forEach((val, key) => currentSnapshot.push({ key, val: JSON.parse(JSON.stringify(val)) }));
-      undoStack.push(currentSnapshot);
-
-      const next = redoStack.pop();
-      applyEditorSnapshot(next);
+      const cur = [];
+      editorBlocks.forEach((val, key) => cur.push({ key, val: JSON.parse(JSON.stringify(val)) }));
+      undoStack.push(cur);
+      applyEditorSnapshot(redoStack.pop());
     };
 
     window.addEventListener('keydown', (e) => {
@@ -2630,7 +2485,6 @@
 
     let isDrawingRouteMode = false;
     let activeRouteEditKey = null;
-
     const routeEditingStatus = document.getElementById('route-editing-status');
     const btnFinishRouteEdit = document.getElementById('btn-finish-route-edit');
 
@@ -2642,7 +2496,6 @@
       highlightEditingBlock(key);
       rebuildPathVisuals();
     }
-
     function exitRouteDrawingMode() {
       isDrawingRouteMode = false;
       activeRouteEditKey = null;
@@ -2651,23 +2504,18 @@
       unhighlightEditingBlocks();
       rebuildPathVisuals();
     }
-
-    btnFinishRouteEdit.onclick = () => {
-      exitRouteDrawingMode();
-      triggerAutoSave();
-    };
+    btnFinishRouteEdit.onclick = () => { exitRouteDrawingMode(); triggerAutoSave(); };
 
     function highlightEditingBlock(key) {
       unhighlightEditingBlocks();
       const mesh = editorMeshMap.get(key);
-      if (mesh) mesh.material.color = new THREE.Color(0x38bdf8);
+      if (mesh && !Array.isArray(mesh.material)) mesh.material.color = new THREE.Color(0x38bdf8);
     }
-
     function unhighlightEditingBlocks() {
       editorBlocks.forEach((val, k) => {
         if (val.type === 8) {
           const m = editorMeshMap.get(k);
-          if (m) m.material.color = new THREE.Color(0x6366f1);
+          if (m && !Array.isArray(m.material)) m.material.color = new THREE.Color(0x6366f1);
         }
       });
     }
@@ -2690,14 +2538,12 @@
     function buildEditorGrid() {
       if (gridHelper) { editorGroup.remove(gridHelper); gridHelper.geometry.dispose(); }
       if (raycastPlane) { editorGroup.remove(raycastPlane); raycastPlane.geometry.dispose(); }
-
       gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x0ea5e9, 0x334155);
       gridHelper.position.set(gridSize / 2 - 0.5, currentLayer - 0.01, gridSize / 2 - 0.5);
       editorGroup.add(gridHelper);
 
       const planeGeo = new THREE.PlaneGeometry(gridSize, gridSize);
-      const planeMat = new THREE.MeshBasicMaterial({ visible: false });
-      raycastPlane = new THREE.Mesh(planeGeo, planeMat);
+      raycastPlane = new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({ visible: false }));
       raycastPlane.rotation.x = -Math.PI / 2;
       raycastPlane.position.set(gridSize / 2 - 0.5, currentLayer, gridSize / 2 - 0.5);
       editorGroup.add(raycastPlane);
@@ -2711,8 +2557,7 @@
       }
       editorMeshMap.forEach((mesh, key) => {
         const y = parseInt(key.split(',')[1], 10);
-        const isCurrent = (y === currentLayer);
-        const targetOpacity = isCurrent ? 1.0 : 0.35;
+        const targetOpacity = (y === currentLayer) ? 1.0 : 0.35;
         if (Array.isArray(mesh.material)) {
           mesh.material.forEach(m => { m.transparent = true; m.opacity = targetOpacity; });
         } else {
@@ -2723,13 +2568,8 @@
       rebuildPathVisuals();
     }
 
-    document.getElementById('btn-layer-up').onclick = () => {
-      if (currentLayer < MAX_HEIGHT) { currentLayer++; updateLayerDisplay(); }
-    };
-    document.getElementById('btn-layer-down').onclick = () => {
-      if (currentLayer > MIN_HEIGHT) { currentLayer--; updateLayerDisplay(); }
-    };
-
+    document.getElementById('btn-layer-up').onclick = () => { if (currentLayer < MAX_HEIGHT) { currentLayer++; updateLayerDisplay(); } };
+    document.getElementById('btn-layer-down').onclick = () => { if (currentLayer > MIN_HEIGHT) { currentLayer--; updateLayerDisplay(); } };
     document.getElementById('select-grid-size').onchange = (e) => {
       gridSize = parseInt(e.target.value, 10);
       buildEditorGrid();
@@ -2747,9 +2587,7 @@
 
     function sanitizeCheckpointIndices() {
       const list = [];
-      editorBlocks.forEach((val, key) => {
-        if (val.type === 6) list.push({ key, val });
-      });
+      editorBlocks.forEach((val, key) => { if (val.type === 6) list.push({ key, val }); });
       list.sort((a, b) => (a.val.cpIndex || 1) - (b.val.cpIndex || 1));
       list.forEach((item, idx) => {
         const correctNum = idx + 1;
@@ -2759,8 +2597,8 @@
           const mesh = editorMeshMap.get(item.key);
           if (mesh) {
             mesh.material = createCheckpointMaterials(correctNum);
-            const isCurrent = (y === currentLayer);
-            mesh.material.forEach(m => { m.transparent = true; m.opacity = isCurrent ? 1.0 : 0.35; });
+            const isCur = (y === currentLayer);
+            mesh.material.forEach(m => { m.transparent = true; m.opacity = isCur ? 1.0 : 0.35; });
           }
         }
       });
@@ -2774,10 +2612,9 @@
       }
 
       editorBlocks.forEach((val, key) => {
-        if (val.type === 8 && val.pathConfig) {
+        if ((val.type === 8 || val.type === 12) && val.pathConfig) {
           const [sx, sy, sz] = key.split(',').map(Number);
           const waypoints = val.pathConfig.waypoints || [{ x: sx, y: sy, z: sz }];
-
           for (let i = 0; i < waypoints.length; i++) {
             const wp = waypoints[i];
             const markerGeo = new THREE.PlaneGeometry(0.7, 0.7);
@@ -2789,36 +2626,29 @@
 
             if (i > 0) {
               const prevWp = waypoints[i - 1];
-              const points = [
-                new THREE.Vector3(prevWp.x, prevWp.y + 0.05, prevWp.z),
-                new THREE.Vector3(wp.x, wp.y + 0.05, wp.z)
-              ];
+              const points = [new THREE.Vector3(prevWp.x, prevWp.y + 0.05, prevWp.z), new THREE.Vector3(wp.x, wp.y + 0.05, wp.z)];
               const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
               const lineMat = new THREE.LineBasicMaterial({
                 color: (key === activeRouteEditKey) ? 0xfacc15 : 0x38bdf8,
-                transparent: true,
-                opacity: 0.8,
-                linewidth: 3
+                transparent: true, opacity: 0.8, linewidth: 3
               });
-              const line = new THREE.Line(lineGeo, lineMat);
-              pathVisualsGroup.add(line);
+              pathVisualsGroup.add(new THREE.Line(lineGeo, lineMat));
             }
           }
         }
       });
     }
 
-    // 速度スケール変換（1〜100 -> 実数値 0.01〜0.40）
     function speedScaleToVal(scale) {
       const s = THREE.MathUtils.clamp(parseInt(scale, 10) || 25, 1, 100);
-      return 0.01 + (s - 1) * (0.39 / 99); // 100で超高速(0.40)
+      return 0.015 + (s - 1) * (0.385 / 99);
     }
     function speedValToScale(val) {
-      const v = THREE.MathUtils.clamp(parseFloat(val) || 0.035, 0.01, 0.40);
-      return Math.round(1 + ((v - 0.01) / 0.39) * 99);
+      const v = THREE.MathUtils.clamp(parseFloat(val) || 0.035, 0.015, 0.40);
+      return Math.round(1 + ((v - 0.015) / 0.385) * 99);
     }
 
-    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null, skipAutoSave = false, blockColor = null, pathConfig = null, warpLetter = null) {
+    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null, skipAutoSave = false, blockColor = null, pathConfig = null, warpLetter = null, gimmickConfig = null) {
       const key = `${x},${y},${z}`;
 
       if (type === 3) {
@@ -2831,26 +2661,33 @@
       }
 
       if (type === 0) {
-        const wasCheckpoint = editorBlocks.has(key) && editorBlocks.get(key).type === 6;
+        const wasCp = editorBlocks.has(key) && editorBlocks.get(key).type === 6;
         editorBlocks.delete(key);
         if (editorMeshMap.has(key)) {
           editorGroup.remove(editorMeshMap.get(key));
           editorMeshMap.delete(key);
         }
-        if (wasCheckpoint) sanitizeCheckpointIndices();
+        if (wasCp) sanitizeCheckpointIndices();
       } else {
-        let cNum = null;
-        if (type === 6) cNum = cpIndex || (countCheckpoints() + 1);
-
+        let cNum = (type === 6) ? (cpIndex || (countCheckpoints() + 1)) : null;
         const color = (type === 1 || type === 5) ? (blockColor || inputBlockColor.value) : null;
-        const pCfg = (type === 8) ? (pathConfig || { waypoints: [{ x, y, z }], speed: 0.035 }) : null;
+        const pCfg = (type === 8 || type === 12) ? (pathConfig || { waypoints: [{ x, y, z }], speed: 0.035, segmentSpeeds: [] }) : null;
         const wLet = (type === 9) ? (warpLetter || 'A') : null;
+
+        let gCfg = gimmickConfig;
+        if (!gCfg) {
+          if (type === 10) gCfg = { group: 'A', mode: 'TOGGLE', showLabel: true };
+          else if (type === 11) gCfg = { group: 'A', dir: 'UP', power: 2 };
+          else if (type === 12) gCfg = { group: 'A', mode: 'MOVE_ON', showLabel: true };
+          else if (type === 13) gCfg = { group: 'A', shape: 1, showLabel: true };
+        }
 
         const data = {
           type,
           moverConfig: moverConfig || (type === 4 ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null),
           pathConfig: pCfg,
           warpLetter: wLet,
+          gimmickConfig: gCfg,
           cpIndex: cNum,
           color: color
         };
@@ -2858,7 +2695,7 @@
 
         if (editorMeshMap.has(key)) editorGroup.remove(editorMeshMap.get(key));
 
-        let geo = (type === 5) ? fullBlockGeo : thinTileGeo;
+        let geo = (type === 5 || (type === 13 && gCfg && gCfg.shape === 5)) ? fullBlockGeo : thinTileGeo;
         let m = matFloor.clone();
         let isMultiMat = false;
 
@@ -2869,16 +2706,15 @@
         else if (type === 4) m = matMover.clone();
         else if (type === 8) m = matPathMover.clone();
         else if (type === 7) m = matFallFloor.clone();
-        else if (type === 6) {
-          m = createCheckpointMaterials(cNum);
-          isMultiMat = true;
-        } else if (type === 9) {
-          m = createWarpMaterials(wLet);
-          isMultiMat = true;
-        }
+        else if (type === 6) { m = createCheckpointMaterials(cNum); isMultiMat = true; }
+        else if (type === 9) { m = createWarpMaterials(wLet); isMultiMat = true; }
+        else if (type === 10) { m = createSwitchMaterials(gCfg.group, false, gCfg.showLabel); isMultiMat = true; }
+        else if (type === 11) { m = createLabeledMaterial(`⚡${gCfg.group}`, true, '#dc2626'); isMultiMat = true; }
+        else if (type === 12) { m = createLabeledMaterial(`🔄${gCfg.group}`, gCfg.showLabel, '#8b5cf6'); isMultiMat = true; }
+        else if (type === 13) { m = createLabeledMaterial(`✨${gCfg.group}`, gCfg.showLabel, '#059669'); isMultiMat = true; }
 
         const mesh = new THREE.Mesh(geo, m);
-        const yOffset = (type === 5) ? 0.5 : -0.1;
+        const yOffset = (type === 5 || (type === 13 && gCfg && gCfg.shape === 5)) ? 0.5 : -0.1;
         mesh.position.set(x, y + yOffset, z);
 
         const isCurrent = (y === currentLayer);
@@ -2891,7 +2727,6 @@
 
         editorGroup.add(mesh);
         editorMeshMap.set(key, mesh);
-
         if (type === 6) sanitizeCheckpointIndices();
       }
       updateTestSpawnOptions();
@@ -2904,20 +2739,14 @@
       if (!select) return;
       const prevVal = select.value;
       select.innerHTML = '<option value="default">スタート地点(S)</option>';
-
       const checkpoints = [];
-      editorBlocks.forEach((val, key) => {
-        if (val.type === 6) checkpoints.push({ key, cpIndex: val.cpIndex || 1 });
-      });
-
+      editorBlocks.forEach((val, key) => { if (val.type === 6) checkpoints.push({ key, cpIndex: val.cpIndex || 1 }); });
       checkpoints.sort((a, b) => a.cpIndex - b.cpIndex);
       checkpoints.forEach(cp => {
         const opt = document.createElement('option');
-        opt.value = cp.key;
-        opt.textContent = `セーブ ${cp.cpIndex}`;
+        opt.value = cp.key; opt.textContent = `セーブ ${cp.cpIndex}`;
         select.appendChild(opt);
       });
-
       select.value = prevVal;
       if (!select.value) select.value = 'default';
     }
@@ -2955,13 +2784,9 @@
         if (val.type === 3) spawn = { x, y, z };
         if (val.type === 2) hasGoal = true;
 
-        if (val.type === 4) {
-          movers.push({ x, y, z, ...val.moverConfig });
-        } else if (val.type === 8) {
-          movers.push({ x, y, z, isPathMover: true, ...val.pathConfig });
-        } else {
-          blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex, color: val.color, warpLetter: val.warpLetter });
-        }
+        if (val.type === 4) movers.push({ x, y, z, ...val.moverConfig });
+        else if (val.type === 8 || val.type === 12) movers.push({ x, y, z, type: val.type, isPathMover: true, ...val.pathConfig, gimmickConfig: val.gimmickConfig });
+        else blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex, color: val.color, warpLetter: val.warpLetter, gimmickConfig: val.gimmickConfig });
       });
 
       return {
@@ -2974,13 +2799,12 @@
       };
     }
 
-    // 動く床（通常往復）設定
+    // 動く床（通常）設定
     let editingMoverKey = null;
     const modal = document.getElementById('editor-modal');
     const modalDistNum = document.getElementById('modal-dist-num');
     const modalSpeedRange = document.getElementById('modal-speed-range');
     const modalSpeedVal = document.getElementById('modal-speed-val');
-
     modalSpeedRange.oninput = (e) => { modalSpeedVal.textContent = e.target.value; };
 
     function openMoverModal(key) {
@@ -3008,15 +2832,22 @@
     };
     document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
 
-    // 動く床（ルート指定）設定
+    // 動く床（ルート）詳細設定 & 区間速度
     let editingPathKey = null;
     let tempWaypoints = [];
+    let tempSegmentSpeeds = [];
     const modalPath = document.getElementById('modal-path-mover');
     const pathStepsList = document.getElementById('path-steps-list');
     const modalPathSpeedRange = document.getElementById('modal-path-speed-range');
     const modalPathSpeedVal = document.getElementById('modal-path-speed-val');
-
     modalPathSpeedRange.oninput = (e) => { modalPathSpeedVal.textContent = e.target.value; };
+
+    let editingSegmentIndex = null;
+    const modalSegmentSpeed = document.getElementById('modal-segment-speed');
+    const segSpeedRange = document.getElementById('seg-speed-range');
+    const segSpeedVal = document.getElementById('seg-speed-val');
+    const lblSegmentSpeedTitle = document.getElementById('lbl-segment-speed-title');
+    segSpeedRange.oninput = (e) => { segSpeedVal.textContent = e.target.value; };
 
     function renderPathStepsUI() {
       pathStepsList.innerHTML = '';
@@ -3034,50 +2865,66 @@
         item.style.borderRadius = '4px';
         item.style.fontSize = '12px';
 
+        const segSpeed = (idx > 0 && tempSegmentSpeeds[idx - 1] != null) ? tempSegmentSpeeds[idx - 1] : modalPathSpeedRange.value;
+
         item.innerHTML = `
           <span><strong>${idx === 0 ? '始点' : `地点 ${idx}`}</strong>: (${wp.x}, ${wp.y}, ${wp.z})</span>
-          <div style="display:flex; gap:4px;">
+          <div style="display:flex; gap:4px; align-items:center;">
+            ${idx > 0 ? `<button class="btn-step-speed" style="padding:2px 6px; font-size:11px; background:#0284c7;">速度(${segSpeed})</button>` : ''}
             ${idx > 1 ? `<button class="btn-step-up" style="padding:2px 6px; font-size:10px;">▲</button>` : ''}
             ${idx > 0 && idx < tempWaypoints.length - 1 ? `<button class="btn-step-down" style="padding:2px 6px; font-size:10px;">▼</button>` : ''}
             ${idx > 0 ? `<button class="btn-step-del" style="padding:2px 6px; font-size:10px; background:#dc2626;">×</button>` : ''}
           </div>
         `;
 
+        if (idx > 0) {
+          item.querySelector('.btn-step-speed').onclick = () => {
+            editingSegmentIndex = idx - 1;
+            lblSegmentSpeedTitle.textContent = `地点 ${idx - 1} → 地点 ${idx} の速度`;
+            segSpeedRange.value = segSpeed;
+            segSpeedVal.textContent = segSpeed;
+            modalSegmentSpeed.classList.remove('hidden');
+          };
+        }
+
         if (idx > 1) {
           item.querySelector('.btn-step-up').onclick = () => {
-            const tmp = tempWaypoints[idx];
-            tempWaypoints[idx] = tempWaypoints[idx - 1];
-            tempWaypoints[idx - 1] = tmp;
-            renderPathStepsUI();
-            rebuildPathVisuals();
+            const tmp = tempWaypoints[idx]; tempWaypoints[idx] = tempWaypoints[idx - 1]; tempWaypoints[idx - 1] = tmp;
+            renderPathStepsUI(); rebuildPathVisuals();
           };
         }
         if (idx > 0 && idx < tempWaypoints.length - 1) {
           item.querySelector('.btn-step-down').onclick = () => {
-            const tmp = tempWaypoints[idx];
-            tempWaypoints[idx] = tempWaypoints[idx + 1];
-            tempWaypoints[idx + 1] = tmp;
-            renderPathStepsUI();
-            rebuildPathVisuals();
+            const tmp = tempWaypoints[idx]; tempWaypoints[idx] = tempWaypoints[idx + 1]; tempWaypoints[idx + 1] = tmp;
+            renderPathStepsUI(); rebuildPathVisuals();
           };
         }
         if (idx > 0) {
           item.querySelector('.btn-step-del').onclick = () => {
             tempWaypoints.splice(idx, 1);
-            renderPathStepsUI();
-            rebuildPathVisuals();
+            tempSegmentSpeeds.splice(idx - 1, 1);
+            renderPathStepsUI(); rebuildPathVisuals();
           };
         }
-
         pathStepsList.appendChild(item);
       });
     }
+
+    document.getElementById('btn-save-seg-speed').onclick = () => {
+      if (editingSegmentIndex != null) {
+        tempSegmentSpeeds[editingSegmentIndex] = parseInt(segSpeedRange.value, 10);
+        renderPathStepsUI();
+      }
+      modalSegmentSpeed.classList.add('hidden');
+    };
+    document.getElementById('btn-cancel-seg-speed').onclick = () => modalSegmentSpeed.classList.add('hidden');
 
     function openPathMoverModal(key) {
       editingPathKey = key;
       const b = editorBlocks.get(key);
       if (b && b.pathConfig) {
         tempWaypoints = [...(b.pathConfig.waypoints || [])];
+        tempSegmentSpeeds = [...(b.pathConfig.segmentSpeeds || [])];
         const scale = speedValToScale(b.pathConfig.speed);
         modalPathSpeedRange.value = scale;
         modalPathSpeedVal.textContent = scale;
@@ -3090,32 +2937,32 @@
       modalPath.classList.add('hidden');
       if (editingPathKey) enterRouteDrawingMode(editingPathKey);
     };
-
     document.getElementById('btn-pop-step').onclick = () => {
       if (tempWaypoints.length > 1) {
         pushEditorHistory();
         tempWaypoints.pop();
+        tempSegmentSpeeds.pop();
         renderPathStepsUI();
         const b = editorBlocks.get(editingPathKey);
         if (b) { b.pathConfig.waypoints = [...tempWaypoints]; rebuildPathVisuals(); }
       }
     };
-
     document.getElementById('btn-clear-path').onclick = () => {
       if (tempWaypoints.length > 0) {
         pushEditorHistory();
         tempWaypoints = [tempWaypoints[0]];
+        tempSegmentSpeeds = [];
         renderPathStepsUI();
         const b = editorBlocks.get(editingPathKey);
         if (b) { b.pathConfig.waypoints = [...tempWaypoints]; rebuildPathVisuals(); }
       }
     };
-
     document.getElementById('modal-path-save').onclick = () => {
       if (editingPathKey && editorBlocks.has(editingPathKey)) {
         pushEditorHistory();
         const b = editorBlocks.get(editingPathKey);
         b.pathConfig.waypoints = [...tempWaypoints];
+        b.pathConfig.segmentSpeeds = [...tempSegmentSpeeds];
         b.pathConfig.speed = speedScaleToVal(modalPathSpeedRange.value);
         rebuildPathVisuals();
         triggerAutoSave();
@@ -3124,10 +2971,139 @@
     };
     document.getElementById('modal-path-cancel').onclick = () => modalPath.classList.add('hidden');
 
+    // スイッチ設定モーダル
+    let editingSwitchKey = null;
+    const modalSwitch = document.getElementById('modal-switch');
+    const selectSwitchGroup = document.getElementById('select-switch-group');
+    const selectSwitchMode = document.getElementById('select-switch-mode');
+    const chkSwitchShowLabel = document.getElementById('chk-switch-show-label');
+
+    function openSwitchModal(key) {
+      editingSwitchKey = key;
+      const b = editorBlocks.get(key);
+      if (b && b.gimmickConfig) {
+        selectSwitchGroup.value = b.gimmickConfig.group || 'A';
+        selectSwitchMode.value = b.gimmickConfig.mode || 'TOGGLE';
+        chkSwitchShowLabel.checked = b.gimmickConfig.showLabel !== false;
+        modalSwitch.classList.remove('hidden');
+      }
+    }
+    document.getElementById('btn-save-switch').onclick = () => {
+      if (editingSwitchKey && editorBlocks.has(editingSwitchKey)) {
+        pushEditorHistory();
+        const b = editorBlocks.get(editingSwitchKey);
+        b.gimmickConfig.group = selectSwitchGroup.value;
+        b.gimmickConfig.mode = selectSwitchMode.value;
+        b.gimmickConfig.showLabel = chkSwitchShowLabel.checked;
+        const [x, y, z] = editingSwitchKey.split(',').map(Number);
+        setEditorTile(x, y, z, 10, null, null, false, null, null, null, b.gimmickConfig);
+      }
+      modalSwitch.classList.add('hidden');
+    };
+    document.getElementById('btn-cancel-switch').onclick = () => modalSwitch.classList.add('hidden');
+
+    // 吹き飛ばし設定モーダル
+    let editingBlastKey = null;
+    const modalBlast = document.getElementById('modal-blast');
+    const selectBlastGroup = document.getElementById('select-blast-group');
+    const selectBlastDir = document.getElementById('select-blast-dir');
+    const inputBlastPower = document.getElementById('input-blast-power');
+
+    function openBlastModal(key) {
+      editingBlastKey = key;
+      const b = editorBlocks.get(key);
+      if (b && b.gimmickConfig) {
+        selectBlastGroup.value = b.gimmickConfig.group || 'A';
+        selectBlastDir.value = b.gimmickConfig.dir || 'UP';
+        inputBlastPower.value = b.gimmickConfig.power || 2;
+        modalBlast.classList.remove('hidden');
+      }
+    }
+    document.getElementById('btn-save-blast').onclick = () => {
+      if (editingBlastKey && editorBlocks.has(editingBlastKey)) {
+        pushEditorHistory();
+        const b = editorBlocks.get(editingBlastKey);
+        b.gimmickConfig.group = selectBlastGroup.value;
+        b.gimmickConfig.dir = selectBlastDir.value;
+        b.gimmickConfig.power = parseInt(inputBlastPower.value, 10) || 2;
+        const [x, y, z] = editingBlastKey.split(',').map(Number);
+        setEditorTile(x, y, z, 11, null, null, false, null, null, null, b.gimmickConfig);
+      }
+      modalBlast.classList.add('hidden');
+    };
+    document.getElementById('btn-cancel-blast').onclick = () => modalBlast.classList.add('hidden');
+
+    // スイッチ床設定モーダル
+    let editingSwFloorKey = null;
+    const modalSwitchFloor = document.getElementById('modal-switch-floor');
+    const selectSwfloorGroup = document.getElementById('select-swfloor-group');
+    const selectSwfloorMode = document.getElementById('select-swfloor-mode');
+    const chkSwfloorShowLabel = document.getElementById('chk-swfloor-show-label');
+
+    function openSwitchFloorModal(key) {
+      editingSwFloorKey = key;
+      const b = editorBlocks.get(key);
+      if (b && b.gimmickConfig) {
+        selectSwfloorGroup.value = b.gimmickConfig.group || 'A';
+        selectSwfloorMode.value = b.gimmickConfig.mode || 'MOVE_ON';
+        chkSwfloorShowLabel.checked = b.gimmickConfig.showLabel !== false;
+        modalSwitchFloor.classList.remove('hidden');
+      }
+    }
+    document.getElementById('btn-swfloor-edit-route').onclick = () => {
+      modalSwitchFloor.classList.add('hidden');
+      if (editingSwFloorKey) openPathMoverModal(editingSwFloorKey);
+    };
+    document.getElementById('btn-save-swfloor').onclick = () => {
+      if (editingSwFloorKey && editorBlocks.has(editingSwFloorKey)) {
+        pushEditorHistory();
+        const b = editorBlocks.get(editingSwFloorKey);
+        b.gimmickConfig.group = selectSwfloorGroup.value;
+        b.gimmickConfig.mode = selectSwfloorMode.value;
+        b.gimmickConfig.showLabel = chkSwfloorShowLabel.checked;
+        const [x, y, z] = editingSwFloorKey.split(',').map(Number);
+        setEditorTile(x, y, z, 12, null, null, false, null, b.pathConfig, null, b.gimmickConfig);
+      }
+      modalSwitchFloor.classList.add('hidden');
+    };
+    document.getElementById('btn-cancel-swfloor').onclick = () => modalSwitchFloor.classList.add('hidden');
+
+    // 出現ブロック設定モーダル
+    let editingAppearKey = null;
+    const modalAppear = document.getElementById('modal-appear');
+    const selectAppearGroup = document.getElementById('select-appear-group');
+    const selectAppearShape = document.getElementById('select-appear-shape');
+    const chkAppearShowLabel = document.getElementById('chk-appear-show-label');
+
+    function openAppearModal(key) {
+      editingAppearKey = key;
+      const b = editorBlocks.get(key);
+      if (b && b.gimmickConfig) {
+        selectAppearGroup.value = b.gimmickConfig.group || 'A';
+        selectAppearShape.value = b.gimmickConfig.shape || 1;
+        chkAppearShowLabel.checked = b.gimmickConfig.showLabel !== false;
+        modalAppear.classList.remove('hidden');
+      }
+    }
+    document.getElementById('btn-save-appear').onclick = () => {
+      if (editingAppearKey && editorBlocks.has(editingAppearKey)) {
+        pushEditorHistory();
+        const b = editorBlocks.get(editingAppearKey);
+        b.gimmickConfig.group = selectAppearGroup.value;
+        b.gimmickConfig.shape = parseInt(selectAppearShape.value, 10) || 1;
+        b.gimmickConfig.showLabel = chkAppearShowLabel.checked;
+        const [x, y, z] = editingAppearKey.split(',').map(Number);
+        setEditorTile(x, y, z, 13, null, null, false, null, null, null, b.gimmickConfig);
+      }
+      modalAppear.classList.add('hidden');
+    };
+    document.getElementById('btn-cancel-appear').onclick = () => modalAppear.classList.add('hidden');
+
     // ワープ床設定モーダル
     let editingWarpKey = null;
     const modalWarp = document.getElementById('modal-warp');
     const warpPairStatus = document.getElementById('warp-pair-status');
+    const selectWarpLetter = document.getElementById('select-warp-letter');
 
     function openWarpModal(key) {
       editingWarpKey = key;
@@ -3138,31 +3114,23 @@
         modalWarp.classList.remove('hidden');
       }
     }
-
     function updateWarpLetterCountDisplay() {
       const letter = selectWarpLetter.value;
       let count = 0;
       editorBlocks.forEach((val, k) => {
         if (val.type === 9 && val.warpLetter === letter && k !== editingWarpKey) count++;
       });
-      if (count === 0) warpPairStatus.textContent = `文字「${letter}」は現在 0 マス配置されています (この後もう1マス置くとワープが完成します)`;
-      else if (count === 1) warpPairStatus.textContent = `文字「${letter}」の相方がすでに 1 マスあります！ (2マス揃ってワープ可能になります)`;
-      else warpPairStatus.textContent = `⚠️ 文字「${letter}」は既に2マス配置されています。重複できません。`;
+      if (count === 0) warpPairStatus.textContent = `文字「${letter}」は現在 0 マス配置されています (もう1マス配置で完成)`;
+      else if (count === 1) warpPairStatus.textContent = `文字「${letter}」の相方がすでに 1 マスあります！ (2マス揃ってワープ完成)`;
+      else warpPairStatus.textContent = `⚠️ 文字「${letter}」は既に2マス配置されています。重複不可です。`;
     }
-
     selectWarpLetter.onchange = updateWarpLetterCountDisplay;
-
     document.getElementById('btn-save-warp').onclick = () => {
       if (editingWarpKey && editorBlocks.has(editingWarpKey)) {
         const letter = selectWarpLetter.value;
         let count = 0;
-        editorBlocks.forEach((val, k) => {
-          if (val.type === 9 && val.warpLetter === letter && k !== editingWarpKey) count++;
-        });
-        if (count >= 2) {
-          alert(`文字「${letter}」のワープ床は既に2マス置かれています。別の文字を選択してください。`);
-          return;
-        }
+        editorBlocks.forEach((val, k) => { if (val.type === 9 && val.warpLetter === letter && k !== editingWarpKey) count++; });
+        if (count >= 2) { alert(`文字「${letter}」のワープ床は既に2マス置かれています。`); return; }
         pushEditorHistory();
         const [x, y, z] = editingWarpKey.split(',').map(Number);
         setEditorTile(x, y, z, 9, null, null, false, null, null, letter);
@@ -3188,7 +3156,6 @@
         modalCp.classList.remove('hidden');
       }
     }
-
     document.getElementById('cp-modal-save').onclick = () => {
       if (editingCpKey && editorBlocks.has(editingCpKey)) {
         pushEditorHistory();
@@ -3197,7 +3164,6 @@
         let targetNum = parseInt(inputCpNumber.value, 10);
         if (isNaN(targetNum) || targetNum < 1) targetNum = 1;
         if (targetNum > maxCp) targetNum = maxCp;
-
         const oldNum = curBlock.cpIndex;
         if (targetNum !== oldNum) {
           editorBlocks.forEach((otherBlock, otherKey) => {
@@ -3212,7 +3178,6 @@
               }
             }
           });
-
           curBlock.cpIndex = targetNum;
           const [cx, cy, cz] = editingCpKey.split(',').map(Number);
           const curMesh = editorMeshMap.get(editingCpKey);
@@ -3234,7 +3199,6 @@
       if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
       if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
       editorGroup.visible = false;
-
       const spawnChoice = document.getElementById('select-test-spawn').value;
       let startPoint = null;
       let startCpIndex = null;
@@ -3243,28 +3207,24 @@
         startPoint = { x: cx, y: cy, z: cz };
         startCpIndex = editorBlocks.get(spawnChoice).cpIndex;
       }
-
       startPlay({ ...data, author: currentUsername }, true, startPoint, startCpIndex, "CUSTOM_TEST", { id: "CUSTOM_TEST", author: currentUsername, authorFriendId: myFriendId || '自作' });
     };
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    let isLeftDown = false;
-    let isRightDown = false;
-    let isMiddleDown = false;
+    let isLeftDown = false, isRightDown = false, isMiddleDown = false;
     let prevMouse = { x: 0, y: 0 };
 
     window.addEventListener('mousedown', (e) => {
       if (gameState !== 'EDITOR' || e.target.closest('#editor-ui-container, .modal-dialog')) return;
       if (e.button === 0) {
         isLeftDown = true;
-        handleEditorClick(e);
+        handleEditorClick(e, false);
       } else if (e.button === 1) {
         isMiddleDown = true;
       } else if (e.button === 2) {
         if (e.shiftKey) isMiddleDown = true;
         else {
-          // 右クリックで詳細編集モーダルを開く
           handleEditorRightClick(e);
           isRightDown = true;
         }
@@ -3278,8 +3238,19 @@
       const dy = e.clientY - prevMouse.y;
       prevMouse = { x: e.clientX, y: e.clientY };
 
-      if (isLeftDown && !isDrawingRouteMode && !e.target.closest('#editor-ui-container, .modal-dialog')) {
-        handleEditorClick(e);
+      if (selectedPalette === 99 && grabbedBlockData && dragPreviewMesh) {
+        const tile = getRaycastGridTile(e);
+        if (tile) {
+          const isSolid = (grabbedBlockData.type === 5 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig?.shape === 5));
+          dragPreviewMesh.position.set(tile.tx, currentLayer + (isSolid ? 0.7 : 0.1), tile.tz);
+          dragPreviewMesh.visible = true;
+        } else { dragPreviewMesh.visible = false; }
+        return;
+      }
+
+      // ワープ床(Type 9)はドラッグでの連続設置をブロック
+      if (isLeftDown && !isDrawingRouteMode && selectedPalette !== 99 && selectedPalette !== 9 && !e.target.closest('#editor-ui-container, .modal-dialog')) {
+        handleEditorClick(e, true);
       }
 
       if (isMiddleDown) {
@@ -3293,17 +3264,43 @@
         const forward = new THREE.Vector3().subVectors(editorCamTarget, camera.position);
         forward.y = 0; forward.normalize();
         const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
-
         editorCamTarget.addScaledVector(right, -dx * panSpeed);
         editorCamTarget.addScaledVector(forward, dy * panSpeed);
         updateEditorCamPos();
       }
     });
 
-    window.addEventListener('mouseup', () => {
-      isLeftDown = false;
-      isRightDown = false;
-      isMiddleDown = false;
+    window.addEventListener('mouseup', (e) => {
+      if (selectedPalette === 99 && grabbedBlockData) {
+        const tile = getRaycastGridTile(e);
+        const origCoords = grabbedBlockOrigKey.split(',').map(Number);
+        if (tile && (!editorBlocks.has(tile.key) || tile.key === grabbedBlockOrigKey)) {
+          pushEditorHistory();
+          setEditorTile(origCoords[0], origCoords[1], origCoords[2], 0, null, null, true);
+          setEditorTile(
+            tile.tx, currentLayer, tile.tz,
+            grabbedBlockData.type,
+            grabbedBlockData.moverConfig,
+            grabbedBlockData.cpIndex,
+            false,
+            grabbedBlockData.color,
+            grabbedBlockData.pathConfig,
+            grabbedBlockData.warpLetter,
+            grabbedBlockData.gimmickConfig
+          );
+        } else {
+          const origMesh = editorMeshMap.get(grabbedBlockOrigKey);
+          if (origMesh) origMesh.visible = true;
+        }
+        if (dragPreviewMesh) {
+          editorGroup.remove(dragPreviewMesh);
+          dragPreviewMesh.geometry.dispose();
+          dragPreviewMesh = null;
+        }
+        grabbedBlockData = null;
+        grabbedBlockOrigKey = null;
+      }
+      isLeftDown = false; isRightDown = false; isMiddleDown = false;
     });
 
     window.addEventListener('wheel', (e) => {
@@ -3332,7 +3329,6 @@
       return null;
     }
 
-    // 右クリックによるブロック詳細設定（動く床・ルート床・ワープ床）
     function handleEditorRightClick(e) {
       const tile = getRaycastGridTile(e);
       if (!tile) return;
@@ -3343,13 +3339,33 @@
         else if (b.type === 8) openPathMoverModal(key);
         else if (b.type === 9) openWarpModal(key);
         else if (b.type === 6) openCpModal(key);
+        else if (b.type === 10) openSwitchModal(key);
+        else if (b.type === 11) openBlastModal(key);
+        else if (b.type === 12) openSwitchFloorModal(key);
+        else if (b.type === 13) openAppearModal(key);
       }
     }
 
-    function handleEditorClick(e) {
+    function handleEditorClick(e, isDragging = false) {
       const tile = getRaycastGridTile(e);
       if (!tile) return;
       const { tx, tz, key } = tile;
+
+      if (selectedPalette === 99) {
+        if (editorBlocks.has(key) && !grabbedBlockData) {
+          grabbedBlockOrigKey = key;
+          grabbedBlockData = JSON.parse(JSON.stringify(editorBlocks.get(key)));
+          const origMesh = editorMeshMap.get(key);
+          if (origMesh) origMesh.visible = false;
+          const isSolid = (grabbedBlockData.type === 5 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig?.shape === 5));
+          const geo = isSolid ? fullBlockGeo : thinTileGeo;
+          const mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, wireframe: true });
+          dragPreviewMesh = new THREE.Mesh(geo, mat);
+          dragPreviewMesh.position.set(tx, currentLayer + (isSolid ? 0.7 : 0.1), tz);
+          editorGroup.add(dragPreviewMesh);
+        }
+        return;
+      }
 
       if (isDrawingRouteMode) {
         if (activeRouteEditKey && editorBlocks.has(activeRouteEditKey)) {
@@ -3370,42 +3386,42 @@
         return;
       }
 
-      if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) {
-        openMoverModal(key);
-      } else if (selectedPalette === 8 && editorBlocks.has(key) && editorBlocks.get(key).type === 8) {
-        enterRouteDrawingMode(key);
-      } else if (selectedPalette === 9 && editorBlocks.has(key) && editorBlocks.get(key).type === 9) {
-        openWarpModal(key);
-      } else if (selectedPalette === 6 && editorBlocks.has(key) && editorBlocks.get(key).type === 6) {
-        openCpModal(key);
-      } else {
+      // ワープ床(Type 9)はドラッグ設置防止
+      if (selectedPalette === 9 && isDragging) return;
+
+      if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) openMoverModal(key);
+      else if (selectedPalette === 8 && editorBlocks.has(key) && editorBlocks.get(key).type === 8) enterRouteDrawingMode(key);
+      else if (selectedPalette === 9 && editorBlocks.has(key) && editorBlocks.get(key).type === 9) openWarpModal(key);
+      else if (selectedPalette === 10 && editorBlocks.has(key) && editorBlocks.get(key).type === 10) openSwitchModal(key);
+      else if (selectedPalette === 11 && editorBlocks.has(key) && editorBlocks.get(key).type === 11) openBlastModal(key);
+      else if (selectedPalette === 12 && editorBlocks.has(key) && editorBlocks.get(key).type === 12) openSwitchFloorModal(key);
+      else if (selectedPalette === 13 && editorBlocks.has(key) && editorBlocks.get(key).type === 13) openAppearModal(key);
+      else if (selectedPalette === 6 && editorBlocks.has(key) && editorBlocks.get(key).type === 6) openCpModal(key);
+      else {
         pushEditorHistory();
         setEditorTile(tx, currentLayer, tz, selectedPalette, null, null, false, inputBlockColor.value);
-        if (selectedPalette === 8) {
-          enterRouteDrawingMode(key);
-        } else if (selectedPalette === 9) {
-          openWarpModal(key);
-        }
+        if (selectedPalette === 8) enterRouteDrawingMode(key);
+        else if (selectedPalette === 9) openWarpModal(key);
+        else if (selectedPalette === 10) openSwitchModal(key);
+        else if (selectedPalette === 11) openBlastModal(key);
+        else if (selectedPalette === 12) openSwitchFloorModal(key);
+        else if (selectedPalette === 13) openAppearModal(key);
       }
     }
 
     function loadStageIntoEditor(stage) {
       exitRouteDrawingMode();
-      undoStack.length = 0;
-      redoStack.length = 0;
-      editorBlocks.forEach((_, k) => {
-        const [x, y, z] = k.split(',').map(Number);
-        setEditorTile(x, y, z, 0, null, null, true);
-      });
+      undoStack.length = 0; redoStack.length = 0;
+      editorBlocks.forEach((_, k) => { const [x, y, z] = k.split(',').map(Number); setEditorTile(x, y, z, 0, null, null, true); });
       gridSize = stage.size || 32;
       document.getElementById('select-grid-size').value = gridSize;
       buildEditorGrid();
 
-      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex, true, b.color, null, b.warpLetter));
+      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex, true, b.color, null, b.warpLetter, b.gimmickConfig));
       if (stage.movers) {
         stage.movers.forEach(m => {
           if (m.isPathMover) {
-            setEditorTile(m.x, m.y, m.z, 8, null, null, true, null, { waypoints: m.waypoints || [{ x: m.x, y: m.y, z: m.z }], speed: m.speed });
+            setEditorTile(m.x, m.y, m.z, m.type || 8, null, null, true, null, { waypoints: m.waypoints || [{ x: m.x, y: m.y, z: m.z }], speed: m.speed, segmentSpeeds: m.segmentSpeeds }, null, m.gimmickConfig);
           } else {
             setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }, null, true);
           }
@@ -3428,6 +3444,7 @@
       isPaused = false;
       modalPause.classList.add('hidden');
       passedCheckpoints.clear();
+      switchStates = {};
 
       playStartTime = performance.now();
       playElapsedTime = 0;
@@ -3465,10 +3482,18 @@
       while (tilesGroup.children.length > 0) tilesGroup.remove(tilesGroup.children[0]);
       activeMovers = [];
       activeFallingFloors = [];
+      activeGimmicks = [];
 
       stage.blocks.forEach(b => {
-        let geo = (b.type === 5) ? fullBlockGeo : thinTileGeo;
+        if (b.type === 11) {
+          activeGimmicks.push({ type: 11, x: b.x, y: b.y, z: b.z, config: b.gimmickConfig });
+          return;
+        }
+
+        const isSolid = (b.type === 5 || (b.type === 13 && b.gimmickConfig?.shape === 5));
+        let geo = isSolid ? fullBlockGeo : thinTileGeo;
         let m = matFloor;
+
         if (b.type === 1) m = new THREE.MeshLambertMaterial({ color: b.color || 0x64748b });
         else if (b.type === 5) m = new THREE.MeshLambertMaterial({ color: b.color || 0x475569 });
         else if (b.type === 2) m = matGoal;
@@ -3476,41 +3501,57 @@
         else if (b.type === 7) m = matFallFloor.clone();
         else if (b.type === 6) m = createCheckpointMaterials(b.cpIndex || 1);
         else if (b.type === 9) m = createWarpMaterials(b.warpLetter || 'A');
+        else if (b.type === 10) m = createSwitchMaterials(b.gimmickConfig.group, false, b.gimmickConfig.showLabel);
+        else if (b.type === 13) m = createLabeledMaterial(b.gimmickConfig.group, b.gimmickConfig.showLabel, '#059669');
 
         const mesh = new THREE.Mesh(geo, m);
-        const yOffset = (b.type === 5) ? 0.5 : -0.1;
+        const yOffset = isSolid ? 0.5 : -0.1;
         mesh.position.set(b.x, b.y + yOffset, b.z);
         mesh.receiveShadow = true;
+
+        if (b.type === 13) {
+          mesh.visible = false;
+        }
+
         tilesGroup.add(mesh);
 
         if (b.type === 7) {
-          activeFallingFloors.push({
-            x: b.x, y: b.y, z: b.z, mesh: mesh, state: 'IDLE', timer: 0, fallVelocity: 0, initialY: b.y - 0.1
-          });
+          activeFallingFloors.push({ x: b.x, y: b.y, z: b.z, mesh, state: 'IDLE', timer: 0, fallVelocity: 0, initialY: b.y - 0.1 });
+        } else if (b.type === 10 || b.type === 13) {
+          activeGimmicks.push({ type: b.type, x: b.x, y: b.y, z: b.z, config: b.gimmickConfig, mesh: mesh });
         }
       });
 
       if (stage.movers) {
         stage.movers.forEach(m => {
           if (m.isPathMover) {
-            const mesh = new THREE.Mesh(thinTileGeo, matPathMover);
+            const isSwFloor = (m.type === 12);
+            let meshMat = matPathMover;
+            if (isSwFloor && m.gimmickConfig) {
+              meshMat = createLabeledMaterial(`🔄${m.gimmickConfig.group}`, m.gimmickConfig.showLabel, '#8b5cf6');
+            }
+            const mesh = new THREE.Mesh(thinTileGeo, meshMat);
             mesh.position.set(m.x, m.y - 0.1, m.z);
             mesh.receiveShadow = true;
             tilesGroup.add(mesh);
 
             const waypoints = (m.waypoints && m.waypoints.length > 0) ? m.waypoints : [{ x: m.x, y: m.y, z: m.z }];
-
-            activeMovers.push({
+            const moverObj = {
               isPathMover: true,
+              isSwitchFloor: isSwFloor,
+              gimmickConfig: m.gimmickConfig,
               waypoints: waypoints,
+              segmentSpeeds: m.segmentSpeeds || [],
+              baseSpeed: m.speed || 0.035,
               currentIndex: 0,
               targetIndex: waypoints.length > 1 ? 1 : 0,
               direction: 1,
               progress: 0,
-              speed: m.speed || 0.035,
               mesh: mesh,
               stepX: 0, stepY: 0, stepZ: 0
-            });
+            };
+            activeMovers.push(moverObj);
+            if (isSwFloor) activeGimmicks.push(moverObj);
           } else {
             const mesh = new THREE.Mesh(thinTileGeo, matMover);
             mesh.position.set(m.x, m.y - 0.1, m.z);
@@ -3518,18 +3559,17 @@
             tilesGroup.add(mesh);
 
             let vecX = 0, vecY = 0, vecZ = 0;
-            if (m.dir === 'UP')     vecZ = -1;
-            if (m.dir === 'DOWN')   vecZ = 1;
-            if (m.dir === 'LEFT')   vecX = -1;
-            if (m.dir === 'RIGHT')  vecX = 1;
-            if (m.dir === 'Y_UP')   vecY = 1;
+            if (m.dir === 'UP') vecZ = -1;
+            if (m.dir === 'DOWN') vecZ = 1;
+            if (m.dir === 'LEFT') vecX = -1;
+            if (m.dir === 'RIGHT') vecX = 1;
+            if (m.dir === 'Y_UP') vecY = 1;
             if (m.dir === 'Y_DOWN') vecY = -1;
 
             activeMovers.push({
               isPathMover: false,
               originX: m.x, originY: m.y, originZ: m.z,
-              vecX: vecX, vecY: vecY, vecZ: vecZ,
-              dist: m.dist, speed: m.speed,
+              vecX, vecY, vecZ, dist: m.dist, speed: m.speed,
               mesh: mesh, currentOffset: 0, direction: 1,
               stepX: 0, stepY: 0, stepZ: 0
             });
@@ -3538,9 +3578,7 @@
       }
     }
 
-    function resetInputBuffer() {
-      for (let k in keysPressed) keysPressed[k] = false;
-    }
+    function resetInputBuffer() { for (let k in keysPressed) keysPressed[k] = false; }
 
     let isFallingDown = false;
     let fallVelocity = 0;
@@ -3552,12 +3590,8 @@
       fallVelocity = 0;
 
       activeFallingFloors.forEach(ff => {
-        ff.state = 'IDLE';
-        ff.timer = 0;
-        ff.fallVelocity = 0;
-        ff.mesh.position.y = ff.initialY;
-        ff.mesh.visible = true;
-        ff.mesh.material.color.setHex(0xf97316);
+        ff.state = 'IDLE'; ff.timer = 0; ff.fallVelocity = 0;
+        ff.mesh.position.y = ff.initialY; ff.mesh.visible = true; ff.mesh.material.color.setHex(0xf97316);
       });
 
       cubePos = { x, y, z };
@@ -3571,35 +3605,46 @@
     }
 
     function respawnPlayer() {
-      if (currentCheckpoint) {
-        resetCubePosition(currentCheckpoint.x, currentCheckpoint.y, currentCheckpoint.z);
-      } else {
+      if (currentCheckpoint) resetCubePosition(currentCheckpoint.x, currentCheckpoint.y, currentCheckpoint.z);
+      else {
         const spawnSurf = getTopSurfaceAt(activeStage.spawn.x, activeStage.spawn.z, activeStage.spawn.y);
         resetCubePosition(activeStage.spawn.x, spawnSurf ? spawnSurf.surfaceY : activeStage.spawn.y, activeStage.spawn.z);
       }
     }
 
     function isSolidAt(x, z, yLevel) {
-      return activeStage.blocks.some(b => b.x === x && b.z === z && b.type === 5 && b.y === yLevel);
+      return activeStage.blocks.some(b => {
+        if (b.x === x && b.z === z && b.y === yLevel) {
+          if (b.type === 5) return true;
+          if (b.type === 13 && b.gimmickConfig?.shape === 5 && switchStates[b.gimmickConfig.group]) return true;
+        }
+        return false;
+      });
     }
 
     function getAllSurfacesAt(x, z) {
       const surfaces = [];
       activeStage.blocks.forEach(b => {
         if (b.x === x && b.z === z) {
+          if (b.type === 11) return;
           if (b.type === 7) {
             const ff = activeFallingFloors.find(f => f.x === b.x && f.y === b.y && f.z === b.z);
             if (ff && (ff.state === 'FALLING' || ff.state === 'GONE')) return;
           }
-          if (b.type === 5) surfaces.push({ type: 5, mover: null, surfaceY: b.y + 1, blockRef: b });
-          else surfaces.push({ type: b.type, mover: null, surfaceY: b.y, blockRef: b });
+          if (b.type === 13) {
+            if (!switchStates[b.gimmickConfig.group]) return;
+          }
+
+          const isSolid = (b.type === 5 || (b.type === 13 && b.gimmickConfig?.shape === 5));
+          surfaces.push({ type: b.type, mover: null, surfaceY: isSolid ? b.y + 1 : b.y, blockRef: b });
         }
       });
+
       activeMovers.forEach(m => {
         const dx = Math.abs(m.mesh.position.x - x);
         const dz = Math.abs(m.mesh.position.z - z);
         if (dx <= 0.85 && dz <= 0.85) {
-          surfaces.push({ type: m.isPathMover ? 8 : 4, mover: m, surfaceY: m.mesh.position.y + 0.1 });
+          surfaces.push({ type: m.isPathMover ? (m.isSwitchFloor ? 12 : 8) : 4, mover: m, surfaceY: m.mesh.position.y + 0.1 });
         }
       });
       return surfaces.sort((a, b) => b.surfaceY - a.surfaceY);
@@ -3619,29 +3664,17 @@
       let isPinched = false;
 
       if (dx !== 0) {
-        if (isSolidAt(curX - 1, curZ, currentLevelY) && isSolidAt(curX + 1, curZ, currentLevelY)) {
-          isPinched = true;
-        }
+        if (isSolidAt(curX - 1, curZ, currentLevelY) && isSolidAt(curX + 1, curZ, currentLevelY)) isPinched = true;
       } else if (dz !== 0) {
-        if (isSolidAt(curX, curZ - 1, currentLevelY) && isSolidAt(curX, curZ + 1, currentLevelY)) {
-          isPinched = true;
-        }
+        if (isSolidAt(curX, curZ - 1, currentLevelY) && isSolidAt(curX, curZ + 1, currentLevelY)) isPinched = true;
       }
 
-      if (isPinched && hasSolidAtTarget) {
-        return { blocked: true };
-      }
+      if (isPinched && hasSolidAtTarget) return { blocked: true };
 
       if (hasSolidAtTarget) {
         const targetTopY = currentLevelY + 1;
         if (!isSolidAt(tx, tz, targetTopY)) {
-          return {
-            dy: 1,
-            targetY: targetTopY,
-            type: 5,
-            surfaceY: targetTopY,
-            mover: null
-          };
+          return { dy: 1, targetY: targetTopY, type: 5, surfaceY: targetTopY, mover: null };
         } else {
           return { blocked: true };
         }
@@ -3656,59 +3689,32 @@
         if (diff >= -1.4 && diff <= 1.25) {
           const targetCubeY = Math.round(s.surfaceY);
           if (!isSolidAt(tx, tz, targetCubeY)) {
-            if (Math.abs(diff) < minDiff) {
-              minDiff = Math.abs(diff);
-              best = s;
-            }
+            if (Math.abs(diff) < minDiff) { minDiff = Math.abs(diff); best = s; }
           }
         }
       }
 
-      if (best) {
-        const diff = best.surfaceY - curY;
-        return {
-          dy: diff,
-          targetY: best.surfaceY,
-          ...best
-        };
-      }
-
+      if (best) return { dy: best.surfaceY - curY, targetY: best.surfaceY, ...best };
       return { dy: 0, targetY: curY, type: 0, mover: null, surfaceY: curY, isFall: true };
     }
 
     const keysPressed = {};
     window.addEventListener('keydown', (e) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-        keysPressed[e.key] = true;
-      }
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) { e.preventDefault(); keysPressed[e.key] = true; }
       if (e.key === 'Escape') togglePause();
     });
-    window.addEventListener('keyup', (e) => {
-      if (keysPressed[e.key]) keysPressed[e.key] = false;
-    });
+    window.addEventListener('keyup', (e) => { if (keysPressed[e.key]) keysPressed[e.key] = false; });
 
     function bindDpadButton(elementId, keyName) {
       const el = document.getElementById(elementId);
       el.addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (isPaused) return;
-        keysPressed[keyName] = true;
-        el.classList.add('active');
+        keysPressed[keyName] = true; el.classList.add('active');
       }, { passive: false });
-
-      el.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        keysPressed[keyName] = false;
-        el.classList.remove('active');
-      }, { passive: false });
-
-      el.addEventListener('touchcancel', (e) => {
-        keysPressed[keyName] = false;
-        el.classList.remove('active');
-      });
+      el.addEventListener('touchend', (e) => { e.preventDefault(); keysPressed[keyName] = false; el.classList.remove('active'); }, { passive: false });
+      el.addEventListener('touchcancel', () => { keysPressed[keyName] = false; el.classList.remove('active'); });
     }
-
     bindDpadButton('dpad-up', 'ArrowUp');
     bindDpadButton('dpad-down', 'ArrowDown');
     bindDpadButton('dpad-left', 'ArrowLeft');
@@ -3724,19 +3730,29 @@
       else if (keysPressed['ArrowRight']) roll(1, 0);
     }
 
+    function triggerSwitchGroup(group, targetState = null) {
+      const cur = switchStates[group] || false;
+      const next = (targetState !== null) ? targetState : !cur;
+      switchStates[group] = next;
+
+      activeGimmicks.forEach(g => {
+        if (g.type === 10 && g.config.group === group) {
+          g.mesh.material = createSwitchMaterials(group, next, g.config.showLabel);
+        } else if (g.type === 13 && g.config.group === group) {
+          g.mesh.visible = next;
+        }
+      });
+    }
+
     function roll(dx, dz) {
       isRolling = true;
-
       const currentX = Math.round(cubePos.x);
       const currentZ = Math.round(cubePos.z);
       const tx = currentX + dx;
       const tz = currentZ + dz;
 
       const surface = findTargetSurface(currentX, currentZ, cubePos.y, tx, tz);
-      if (surface.blocked) {
-        isRolling = false;
-        return;
-      }
+      if (surface.blocked) { isRolling = false; return; }
 
       const startY = cubePos.y;
       const targetY = surface.targetY;
@@ -3755,14 +3771,10 @@
       const axis = new THREE.Vector3(dz, 0, -dx).normalize();
 
       function animateRoll() {
-        if (isPaused) {
-          requestAnimationFrame(animateRoll);
-          return;
-        }
-
+        if (isPaused) { requestAnimationFrame(animateRoll); return; }
         currentAngle += rollSpeed;
 
-        if ((surface.type === 4 || surface.type === 8) && surface.mover) {
+        if ((surface.type === 4 || surface.type === 8 || surface.type === 12) && surface.mover) {
           const liveMoverY = surface.mover.mesh.position.y + 0.1;
           const liveDy = liveMoverY - startY;
           if (liveDy > 0.15) pivot.position.y = startY + liveDy;
@@ -3772,10 +3784,8 @@
           pivot.rotateOnAxis(axis, rollSpeed);
           requestAnimationFrame(animateRoll);
         } else {
-          cubePos.x = tx;
-          cubePos.z = tz;
-
-          if ((surface.type === 4 || surface.type === 8) && surface.mover) {
+          cubePos.x = tx; cubePos.z = tz;
+          if ((surface.type === 4 || surface.type === 8 || surface.type === 12) && surface.mover) {
             cubePos.x = surface.mover.mesh.position.x;
             cubePos.z = surface.mover.mesh.position.z;
             cubePos.y = surface.mover.mesh.position.y + 0.1;
@@ -3786,19 +3796,35 @@
           pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
           pivot.rotation.set(0, 0, 0);
           cubeMesh.position.set(0, 0.5, 0);
-
           isRolling = false;
-
           syncMyVersusPosition();
 
-          // ワープ床（Type 9）の相互ワープ判定
-          if (surface.type === 9 && surface.blockRef && surface.blockRef.warpLetter) {
+          if (surface.type === 10 && surface.blockRef?.gimmickConfig) {
+            const cfg = surface.blockRef.gimmickConfig;
+            if (cfg.mode === 'ONCE') triggerSwitchGroup(cfg.group, true);
+            else triggerSwitchGroup(cfg.group);
+          }
+
+          const curLvlY = Math.round(cubePos.y);
+          const activeBlast = activeGimmicks.find(g => g.type === 11 && switchStates[g.config.group] && g.x === Math.round(cubePos.x) && g.z === Math.round(cubePos.z) && g.y === curLvlY);
+          if (activeBlast) {
+            let bdx = 0, bdz = 0;
+            if (activeBlast.config.dir === 'UP') bdz = -activeBlast.config.power;
+            else if (activeBlast.config.dir === 'DOWN') bdz = activeBlast.config.power;
+            else if (activeBlast.config.dir === 'LEFT') bdx = -activeBlast.config.power;
+            else if (activeBlast.config.dir === 'RIGHT') bdx = activeBlast.config.power;
+
+            cubePos.x += bdx;
+            cubePos.z += bdz;
+            pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
+            syncMyVersusPosition();
+          }
+
+          if (surface.type === 9 && surface.blockRef?.warpLetter) {
             const letter = surface.blockRef.warpLetter;
             const targetPartner = activeStage.blocks.find(b => b.type === 9 && b.warpLetter === letter && !(b.x === tx && b.z === tz && b.y === Math.round(targetY)));
             if (targetPartner) {
-              cubePos.x = targetPartner.x;
-              cubePos.y = targetPartner.y;
-              cubePos.z = targetPartner.z;
+              cubePos.x = targetPartner.x; cubePos.y = targetPartner.y; cubePos.z = targetPartner.z;
               pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
               syncMyVersusPosition();
             }
@@ -3812,10 +3838,7 @@
 
           if (surface.type === 7) {
             const ff = activeFallingFloors.find(f => f.x === tx && f.y === Math.round(targetY) && f.z === tz);
-            if (ff && ff.state === 'IDLE') {
-              ff.state = 'COUNTING';
-              ff.timer = 0;
-            }
+            if (ff && ff.state === 'IDLE') { ff.state = 'COUNTING'; ff.timer = 0; }
           }
 
           if (surface.isFall) {
@@ -3824,16 +3847,10 @@
           } else if (surface.type === 2) {
             timerRunning = false;
             resetInputBuffer();
-
             const finalTimeMs = Math.round(playElapsedTime);
             const bestMs = getBestTime(activeStageKey);
             let isNewRecord = false;
-
-            if (!bestMs || finalTimeMs < bestMs) {
-              setBestTime(activeStageKey, finalTimeMs);
-              isNewRecord = true;
-            }
-
+            if (!bestMs || finalTimeMs < bestMs) { setBestTime(activeStageKey, finalTimeMs); isNewRecord = true; }
             const currentBestStr = formatTime(getBestTime(activeStageKey));
             const clearTimeStr = formatTime(finalTimeMs);
 
@@ -3850,29 +3867,13 @@
             if (isVersusMatch) {
               const timeField = isRoomHost ? "hostClearTime" : "guestClearTime";
               db.collection("versus_rooms").doc(vsRoomId).update({ [timeField]: finalTimeMs });
-
-              let resultMsg = `🎉 ゴールしました！\nタイム: ${clearTimeStr}\n\n`;
-              let matchResult = 'WIN';
-              if (opponentClearTime) {
-                if (finalTimeMs < opponentClearTime) {
-                  resultMsg += `🏆 相手(${formatTime(opponentClearTime)})に勝利しました！ (YOU WIN)`;
-                  matchResult = 'WIN';
-                } else {
-                  resultMsg += `💥 相手(${formatTime(opponentClearTime)})の方が速かったです... (YOU LOSE)`;
-                  matchResult = 'LOSE';
-                }
-              } else {
-                resultMsg += `相手より先にゴールしました！ (YOU WIN)`;
-                matchResult = 'WIN';
-              }
-              alert(resultMsg);
-              recordMatchHistory(matchResult, finalTimeMs);
+              recordMatchHistory('WIN', finalTimeMs);
               endVersusMatch();
+              alert(`🎉 先にゴールしました！ (YOU WIN)\nタイム: ${clearTimeStr}`);
             } else {
               let msg = `🎉 ステージクリア！おめでとうございます！\n\nタイム: ${clearTimeStr}\n自己ベスト: ${currentBestStr}`;
               if (isNewRecord) msg += "\n✨ NEW RECORD 更新！ ✨";
               alert(msg);
-
               if (isTestPlay) returnToEditorView();
               else { gameState = 'STAGES'; switchScreen('STAGES'); }
             }
@@ -3900,9 +3901,7 @@
 
           if (isVersusMatch && (Date.now() - lastActionTime > 120000)) {
             alert("2分間操作がなかったため、時間切れで敗北となりました。");
-            if (vsRoomId && db && currentUser) {
-              db.collection("versus_rooms").doc(vsRoomId).update({ forfeitUid: currentUser.uid });
-            }
+            if (vsRoomId && db && currentUser) db.collection("versus_rooms").doc(vsRoomId).update({ forfeitUid: currentUser.uid });
             recordMatchHistory('LOSE', Math.round(playElapsedTime));
             endVersusMatch();
             return;
@@ -3911,108 +3910,90 @@
           activeFallingFloors.forEach(ff => {
             if (ff.state === 'COUNTING') {
               ff.timer += 1 / 60;
-              if (Math.floor(ff.timer * 8) % 2 === 0) ff.mesh.material.color.setHex(0xef4444);
-              else ff.mesh.material.color.setHex(0xf97316);
-
+              ff.mesh.material.color.setHex((Math.floor(ff.timer * 8) % 2 === 0) ? 0xef4444 : 0xf97316);
               if (ff.timer >= 1.0) {
-                ff.state = 'FALLING';
-                ff.fallVelocity = 0.05;
-
+                ff.state = 'FALLING'; ff.fallVelocity = 0.05;
                 const cx = Math.round(cubePos.x);
                 const cz = Math.round(cubePos.z);
                 if (cx === ff.x && cz === ff.z && Math.abs(cubePos.y - ff.y) <= 0.2 && !isRolling) {
-                  isFallingDown = true;
-                  fallVelocity = 0.05;
+                  isFallingDown = true; fallVelocity = 0.05;
                 }
               }
             } else if (ff.state === 'FALLING') {
               ff.fallVelocity += 0.03;
               ff.mesh.position.y -= ff.fallVelocity;
-              if (ff.mesh.position.y < -15) {
-                ff.state = 'GONE';
-                ff.mesh.visible = false;
-              }
+              if (ff.mesh.position.y < -15) { ff.state = 'GONE'; ff.mesh.visible = false; }
             }
           });
 
-          // 動く床の吸着・乗車安定化とスムーズな移動
           activeMovers.forEach(m => {
             let stepX = 0, stepY = 0, stepZ = 0;
 
-            if (m.isPathMover) {
-              if (m.waypoints && m.waypoints.length > 1) {
-                const fromWp = m.waypoints[m.currentIndex];
-                const toWp = m.waypoints[m.targetIndex];
+            let allowMove = true;
+            if (m.isSwitchFloor && m.gimmickConfig) {
+              const isSwON = switchStates[m.gimmickConfig.group] || false;
+              if (m.gimmickConfig.mode === 'MOVE_ON') allowMove = isSwON;
+              else if (m.gimmickConfig.mode === 'STOP_ON') allowMove = !isSwON;
+            }
 
-                const segDist = Math.hypot(toWp.x - fromWp.x, toWp.y - fromWp.y, toWp.z - fromWp.z) || 1;
-                m.progress += m.speed / segDist;
+            if (allowMove) {
+              if (m.isPathMover) {
+                if (m.waypoints && m.waypoints.length > 1) {
+                  const fromWp = m.waypoints[m.currentIndex];
+                  const toWp = m.waypoints[m.targetIndex];
 
-                if (m.progress >= 1.0) {
-                  m.progress = 0;
-                  m.currentIndex = m.targetIndex;
-                  m.targetIndex += m.direction;
-
-                  if (m.targetIndex >= m.waypoints.length) {
-                    m.direction = -1;
-                    m.targetIndex = m.waypoints.length - 2;
-                  } else if (m.targetIndex < 0) {
-                    m.direction = 1;
-                    m.targetIndex = 1;
+                  const segIdx = Math.min(m.currentIndex, m.targetIndex);
+                  let curSpeed = m.baseSpeed;
+                  if (m.segmentSpeeds && m.segmentSpeeds[segIdx] != null) {
+                    curSpeed = speedScaleToVal(m.segmentSpeeds[segIdx]);
                   }
+
+                  const segDist = Math.hypot(toWp.x - fromWp.x, toWp.y - fromWp.y, toWp.z - fromWp.z) || 1;
+                  m.progress += curSpeed / segDist;
+
+                  if (m.progress >= 1.0) {
+                    m.progress = 0;
+                    m.currentIndex = m.targetIndex;
+                    m.targetIndex += m.direction;
+                    if (m.targetIndex >= m.waypoints.length) { m.direction = -1; m.targetIndex = m.waypoints.length - 2; }
+                    else if (m.targetIndex < 0) { m.direction = 1; m.targetIndex = 1; }
+                  }
+
+                  const curFrom = m.waypoints[m.currentIndex];
+                  const curTo = m.waypoints[m.targetIndex];
+                  const interpX = curFrom.x + (curTo.x - curFrom.x) * m.progress;
+                  const interpY = curFrom.y + (curTo.y - curFrom.y) * m.progress - 0.1;
+                  const interpZ = curFrom.z + (curTo.z - curFrom.z) * m.progress;
+
+                  stepX = interpX - m.mesh.position.x;
+                  stepY = interpY - m.mesh.position.y;
+                  stepZ = interpZ - m.mesh.position.z;
+                  m.mesh.position.set(interpX, interpY, interpZ);
                 }
-
-                const curFrom = m.waypoints[m.currentIndex];
-                const curTo = m.waypoints[m.targetIndex];
-
-                const interpX = curFrom.x + (curTo.x - curFrom.x) * m.progress;
-                const interpY = curFrom.y + (curTo.y - curFrom.y) * m.progress - 0.1;
-                const interpZ = curFrom.z + (curTo.z - curFrom.z) * m.progress;
-
-                stepX = interpX - m.mesh.position.x;
-                stepY = interpY - m.mesh.position.y;
-                stepZ = interpZ - m.mesh.position.z;
-
-                m.mesh.position.set(interpX, interpY, interpZ);
-              }
-            } else {
-              const delta = m.speed * m.direction;
-              m.currentOffset += Math.abs(delta);
-
-              stepX = m.vecX * delta;
-              stepY = m.vecY * delta;
-              stepZ = m.vecZ * delta;
-
-              m.mesh.position.x += stepX;
-              m.mesh.position.y += stepY;
-              m.mesh.position.z += stepZ;
-
-              if (m.currentOffset >= m.dist) {
-                m.direction *= -1;
-                m.currentOffset = 0;
+              } else {
+                const delta = m.speed * m.direction;
+                m.currentOffset += Math.abs(delta);
+                stepX = m.vecX * delta; stepY = m.vecY * delta; stepZ = m.vecZ * delta;
+                m.mesh.position.x += stepX; m.mesh.position.y += stepY; m.mesh.position.z += stepZ;
+                if (m.currentOffset >= m.dist) { m.direction *= -1; m.currentOffset = 0; }
               }
             }
 
-            // 動く床の上に乗っているときの追従と落下防止
             const moverSurfaceY = m.mesh.position.y + 0.1;
             const dx = Math.abs(m.mesh.position.x - cubePos.x);
             const dz = Math.abs(m.mesh.position.z - cubePos.z);
             const dy = moverSurfaceY - cubePos.y;
 
             if (dx <= 0.85 && dz <= 0.85) {
-              // 上から乗った・飛び乗った際の着地判定
               if (isFallingDown && dy <= 0.3 && dy >= -0.85) {
                 isFallingDown = false;
                 fallVelocity = 0;
                 cubePos.y = moverSurfaceY;
                 pivot.position.y = cubePos.y;
               }
-
               if (!isRolling && !isFallingDown && Math.abs(dy) <= 0.75) {
-                cubePos.x += stepX;
-                cubePos.y += stepY;
-                cubePos.z += stepZ;
-                pivot.position.x = cubePos.x;
-                pivot.position.y = cubePos.y;
+                cubePos.x += stepX; cubePos.y += stepY; cubePos.z += stepZ;
+                pivot.position.x = cubePos.x; pivot.position.y = cubePos.y;
                 pivot.position.z = cubePos.z;
                 syncMyVersusPosition();
               }
@@ -4024,7 +4005,6 @@
             cubePos.y -= fallVelocity;
             pivot.position.y = cubePos.y;
             syncMyVersusPosition();
-
             if (cubePos.y <= -10) respawnPlayer();
           }
 
@@ -4033,15 +4013,12 @@
 
         const cubeWorldPos = new THREE.Vector3();
         cubeMesh.getWorldPosition(cubeWorldPos);
-
         const targetCamX = cubeWorldPos.x + 6;
         const targetCamY = cubeWorldPos.y + 7.5;
         const targetCamZ = cubeWorldPos.z + 8;
-
         camera.position.x += (targetCamX - camera.position.x) * 0.06;
         camera.position.y += (targetCamY - camera.position.y) * 0.06;
         camera.position.z += (targetCamZ - camera.position.z) * 0.06;
-
         cameraTarget.x += (cubeWorldPos.x - cameraTarget.x) * 0.06;
         cameraTarget.y += (cubeWorldPos.y + 0.5 - cameraTarget.y) * 0.06;
         cameraTarget.z += (cubeWorldPos.z - cameraTarget.z) * 0.06;
@@ -4052,7 +4029,6 @@
         cameraTarget.lerp(editorCamTarget, 0.15);
         camera.lookAt(cameraTarget);
       }
-
       renderer.render(scene, camera);
     }
     loop();
