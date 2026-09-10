@@ -442,7 +442,7 @@
     </div>
   </div>
 
-  <!-- 出現床（薄い床・直方体・セーブ・ワープ対応） -->
+  <!-- 出現床（薄い床・直方体・セーブ・ワープ・動く床・動く直方体対応） -->
   <div id="modal-appear" class="modal-dialog hidden" style="min-width: 320px;">
     <h3 style="margin: 0;">出現ブロックの設定</h3>
     <label>連動スイッチグループ: <select id="select-appear-group" style="width: 100%; margin-top: 4px;"></select></label>
@@ -450,6 +450,8 @@
       <select id="select-appear-shape" style="width: 100%; margin-top: 4px;">
         <option value="1">薄い床</option>
         <option value="5">直方体</option>
+        <option value="4">動く床</option>
+        <option value="14">動く直方体</option>
         <option value="6">セーブ地点</option>
         <option value="9">ワープ床</option>
       </select>
@@ -483,7 +485,7 @@
   <div id="modal-checkpoint" class="modal-dialog hidden">
     <h3 style="margin: 0;">セーブ地点の設定</h3>
     <div id="cp-max-desc" style="font-size: 12px; color: #94a3b8;"></div>
-    <label>セーブ番号: <input type="number" id="cp-number-input" min="1" max="1" value="1" style="width: 80px;"></label>
+    <label>セーブ番号: <input type="number" id="cp-number-input" min="1" max="1" value="1" style="width: 80px;"> </label>
     <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
       <input type="checkbox" id="chk-cp-show-label" checked style="width:16px; height:16px;">
       プレイ中数字を表示
@@ -1908,7 +1910,6 @@
       return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
     }
 
-    // 吹き飛ばし面用テクスチャ
     function createBlastFaceMaterial(dir, group) {
       const cv = document.createElement('canvas');
       cv.width = 128; cv.height = 128;
@@ -2252,7 +2253,7 @@
           if (type === 10) gCfg = { group: 'A', mode: 'TOGGLE', showLabel: true };
           else if (type === 11) gCfg = { group: 'A', dir: 'UP', power: 2 };
           else if (type === 12) gCfg = { group: 'A', mode: 'MOVE_ON', showLabel: true };
-          else if (type === 13) gCfg = { group: 'A', shape: 1, showLabel: true, warpLetter: 'A', cpIndex: 1 };
+          else if (type === 13) gCfg = { group: 'A', shape: 1, showLabel: true, warpLetter: 'A', cpIndex: 1, moverConfig: { dir: 'RIGHT', dist: 3, speed: 0.035 } };
         }
 
         const data = {
@@ -2268,7 +2269,7 @@
 
         if (editorMeshMap.has(key)) editorGroup.remove(editorMeshMap.get(key));
 
-        let isSolid = (type === 5 || type === 14 || (type === 13 && gCfg && gCfg.shape === 5));
+        let isSolid = (type === 5 || type === 14 || (type === 13 && gCfg && (gCfg.shape === 5 || gCfg.shape === 14)));
         let geo = isSolid ? fullBlockGeo : thinTileGeo;
         let m = matFloor.clone();
         let isMultiMat = false;
@@ -2303,6 +2304,8 @@
         else if (type === 13) {
           if (gCfg.shape === 6) { m = createCheckpointMaterials(gCfg.cpIndex || 1, gCfg.showLabel); isMultiMat = true; }
           else if (gCfg.shape === 9) { m = createWarpMaterials(gCfg.warpLetter || 'A', gCfg.showLabel); isMultiMat = true; }
+          else if (gCfg.shape === 4) { m = createLabeledMaterial(`🚀${gCfg.group}`, gCfg.showLabel, '#059669'); isMultiMat = true; }
+          else if (gCfg.shape === 14) { m = createLabeledMaterial(`🧱${gCfg.group}`, gCfg.showLabel, '#047857'); isMultiMat = true; }
           else { m = createLabeledMaterial(`✨${gCfg.group}`, gCfg.showLabel, '#059669'); isMultiMat = true; }
         }
 
@@ -2721,6 +2724,29 @@
         `;
         populateLetterSelect('select-appear-warp');
         document.getElementById('select-appear-warp').value = cfg.warpLetter || 'A';
+      } else if (shape === 4 || shape === 14) {
+        const mCfg = cfg.moverConfig || { dir: 'RIGHT', dist: 3, speed: 0.035 };
+        const scale = speedValToScale(mCfg.speed);
+        appearExtraOptions.innerHTML = `
+          <label>進行方向:
+            <select id="select-appear-mover-dir" style="width:100%; margin-top:4px;">
+              <option value="UP">↑ (奥へ移動)</option><option value="DOWN">↓ (手前へ移動)</option>
+              <option value="LEFT">← (左へ移動)</option><option value="RIGHT">→ (右へ移動)</option>
+              <option value="Y_UP">▲ (上へ上昇)</option><option value="Y_DOWN">▼ (下へ下降)</option>
+            </select>
+          </label>
+          <label>往復距離: <input type="number" id="input-appear-mover-dist" min="1" max="30" value="${mCfg.dist || 3}" style="width: 80px;"></label>
+          <label>速度 (1〜100):
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="range" id="input-appear-mover-speed" min="1" max="100" value="${scale}" style="flex:1;">
+              <span id="input-appear-mover-speed-val" style="width:40px; text-align:right;">${scale}</span>
+            </div>
+          </label>
+        `;
+        document.getElementById('select-appear-mover-dir').value = mCfg.dir || 'RIGHT';
+        const rng = document.getElementById('input-appear-mover-speed');
+        const rngVal = document.getElementById('input-appear-mover-speed-val');
+        rng.oninput = (e) => { rngVal.textContent = e.target.value; };
       }
     }
     selectAppearShape.onchange = renderAppearExtraOptions;
@@ -2748,6 +2774,12 @@
           b.gimmickConfig.cpIndex = parseInt(document.getElementById('input-appear-cp').value, 10) || 1;
         } else if (b.gimmickConfig.shape === 9) {
           b.gimmickConfig.warpLetter = document.getElementById('select-appear-warp').value;
+        } else if (b.gimmickConfig.shape === 4 || b.gimmickConfig.shape === 14) {
+          b.gimmickConfig.moverConfig = {
+            dir: document.getElementById('select-appear-mover-dir').value,
+            dist: parseInt(document.getElementById('input-appear-mover-dist').value, 10) || 3,
+            speed: speedScaleToVal(document.getElementById('input-appear-mover-speed').value)
+          };
         }
 
         const [x, y, z] = editingAppearKey.split(',').map(Number);
@@ -2926,7 +2958,7 @@
       if (selectedPalette === 99 && grabbedBlockData && dragPreviewMesh) {
         const tile = getRaycastGridTile(e);
         if (tile) {
-          const isSolid = (grabbedBlockData.type === 5 || grabbedBlockData.type === 14 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig?.shape === 5));
+          const isSolid = (grabbedBlockData.type === 5 || grabbedBlockData.type === 14 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig && (grabbedBlockData.gimmickConfig.shape === 5 || grabbedBlockData.gimmickConfig.shape === 14)));
           dragPreviewMesh.position.set(tile.tx, currentLayer + (isSolid ? 0.7 : 0.1), tile.tz);
           dragPreviewMesh.visible = true;
         } else { dragPreviewMesh.visible = false; }
@@ -3041,7 +3073,7 @@
           grabbedBlockData = JSON.parse(JSON.stringify(editorBlocks.get(key)));
           const origMesh = editorMeshMap.get(key);
           if (origMesh) origMesh.visible = false;
-          const isSolid = (grabbedBlockData.type === 5 || grabbedBlockData.type === 14 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig?.shape === 5));
+          const isSolid = (grabbedBlockData.type === 5 || grabbedBlockData.type === 14 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig && (grabbedBlockData.gimmickConfig.shape === 5 || grabbedBlockData.gimmickConfig.shape === 14)));
           const geo = isSolid ? fullBlockGeo : thinTileGeo;
           const mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, wireframe: true });
           dragPreviewMesh = new THREE.Mesh(geo, mat);
@@ -3197,7 +3229,8 @@
       activeGimmicks = [];
 
       stage.blocks.forEach(b => {
-        const isSolid = (b.type === 5 || (b.type === 13 && b.gimmickConfig?.shape === 5));
+        const isAppearMover = (b.type === 13 && b.gimmickConfig && (b.gimmickConfig.shape === 4 || b.gimmickConfig.shape === 14));
+        const isSolid = (b.type === 5 || (b.type === 13 && b.gimmickConfig && (b.gimmickConfig.shape === 5 || b.gimmickConfig.shape === 14)));
         let geo = isSolid ? fullBlockGeo : thinTileGeo;
         let m = matFloor;
 
@@ -3213,6 +3246,8 @@
           const cfg = b.gimmickConfig;
           if (cfg.shape === 6) m = createCheckpointMaterials(cfg.cpIndex || 1, cfg.showLabel);
           else if (cfg.shape === 9) m = createWarpMaterials(cfg.warpLetter || 'A', cfg.showLabel);
+          else if (cfg.shape === 4) m = createLabeledMaterial(`🚀${cfg.group}`, cfg.showLabel, '#059669');
+          else if (cfg.shape === 14) m = createLabeledMaterial(`🧱${cfg.group}`, cfg.showLabel, '#047857');
           else m = createLabeledMaterial(cfg.group, cfg.showLabel, '#059669');
         }
 
@@ -3229,8 +3264,33 @@
 
         if (b.type === 7) {
           activeFallingFloors.push({ x: b.x, y: b.y, z: b.z, mesh, state: 'IDLE', timer: 0, fallVelocity: 0, initialY: b.y - 0.1 });
-        } else if (b.type === 10 || b.type === 13) {
+        } else if (b.type === 10) {
           activeGimmicks.push({ type: b.type, x: b.x, y: b.y, z: b.z, config: b.gimmickConfig, mesh: mesh });
+        } else if (b.type === 13) {
+          activeGimmicks.push({ type: b.type, x: b.x, y: b.y, z: b.z, config: b.gimmickConfig, mesh: mesh });
+
+          // 出現ブロックが動く床/動く直方体の場合、moverとしても登録
+          if (isAppearMover) {
+            const mCfg = b.gimmickConfig.moverConfig || { dir: 'RIGHT', dist: 3, speed: 0.035 };
+            let vecX = 0, vecY = 0, vecZ = 0;
+            if (mCfg.dir === 'UP') vecZ = -1;
+            if (mCfg.dir === 'DOWN') vecZ = 1;
+            if (mCfg.dir === 'LEFT') vecX = -1;
+            if (mCfg.dir === 'RIGHT') vecX = 1;
+            if (mCfg.dir === 'Y_UP') vecY = 1;
+            if (mCfg.dir === 'Y_DOWN') vecY = -1;
+
+            activeMovers.push({
+              isPathMover: false,
+              isSolid: (b.gimmickConfig.shape === 14),
+              isAppearMover: true,
+              appearGroup: b.gimmickConfig.group,
+              originX: b.x, originY: b.y, originZ: b.z,
+              vecX, vecY, vecZ, dist: mCfg.dist || 3, speed: mCfg.speed || 0.035,
+              mesh: mesh, currentOffset: 0, direction: 1,
+              stepX: 0, stepY: 0, stepZ: 0
+            });
+          }
         }
 
         if (b.blastConfig) {
@@ -3339,7 +3399,7 @@
       const isStaticSolid = activeStage.blocks.some(b => {
         if (b.x === x && b.z === z && b.y === yLevel) {
           if (b.type === 5) return true;
-          if (b.type === 13 && b.gimmickConfig?.shape === 5 && switchStates[b.gimmickConfig.group]) return true;
+          if (b.type === 13 && (b.gimmickConfig?.shape === 5 || b.gimmickConfig?.shape === 14) && switchStates[b.gimmickConfig.group]) return true;
         }
         return false;
       });
@@ -3347,6 +3407,7 @@
 
       const isDynamicSolid = activeMovers.some(m => {
         if (m.isSolid) {
+          if (m.isAppearMover && !switchStates[m.appearGroup]) return false;
           const dx = Math.abs(m.mesh.position.x - x);
           const dz = Math.abs(m.mesh.position.z - z);
           const dy = Math.abs((m.mesh.position.y - 0.5) - yLevel);
@@ -3367,14 +3428,17 @@
           }
           if (b.type === 13) {
             if (!switchStates[b.gimmickConfig.group]) return;
+            // 出現する動く床/動く直方体は activeMovers 側で判定するため除外
+            if (b.gimmickConfig.shape === 4 || b.gimmickConfig.shape === 14) return;
           }
 
-          const isSolid = (b.type === 5 || (b.type === 13 && b.gimmickConfig?.shape === 5));
+          const isSolid = (b.type === 5 || (b.type === 13 && (b.gimmickConfig?.shape === 5 || b.gimmickConfig?.shape === 14)));
           surfaces.push({ type: b.type, mover: null, surfaceY: isSolid ? b.y + 1 : b.y, blockRef: b });
         }
       });
 
       activeMovers.forEach(m => {
+        if (m.isAppearMover && !switchStates[m.appearGroup]) return;
         const dx = Math.abs(m.mesh.position.x - x);
         const dz = Math.abs(m.mesh.position.z - z);
         if (dx <= 0.85 && dz <= 0.85) {
@@ -3721,6 +3785,12 @@
               else if (m.gimmickConfig.mode === 'STOP_ON') allowMove = !isSwON;
             }
 
+            // 出現する動く床/動く直方体の稼働制御
+            if (m.isAppearMover) {
+              const isAppearON = switchStates[m.appearGroup] || false;
+              allowMove = isAppearON;
+            }
+
             if (allowMove) {
               if (m.isPathMover) {
                 if (m.waypoints && m.waypoints.length > 1) {
@@ -3764,23 +3834,25 @@
               }
             }
 
-            // 乗車判定
-            const moverSurfaceY = m.isSolid ? (m.mesh.position.y + 0.5) : (m.mesh.position.y + 0.1);
-            const dx = Math.abs(m.mesh.position.x - cubePos.x);
-            const dz = Math.abs(m.mesh.position.z - cubePos.z);
-            const dy = moverSurfaceY - cubePos.y;
+            // 乗車判定 (出現床の場合は実体化時のみ)
+            if (!m.isAppearMover || switchStates[m.appearGroup]) {
+              const moverSurfaceY = m.isSolid ? (m.mesh.position.y + 0.5) : (m.mesh.position.y + 0.1);
+              const dx = Math.abs(m.mesh.position.x - cubePos.x);
+              const dz = Math.abs(m.mesh.position.z - cubePos.z);
+              const dy = moverSurfaceY - cubePos.y;
 
-            if (dx <= 0.85 && dz <= 0.85) {
-              if (isFallingDown && dy <= 0.3 && dy >= -0.85) {
-                isFallingDown = false;
-                fallVelocity = 0;
-                cubePos.y = moverSurfaceY;
-                pivot.position.y = cubePos.y;
-              }
-              if (!isRolling && !isFallingDown && Math.abs(dy) <= 0.75) {
-                cubePos.x += stepX; cubePos.y += stepY; cubePos.z += stepZ;
-                pivot.position.x = cubePos.x; pivot.position.y = cubePos.y; pivot.position.z = cubePos.z;
-                syncMyVersusPosition();
+              if (dx <= 0.85 && dz <= 0.85) {
+                if (isFallingDown && dy <= 0.3 && dy >= -0.85) {
+                  isFallingDown = false;
+                  fallVelocity = 0;
+                  cubePos.y = moverSurfaceY;
+                  pivot.position.y = cubePos.y;
+                }
+                if (!isRolling && !isFallingDown && Math.abs(dy) <= 0.75) {
+                  cubePos.x += stepX; cubePos.y += stepY; cubePos.z += stepZ;
+                  pivot.position.x = cubePos.x; pivot.position.y = cubePos.y; pivot.position.z = cubePos.z;
+                  syncMyVersusPosition();
+                }
               }
             }
           });
