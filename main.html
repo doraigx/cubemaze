@@ -157,6 +157,7 @@
     .p-start { background: #06b6d4; color: #000; }
     .p-mover { background: #a855f7; color: #fff; }
     .p-path-mover { background: #6366f1; color: #fff; }
+    .p-warp { background: #14b8a6; color: #fff; }
     .p-checkpoint { background: #ec4899; color: #fff; }
     .p-fallfloor { background: #f97316; color: #fff; }
 
@@ -349,7 +350,6 @@
       border: 1px solid #fff;
     }
 
-    /* 10秒カウントダウン用オーバーレイ */
     #vs-countdown-overlay {
       position: absolute;
       top: 0;
@@ -497,7 +497,7 @@
 
   <!-- ステージクリア履歴モーダル -->
   <div id="modal-stage-history" class="modal-dialog hidden" style="min-width: 360px;">
-    <h3 style="margin: 0;" id="stage-history-title">ステージクリア履歴</h3>
+    <h3 style="margin: 0;" id="stage-history-title">ステージクリア履歴 (ランキング)</h3>
     <div id="stage-history-container" class="list-container" style="max-height: 260px;">
       <div style="color:#64748b; font-size:12px; text-align:center;">クリア履歴を読み込み中...</div>
     </div>
@@ -637,6 +637,7 @@
       <button class="palette-btn p-full" data-type="5">直方体</button>
       <button class="palette-btn p-mover" data-type="4">動く床</button>
       <button class="palette-btn p-path-mover" data-type="8">動く床(ルート)</button>
+      <button class="palette-btn p-warp" data-type="9">ワープ床</button>
       <button class="palette-btn p-checkpoint" data-type="6">セーブ</button>
       <button class="palette-btn p-fallfloor" data-type="7">落下床</button>
       <button class="palette-btn p-start" data-type="3">スタート</button>
@@ -649,8 +650,8 @@
 
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
-        左ドラッグ: 配置 / 削除 | 「動く床(ルート)」クリックでグリッド直接描画<br>
-        「セーブ」「動く床」クリックで設定変更 / 右ドラッグ: 移動 / ホイール回転: 視点回転
+        左ドラッグ: 配置 / 削除 | 「動く床」「ルート床」右クリックで設定編集（速度1-100等）<br>
+        「ワープ床」配置でA-Zワープ設定 | 右ドラッグ: 移動 / ホイール回転: 視点回転
       </div>
       <div class="editor-bar">
         <span id="route-editing-status" style="font-size:12px; font-weight:bold; color:#facc15; display:none;">✍️ ルート描画中 (グリッドをクリックで経由地追加)</span>
@@ -678,7 +679,7 @@
     </div>
   </div>
 
-  <!-- 動く床設定ポップアップ -->
+  <!-- 動く床設定ポップアップ (速度1〜100、高さ調整等対応) -->
   <div id="editor-modal" class="modal-dialog hidden">
     <h3 style="margin: 0;">動く床の設定</h3>
     <label>進行方向:
@@ -692,21 +693,13 @@
       </select>
     </label>
     <label>往復距離:
-      <select id="modal-dist">
-        <option value="1">1マス</option>
-        <option value="2">2マス</option>
-        <option value="3" selected>3マス</option>
-        <option value="4">4マス</option>
-        <option value="5">5マス</option>
-        <option value="6">6マス</option>
-      </select>
+      <input type="number" id="modal-dist-num" min="1" max="30" value="3" style="width: 80px;">
     </label>
-    <label>速度:
-      <select id="modal-speed">
-        <option value="0.02">遅い</option>
-        <option value="0.035" selected>普通</option>
-        <option value="0.06">速い</option>
-      </select>
+    <label>速度 (1〜100):
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="range" id="modal-speed-range" min="1" max="100" value="25" style="flex:1;">
+        <span id="modal-speed-val" style="width:40px; text-align:right;">25</span>
+      </div>
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
       <button id="modal-save" style="background: #0284c7;">決定</button>
@@ -714,30 +707,47 @@
     </div>
   </div>
 
-  <!-- ルート移動床設定モーダル -->
-  <div id="modal-path-mover" class="modal-dialog hidden" style="min-width: 360px;">
-    <h3 style="margin: 0;">動く床（ルート指定）の設定</h3>
+  <!-- ルート移動床設定モーダル (順番入替・稼働領域追加・速度1〜100対応) -->
+  <div id="modal-path-mover" class="modal-dialog hidden" style="min-width: 380px;">
+    <h3 style="margin: 0;">動く床（ルート指定）の詳細設定</h3>
     <div style="font-size: 12px; color: #94a3b8;">
-      エディター上で直接グリッドをクリックして経由地番号を追加できます。<br>
+      エディター上で直接グリッドをクリックして経由地を追加できます。<br>
       番号順（① → ② → ③...）に巡回移動します。
     </div>
-    <div id="path-steps-list" style="display: flex; flex-wrap: wrap; gap: 6px; background: #0f172a; padding: 10px; border-radius: 6px; min-height: 40px;">
+    <div id="path-steps-list" style="display: flex; flex-direction: column; gap: 6px; background: #0f172a; padding: 10px; border-radius: 6px; max-height: 160px; overflow-y: auto;">
     </div>
     <div style="display: flex; gap: 6px; flex-wrap: wrap;">
       <button id="btn-draw-grid-route" style="background:#0284c7; padding: 4px 8px; font-size: 12px;">✍️ グリッド直接描き</button>
-      <button id="btn-pop-step" style="background:#dc2626; padding: 4px 8px; font-size: 12px;">1つ戻す</button>
+      <button id="btn-pop-step" style="background:#dc2626; padding: 4px 8px; font-size: 12px;">末尾削除</button>
       <button id="btn-clear-path" style="background:#475569; padding: 4px 8px; font-size: 12px;">全クリア</button>
     </div>
-    <label style="font-size: 13px;">移動速度:
-      <select id="modal-path-speed">
-        <option value="0.02">遅い</option>
-        <option value="0.035" selected>普通</option>
-        <option value="0.06">速い</option>
-      </select>
+    <label style="font-size: 13px;">移動速度 (1〜100):
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="range" id="modal-path-speed-range" min="1" max="100" value="25" style="flex:1;">
+        <span id="modal-path-speed-val" style="width:40px; text-align:right;">25</span>
+      </div>
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
       <button id="modal-path-save" style="background: #0284c7;">決定</button>
       <button id="modal-path-cancel">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ワープ床設定モーダル (A〜Z) -->
+  <div id="modal-warp" class="modal-dialog hidden" style="min-width: 300px;">
+    <h3 style="margin: 0;">ワープ床の設定</h3>
+    <div style="font-size: 12px; color: #94a3b8;">
+      同じ文字（例: AとA）同士が双方向でワープします。<br>各文字はステージ内に最大2マスまでです。
+    </div>
+    <label>ワープ文字:
+      <select id="select-warp-letter" style="width: 100px; font-size: 1.1rem; text-align:center;">
+        <!-- A〜ZをJSで生成 -->
+      </select>
+    </label>
+    <div id="warp-pair-status" style="font-size: 11px; color: #38bdf8;"></div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+      <button id="btn-save-warp" style="background: #0284c7;">決定</button>
+      <button id="btn-cancel-warp">閉じる</button>
     </div>
   </div>
 
@@ -784,7 +794,7 @@
     </div>
   </div>
 
-  <!-- BGM ピッカー -->
+  <!-- BGM ピッカー (音量1〜100%に拡張) -->
   <div id="modal-bgm-picker" class="modal-dialog hidden">
     <h3 style="margin: 0; font-size: 1.1rem;">BGM 選択</h3>
     <div class="list-container">
@@ -810,8 +820,9 @@
       </div>
     </div>
     <label style="font-size:12px; display:flex; align-items:center; gap:8px;">
-      音量:
-      <input type="range" id="bgm-volume" min="0" max="1" step="0.05" value="0.5" style="flex:1;">
+      音量 (1%〜100%):
+      <input type="range" id="bgm-volume" min="0.01" max="1.0" step="0.01" value="0.5" style="flex:1;">
+      <span id="bgm-volume-val" style="width:40px; text-align:right;">50%</span>
     </label>
     <button id="btn-close-bgm" style="align-self: flex-end; padding:4px 12px; font-size:12px;">閉じる</button>
   </div>
@@ -833,7 +844,20 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
-    window.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; }, { passive: false });
+    // A〜Z 26色のカラーパレット生成（ワープ床用）
+    const WARP_COLORS = [
+      '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+      '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+      '#f43f5e', '#fb7185', '#fda4af', '#fbbf24', '#a3e635', '#34d399', '#38bdf8', '#818cf8',
+      '#c084fc', '#e879f9'
+    ];
+
+    window.addEventListener('contextmenu', (e) => {
+      // エディタ内の床クリック時のみカスタムコンテキストメニュー処理を行うためデフォルト抑止
+      e.preventDefault();
+      return false;
+    }, { passive: false });
+
     window.addEventListener('dragstart', (e) => { e.preventDefault(); });
     window.addEventListener('copy', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
     window.addEventListener('cut', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
@@ -963,7 +987,6 @@
       heartbeatTimer = setInterval(sendBeat, 30000);
     }
 
-    // 作者のフレンドIDを確実に解決・補完する関数
     async function getAuthorFriendId(authorUid, fallbackFriendId) {
       if (fallbackFriendId && fallbackFriendId !== '公開' && fallbackFriendId !== 'なし') {
         return fallbackFriendId;
@@ -978,7 +1001,7 @@
           return userDoc.data().friendId;
         }
       } catch (e) {
-        console.warn("製作者フレンドID取得失敗:", e);
+        return fallbackFriendId || '--------';
       }
       return '--------';
     }
@@ -990,10 +1013,15 @@
     const btnBgmTrigger = document.getElementById('btn-bgm-trigger');
     const modalBgmPicker = document.getElementById('modal-bgm-picker');
     const bgmVolume = document.getElementById('bgm-volume');
+    const bgmVolumeVal = document.getElementById('bgm-volume-val');
 
     btnBgmTrigger.onclick = () => modalBgmPicker.classList.toggle('hidden');
     document.getElementById('btn-close-bgm').onclick = () => modalBgmPicker.classList.add('hidden');
-    bgmVolume.oninput = (e) => { currentAudio.volume = parseFloat(e.target.value); };
+    bgmVolume.oninput = (e) => {
+      const vol = parseFloat(e.target.value);
+      currentAudio.volume = vol;
+      bgmVolumeVal.textContent = `${Math.round(vol * 100)}%`;
+    };
 
     function playBGM(src, title) {
       currentAudio.src = src;
@@ -1118,7 +1146,7 @@
       }
     }
 
-    // ステージクリア履歴モーダル
+    // ステージクリア履歴（ベストタイムのみ・ユーザー重複排除ランキング）
     const modalStageHistory = document.getElementById('modal-stage-history');
     const stageHistoryTitle = document.getElementById('stage-history-title');
     const stageHistoryContainer = document.getElementById('stage-history-container');
@@ -1126,7 +1154,7 @@
 
     async function openStageHistoryModal(stageId, stageName) {
       modalStageHistory.classList.remove('hidden');
-      stageHistoryTitle.textContent = `「${stageName}」クリア履歴`;
+      stageHistoryTitle.textContent = `「${stageName}」ランキング`;
       stageHistoryContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">クリア履歴を読み込み中...</div>';
 
       if (!db) {
@@ -1136,23 +1164,37 @@
 
       try {
         const snap = await db.collection("stages").doc(stageId).collection("clear_records")
-          .orderBy("time", "asc").limit(30).get();
+          .orderBy("time", "asc").limit(100).get();
 
         if (snap.empty) {
           stageHistoryContainer.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center;">まだクリアしたプレイヤーはいません</div>';
           return;
         }
 
-        stageHistoryContainer.innerHTML = '';
-        snap.docs.forEach((doc, idx) => {
+        // ユーザーごとのベストタイムのみを抽出（重複排除）
+        const userBestMap = new Map();
+        snap.docs.forEach(doc => {
           const rec = doc.data();
+          const userKey = rec.userId || rec.userFriendId || rec.userName;
+          if (!userBestMap.has(userKey)) {
+            userBestMap.set(userKey, rec);
+          }
+        });
+
+        const rankingList = Array.from(userBestMap.values()).sort((a, b) => a.time - b.time).slice(0, 30);
+
+        stageHistoryContainer.innerHTML = '';
+        rankingList.forEach((rec, idx) => {
           const item = document.createElement('div');
           item.className = 'list-item';
           const dtStr = rec.clearedAt ? new Date(rec.clearedAt.toDate()).toLocaleString() : '不明';
           item.innerHTML = `
             <div>
-              <strong style="color: ${idx === 0 ? '#facc15' : '#cbd5e1'}; font-size: 13px;">#${idx + 1} ${rec.userName}</strong><br>
-              <span style="font-size:10px; color:#94a3b8;">クリア日時: ${dtStr}</span>
+              <strong style="color: ${idx === 0 ? '#facc15' : (idx === 1 ? '#cbd5e1' : (idx === 2 ? '#b45309' : '#fff'))}; font-size: 13px;">
+                #${idx + 1} ${rec.userName}
+              </strong>
+              <span style="font-size:10px; color:#94a3b8; margin-left:4px;">(ID: ${rec.userFriendId || '----'})</span><br>
+              <span style="font-size:10px; color:#64748b;">達成日: ${dtStr}</span>
             </div>
             <div style="font-size:13px; font-weight:bold; color:#38bdf8;">
               ${formatTime(rec.time)}
@@ -1181,7 +1223,6 @@
     let currentChatFriendUid = null;
     let chatUnsub = null;
 
-    // 未読チャット管理
     const unreadChatFriends = new Set();
     let totalPendingRequests = 0;
 
@@ -1351,7 +1392,6 @@
       }
     }
 
-    // チャット未読バッジの監視
     function listenAllFriendChatUnread() {
       if (!currentUser || !db) return;
       db.collection("users").doc(currentUser.uid).collection("friends").get().then(snap => {
@@ -1680,7 +1720,11 @@
               </div>
               <button class="btn-do-invite-vs" style="padding:4px 8px; font-size:11px; background:#8b5cf6;">招待を送る</button>
             `;
-            item.querySelector('.btn-do-invite-vs').onclick = () => sendVersusInvite(f);
+            item.querySelector('.btn-do-invite-vs').onclick = () => {
+              if (confirm(`${f.name} に対戦招待を送信しますか？`)) {
+                sendVersusInvite(f);
+              }
+            };
             vsOnlineFriendsContainer.appendChild(item);
           }
         }
@@ -1696,7 +1740,6 @@
       modalVsInvite.classList.add('hidden');
       vsOpponentName = friend.name;
       vsOpponentId = friend.friendId;
-      alert(`${friend.name} に対戦招待を送信しました！相手が承認するまでお待ちください...`);
 
       const roomRef = await db.collection("versus_rooms").add({
         hostUid: currentUser.uid,
@@ -1715,6 +1758,7 @@
 
       vsRoomId = roomRef.id;
 
+      // 招待を即時に相手に通知
       await db.collection("users").doc(friend.uid).collection("versus_invites").doc(vsRoomId).set({
         roomId: vsRoomId,
         senderName: currentUsername,
@@ -1747,7 +1791,7 @@
       vsRoomId = invite.roomId;
 
       await currentIncomingInviteDoc.ref.delete();
-      // 招待を承認したら 10秒後にスタートするタイムスタンプを共有
+      // 招待を承認したら 10秒後にスタートする絶対時刻を同期
       const startTimestamp = Date.now() + 10000;
       await db.collection("versus_rooms").doc(vsRoomId).update({
         status: "COUNTDOWN",
@@ -1772,6 +1816,7 @@
       if (countdownInterval) clearInterval(countdownInterval);
 
       countdownInterval = setInterval(() => {
+        // 同一の絶対タイムスタンプから残り秒数を同期計算
         const remaining = Math.max(0, Math.ceil((startTime - Date.now()) / 1000));
         vsCountdownNumber.textContent = remaining;
 
@@ -1797,7 +1842,6 @@
           vsOpponentId = room.hostFriendId || '--------';
         }
 
-        // カウントダウン開始
         if (room.status === "COUNTDOWN" && !isVersusMatch && room.startTime) {
           start10sCountdown(room.startTime, room.stageData, isHost);
         }
@@ -1809,7 +1853,6 @@
             opponentMesh.position.set(oppPos.x, oppPos.y + 0.5, oppPos.z);
           }
 
-          // 不戦勝判定
           const oppLastActive = isHost ? room.guestLastActive : room.hostLastActive;
           if (room.forfeitUid && room.forfeitUid !== currentUser.uid) {
             handleVersusForfeitWin("相手が対戦から退出または2分以上無操作のため、あなたの不戦勝です！");
@@ -1826,10 +1869,10 @@
           if (oppTime && !opponentFinished) {
             opponentFinished = true;
             opponentClearTime = oppTime;
-            // 相手が先にゴールしたため即座に敗北終了
-            alert(`💥 相手(${formatTime(oppTime)})が先にゴールしました！ (YOU LOSE)`);
+            // 相手ゴールで即座に終了処理
             recordMatchHistory('LOSE', Math.round(playElapsedTime));
             endVersusMatch();
+            alert(`💥 相手(${formatTime(oppTime)})が先にゴールしました！ (YOU LOSE)`);
           }
         }
       }, err => console.warn("versus_rooms listener:", err.message));
@@ -2330,6 +2373,7 @@
       }
     };
 
+    // ネット投稿確認ポップアップ
     document.getElementById('btn-online-publish').onclick = async () => {
       if (!db || !auth) { alert("Firebaseが設定されていません。"); return; }
       if (!currentUser) { alert("ステージを投稿するにはGoogleログインが必要です。"); return; }
@@ -2337,6 +2381,10 @@
       const data = exportStageData();
       if (!data.spawn) { alert("スタート地点(S)を配置してください。"); return; }
       if (!data.hasGoal) { alert("ゴール地点(G)を配置してください。"); return; }
+
+      if (!confirm(`ステージ「${data.name}」をネットに全体公開しますか？\n（投稿後は誰でもプレイ可能になります）`)) {
+        return;
+      }
 
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       let stageId = '';
@@ -2431,6 +2479,25 @@
       return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
     }
 
+    // ワープ床用マテリアル（A〜Z対応・英字描画）
+    function createWarpMaterials(letter = 'A') {
+      const charCode = letter.charCodeAt(0) - 65;
+      const hexColor = WARP_COLORS[Math.max(0, Math.min(25, charCode))] || '#14b8a6';
+
+      const cv = document.createElement('canvas');
+      cv.width = 128; cv.height = 128;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = hexColor; ctx.fillRect(0, 0, 128, 128);
+      ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(4, 4, 120, 120);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 68px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(letter, 64, 64);
+
+      const tex = new THREE.CanvasTexture(cv);
+      const topMat = new THREE.MeshLambertMaterial({ map: tex });
+      const sideMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(hexColor) });
+      return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
+    }
+
     function createWaypointMarkerMaterial(number) {
       const cv = document.createElement('canvas');
       cv.width = 128; cv.height = 128;
@@ -2483,6 +2550,16 @@
     let editorMeshMap = new Map();
     let selectedPalette = 1;
 
+    // ワープ設定モーダル用初期化
+    const selectWarpLetter = document.getElementById('select-warp-letter');
+    for (let i = 0; i < 26; i++) {
+      const char = String.fromCharCode(65 + i);
+      const opt = document.createElement('option');
+      opt.value = char;
+      opt.textContent = char;
+      selectWarpLetter.appendChild(opt);
+    }
+
     // Undo / Redo スタック
     const undoStack = [];
     const redoStack = [];
@@ -2511,7 +2588,7 @@
 
       snapshot.forEach(item => {
         const [x, y, z] = item.key.split(',').map(Number);
-        setEditorTile(x, y, z, item.val.type, item.val.moverConfig, item.val.cpIndex, true, item.val.color, item.val.pathConfig);
+        setEditorTile(x, y, z, item.val.type, item.val.moverConfig, item.val.cpIndex, true, item.val.color, item.val.pathConfig, item.val.warpLetter);
       });
       rebuildPathVisuals();
       isHistoryOperating = false;
@@ -2731,7 +2808,17 @@
       });
     }
 
-    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null, skipAutoSave = false, blockColor = null, pathConfig = null) {
+    // 速度スケール変換（1〜100 -> 実数値 0.01〜0.40）
+    function speedScaleToVal(scale) {
+      const s = THREE.MathUtils.clamp(parseInt(scale, 10) || 25, 1, 100);
+      return 0.01 + (s - 1) * (0.39 / 99); // 100で超高速(0.40)
+    }
+    function speedValToScale(val) {
+      const v = THREE.MathUtils.clamp(parseFloat(val) || 0.035, 0.01, 0.40);
+      return Math.round(1 + ((v - 0.01) / 0.39) * 99);
+    }
+
+    function setEditorTile(x, y, z, type, moverConfig = null, cpIndex = null, skipAutoSave = false, blockColor = null, pathConfig = null, warpLetter = null) {
       const key = `${x},${y},${z}`;
 
       if (type === 3) {
@@ -2757,11 +2844,13 @@
 
         const color = (type === 1 || type === 5) ? (blockColor || inputBlockColor.value) : null;
         const pCfg = (type === 8) ? (pathConfig || { waypoints: [{ x, y, z }], speed: 0.035 }) : null;
+        const wLet = (type === 9) ? (warpLetter || 'A') : null;
 
         const data = {
           type,
           moverConfig: moverConfig || (type === 4 ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null),
           pathConfig: pCfg,
+          warpLetter: wLet,
           cpIndex: cNum,
           color: color
         };
@@ -2782,6 +2871,9 @@
         else if (type === 7) m = matFallFloor.clone();
         else if (type === 6) {
           m = createCheckpointMaterials(cNum);
+          isMultiMat = true;
+        } else if (type === 9) {
+          m = createWarpMaterials(wLet);
           isMultiMat = true;
         }
 
@@ -2868,7 +2960,7 @@
         } else if (val.type === 8) {
           movers.push({ x, y, z, isPathMover: true, ...val.pathConfig });
         } else {
-          blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex, color: val.color });
+          blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex, color: val.color, warpLetter: val.warpLetter });
         }
       });
 
@@ -2882,15 +2974,24 @@
       };
     }
 
+    // 動く床（通常往復）設定
     let editingMoverKey = null;
     const modal = document.getElementById('editor-modal');
+    const modalDistNum = document.getElementById('modal-dist-num');
+    const modalSpeedRange = document.getElementById('modal-speed-range');
+    const modalSpeedVal = document.getElementById('modal-speed-val');
+
+    modalSpeedRange.oninput = (e) => { modalSpeedVal.textContent = e.target.value; };
+
     function openMoverModal(key) {
       editingMoverKey = key;
       const b = editorBlocks.get(key);
       if (b && b.moverConfig) {
         document.getElementById('modal-dir').value = b.moverConfig.dir;
-        document.getElementById('modal-dist').value = b.moverConfig.dist;
-        document.getElementById('modal-speed').value = b.moverConfig.speed;
+        modalDistNum.value = b.moverConfig.dist || 3;
+        const scale = speedValToScale(b.moverConfig.speed);
+        modalSpeedRange.value = scale;
+        modalSpeedVal.textContent = scale;
         modal.classList.remove('hidden');
       }
     }
@@ -2899,18 +3000,23 @@
         pushEditorHistory();
         const b = editorBlocks.get(editingMoverKey);
         b.moverConfig.dir = document.getElementById('modal-dir').value;
-        b.moverConfig.dist = parseInt(document.getElementById('modal-dist').value, 10);
-        b.moverConfig.speed = parseFloat(document.getElementById('modal-speed').value);
+        b.moverConfig.dist = parseInt(modalDistNum.value, 10) || 3;
+        b.moverConfig.speed = speedScaleToVal(modalSpeedRange.value);
         triggerAutoSave();
       }
       modal.classList.add('hidden');
     };
     document.getElementById('modal-cancel').onclick = () => modal.classList.add('hidden');
 
+    // 動く床（ルート指定）設定
     let editingPathKey = null;
     let tempWaypoints = [];
     const modalPath = document.getElementById('modal-path-mover');
     const pathStepsList = document.getElementById('path-steps-list');
+    const modalPathSpeedRange = document.getElementById('modal-path-speed-range');
+    const modalPathSpeedVal = document.getElementById('modal-path-speed-val');
+
+    modalPathSpeedRange.oninput = (e) => { modalPathSpeedVal.textContent = e.target.value; };
 
     function renderPathStepsUI() {
       pathStepsList.innerHTML = '';
@@ -2919,10 +3025,51 @@
         return;
       }
       tempWaypoints.forEach((wp, idx) => {
-        const pill = document.createElement('div');
-        pill.className = 'route-step-pill';
-        pill.textContent = `${idx === 0 ? '始点' : `経由地 ${idx}`}: (${wp.x}, ${wp.y}, ${wp.z})`;
-        pathStepsList.appendChild(pill);
+        const item = document.createElement('div');
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+        item.style.background = '#1e293b';
+        item.style.padding = '4px 8px';
+        item.style.borderRadius = '4px';
+        item.style.fontSize = '12px';
+
+        item.innerHTML = `
+          <span><strong>${idx === 0 ? '始点' : `地点 ${idx}`}</strong>: (${wp.x}, ${wp.y}, ${wp.z})</span>
+          <div style="display:flex; gap:4px;">
+            ${idx > 1 ? `<button class="btn-step-up" style="padding:2px 6px; font-size:10px;">▲</button>` : ''}
+            ${idx > 0 && idx < tempWaypoints.length - 1 ? `<button class="btn-step-down" style="padding:2px 6px; font-size:10px;">▼</button>` : ''}
+            ${idx > 0 ? `<button class="btn-step-del" style="padding:2px 6px; font-size:10px; background:#dc2626;">×</button>` : ''}
+          </div>
+        `;
+
+        if (idx > 1) {
+          item.querySelector('.btn-step-up').onclick = () => {
+            const tmp = tempWaypoints[idx];
+            tempWaypoints[idx] = tempWaypoints[idx - 1];
+            tempWaypoints[idx - 1] = tmp;
+            renderPathStepsUI();
+            rebuildPathVisuals();
+          };
+        }
+        if (idx > 0 && idx < tempWaypoints.length - 1) {
+          item.querySelector('.btn-step-down').onclick = () => {
+            const tmp = tempWaypoints[idx];
+            tempWaypoints[idx] = tempWaypoints[idx + 1];
+            tempWaypoints[idx + 1] = tmp;
+            renderPathStepsUI();
+            rebuildPathVisuals();
+          };
+        }
+        if (idx > 0) {
+          item.querySelector('.btn-step-del').onclick = () => {
+            tempWaypoints.splice(idx, 1);
+            renderPathStepsUI();
+            rebuildPathVisuals();
+          };
+        }
+
+        pathStepsList.appendChild(item);
       });
     }
 
@@ -2931,7 +3078,9 @@
       const b = editorBlocks.get(key);
       if (b && b.pathConfig) {
         tempWaypoints = [...(b.pathConfig.waypoints || [])];
-        document.getElementById('modal-path-speed').value = b.pathConfig.speed || 0.035;
+        const scale = speedValToScale(b.pathConfig.speed);
+        modalPathSpeedRange.value = scale;
+        modalPathSpeedVal.textContent = scale;
         renderPathStepsUI();
         modalPath.classList.remove('hidden');
       }
@@ -2967,7 +3116,7 @@
         pushEditorHistory();
         const b = editorBlocks.get(editingPathKey);
         b.pathConfig.waypoints = [...tempWaypoints];
-        b.pathConfig.speed = parseFloat(document.getElementById('modal-path-speed').value);
+        b.pathConfig.speed = speedScaleToVal(modalPathSpeedRange.value);
         rebuildPathVisuals();
         triggerAutoSave();
       }
@@ -2975,6 +3124,54 @@
     };
     document.getElementById('modal-path-cancel').onclick = () => modalPath.classList.add('hidden');
 
+    // ワープ床設定モーダル
+    let editingWarpKey = null;
+    const modalWarp = document.getElementById('modal-warp');
+    const warpPairStatus = document.getElementById('warp-pair-status');
+
+    function openWarpModal(key) {
+      editingWarpKey = key;
+      const b = editorBlocks.get(key);
+      if (b) {
+        selectWarpLetter.value = b.warpLetter || 'A';
+        updateWarpLetterCountDisplay();
+        modalWarp.classList.remove('hidden');
+      }
+    }
+
+    function updateWarpLetterCountDisplay() {
+      const letter = selectWarpLetter.value;
+      let count = 0;
+      editorBlocks.forEach((val, k) => {
+        if (val.type === 9 && val.warpLetter === letter && k !== editingWarpKey) count++;
+      });
+      if (count === 0) warpPairStatus.textContent = `文字「${letter}」は現在 0 マス配置されています (この後もう1マス置くとワープが完成します)`;
+      else if (count === 1) warpPairStatus.textContent = `文字「${letter}」の相方がすでに 1 マスあります！ (2マス揃ってワープ可能になります)`;
+      else warpPairStatus.textContent = `⚠️ 文字「${letter}」は既に2マス配置されています。重複できません。`;
+    }
+
+    selectWarpLetter.onchange = updateWarpLetterCountDisplay;
+
+    document.getElementById('btn-save-warp').onclick = () => {
+      if (editingWarpKey && editorBlocks.has(editingWarpKey)) {
+        const letter = selectWarpLetter.value;
+        let count = 0;
+        editorBlocks.forEach((val, k) => {
+          if (val.type === 9 && val.warpLetter === letter && k !== editingWarpKey) count++;
+        });
+        if (count >= 2) {
+          alert(`文字「${letter}」のワープ床は既に2マス置かれています。別の文字を選択してください。`);
+          return;
+        }
+        pushEditorHistory();
+        const [x, y, z] = editingWarpKey.split(',').map(Number);
+        setEditorTile(x, y, z, 9, null, null, false, null, null, letter);
+      }
+      modalWarp.classList.add('hidden');
+    };
+    document.getElementById('btn-cancel-warp').onclick = () => modalWarp.classList.add('hidden');
+
+    // セーブ地点設定
     let editingCpKey = null;
     const modalCp = document.getElementById('modal-checkpoint');
     const inputCpNumber = document.getElementById('cp-number-input');
@@ -3066,7 +3263,11 @@
         isMiddleDown = true;
       } else if (e.button === 2) {
         if (e.shiftKey) isMiddleDown = true;
-        else isRightDown = true;
+        else {
+          // 右クリックで詳細編集モーダルを開く
+          handleEditorRightClick(e);
+          isRightDown = true;
+        }
       }
       prevMouse = { x: e.clientX, y: e.clientY };
     });
@@ -3114,51 +3315,76 @@
       }
     }, { passive: false });
 
-    function handleEditorClick(e) {
+    function getRaycastGridTile(e) {
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
-      if (!raycastPlane) return;
+      if (!raycastPlane) return null;
       const intersects = raycaster.intersectObject(raycastPlane);
       if (intersects.length > 0) {
         const pt = intersects[0].point;
         const tx = Math.floor(pt.x + 0.5);
         const tz = Math.floor(pt.z + 0.5);
         if (tx >= 0 && tx < gridSize && tz >= 0 && tz < gridSize) {
-          const key = `${tx},${currentLayer},${tz}`;
+          return { tx, tz, key: `${tx},${currentLayer},${tz}` };
+        }
+      }
+      return null;
+    }
 
-          if (isDrawingRouteMode) {
-            if (activeRouteEditKey && editorBlocks.has(activeRouteEditKey)) {
-              pushEditorHistory();
-              const b = editorBlocks.get(activeRouteEditKey);
-              if (!b.pathConfig.waypoints) {
-                const [sx, sy, sz] = activeRouteEditKey.split(',').map(Number);
-                b.pathConfig.waypoints = [{ x: sx, y: sy, z: sz }];
-              }
-              const wps = b.pathConfig.waypoints;
-              const last = wps[wps.length - 1];
-              if (last.x !== tx || last.y !== currentLayer || last.z !== tz) {
-                wps.push({ x: tx, y: currentLayer, z: tz });
-                rebuildPathVisuals();
-                triggerAutoSave();
-              }
-            }
-            return;
-          }
+    // 右クリックによるブロック詳細設定（動く床・ルート床・ワープ床）
+    function handleEditorRightClick(e) {
+      const tile = getRaycastGridTile(e);
+      if (!tile) return;
+      const key = tile.key;
+      if (editorBlocks.has(key)) {
+        const b = editorBlocks.get(key);
+        if (b.type === 4) openMoverModal(key);
+        else if (b.type === 8) openPathMoverModal(key);
+        else if (b.type === 9) openWarpModal(key);
+        else if (b.type === 6) openCpModal(key);
+      }
+    }
 
-          if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) {
-            openMoverModal(key);
-          } else if (selectedPalette === 8 && editorBlocks.has(key) && editorBlocks.get(key).type === 8) {
-            openPathMoverModal(key);
-          } else if (selectedPalette === 6 && editorBlocks.has(key) && editorBlocks.get(key).type === 6) {
-            openCpModal(key);
-          } else {
-            pushEditorHistory();
-            setEditorTile(tx, currentLayer, tz, selectedPalette, null, null, false, inputBlockColor.value);
-            if (selectedPalette === 8) {
-              enterRouteDrawingMode(key);
-            }
+    function handleEditorClick(e) {
+      const tile = getRaycastGridTile(e);
+      if (!tile) return;
+      const { tx, tz, key } = tile;
+
+      if (isDrawingRouteMode) {
+        if (activeRouteEditKey && editorBlocks.has(activeRouteEditKey)) {
+          pushEditorHistory();
+          const b = editorBlocks.get(activeRouteEditKey);
+          if (!b.pathConfig.waypoints) {
+            const [sx, sy, sz] = activeRouteEditKey.split(',').map(Number);
+            b.pathConfig.waypoints = [{ x: sx, y: sy, z: sz }];
           }
+          const wps = b.pathConfig.waypoints;
+          const last = wps[wps.length - 1];
+          if (last.x !== tx || last.y !== currentLayer || last.z !== tz) {
+            wps.push({ x: tx, y: currentLayer, z: tz });
+            rebuildPathVisuals();
+            triggerAutoSave();
+          }
+        }
+        return;
+      }
+
+      if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) {
+        openMoverModal(key);
+      } else if (selectedPalette === 8 && editorBlocks.has(key) && editorBlocks.get(key).type === 8) {
+        enterRouteDrawingMode(key);
+      } else if (selectedPalette === 9 && editorBlocks.has(key) && editorBlocks.get(key).type === 9) {
+        openWarpModal(key);
+      } else if (selectedPalette === 6 && editorBlocks.has(key) && editorBlocks.get(key).type === 6) {
+        openCpModal(key);
+      } else {
+        pushEditorHistory();
+        setEditorTile(tx, currentLayer, tz, selectedPalette, null, null, false, inputBlockColor.value);
+        if (selectedPalette === 8) {
+          enterRouteDrawingMode(key);
+        } else if (selectedPalette === 9) {
+          openWarpModal(key);
         }
       }
     }
@@ -3175,7 +3401,7 @@
       document.getElementById('select-grid-size').value = gridSize;
       buildEditorGrid();
 
-      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex, true, b.color));
+      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex, true, b.color, null, b.warpLetter));
       if (stage.movers) {
         stage.movers.forEach(m => {
           if (m.isPathMover) {
@@ -3249,6 +3475,7 @@
         else if (b.type === 3) m = matStart;
         else if (b.type === 7) m = matFallFloor.clone();
         else if (b.type === 6) m = createCheckpointMaterials(b.cpIndex || 1);
+        else if (b.type === 9) m = createWarpMaterials(b.warpLetter || 'A');
 
         const mesh = new THREE.Mesh(geo, m);
         const yOffset = (b.type === 5) ? 0.5 : -0.1;
@@ -3380,7 +3607,7 @@
 
     function getTopSurfaceAt(x, z, nearY) {
       const list = getAllSurfacesAt(x, z);
-      return list.find(s => Math.abs(s.surfaceY - nearY) <= 0.6) || list[0] || null;
+      return list.find(s => Math.abs(s.surfaceY - nearY) <= 0.85) || list[0] || null;
     }
 
     function findTargetSurface(curX, curZ, curY, tx, tz) {
@@ -3523,7 +3750,7 @@
       cubeMesh.position.set(currentX - pivotX, startY + 0.5 - pivotY, currentZ - pivotZ);
 
       const targetAngle = (Math.abs(dy) > 0.25) ? Math.PI : (Math.PI / 2);
-      const rollSpeed = 0.16; // 完全一定速度
+      const rollSpeed = 0.16;
       let currentAngle = 0;
       const axis = new THREE.Vector3(dz, 0, -dx).normalize();
 
@@ -3564,6 +3791,19 @@
 
           syncMyVersusPosition();
 
+          // ワープ床（Type 9）の相互ワープ判定
+          if (surface.type === 9 && surface.blockRef && surface.blockRef.warpLetter) {
+            const letter = surface.blockRef.warpLetter;
+            const targetPartner = activeStage.blocks.find(b => b.type === 9 && b.warpLetter === letter && !(b.x === tx && b.z === tz && b.y === Math.round(targetY)));
+            if (targetPartner) {
+              cubePos.x = targetPartner.x;
+              cubePos.y = targetPartner.y;
+              cubePos.z = targetPartner.z;
+              pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
+              syncMyVersusPosition();
+            }
+          }
+
           if (surface.type === 6) {
             currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
             const idx = (surface.blockRef && surface.blockRef.cpIndex) || 1;
@@ -3597,7 +3837,6 @@
             const currentBestStr = formatTime(getBestTime(activeStageKey));
             const clearTimeStr = formatTime(finalTimeMs);
 
-            // ステージ履歴へのクリア記録保存 (公開ステージの場合)
             if (activeStageMeta && activeStageMeta.id && db && !isTestPlay) {
               db.collection("stages").doc(activeStageMeta.id).collection("clear_records").add({
                 userId: currentUser ? currentUser.uid : "GUEST",
@@ -3696,24 +3935,16 @@
             }
           });
 
-          if (isFallingDown) {
-            fallVelocity += 0.03;
-            cubePos.y -= fallVelocity;
-            pivot.position.y = cubePos.y;
-            syncMyVersusPosition();
-
-            if (cubePos.y <= -10) respawnPlayer();
-          }
-
+          // 動く床の吸着・乗車安定化とスムーズな移動
           activeMovers.forEach(m => {
             let stepX = 0, stepY = 0, stepZ = 0;
 
             if (m.isPathMover) {
               if (m.waypoints && m.waypoints.length > 1) {
-                const currentWp = m.waypoints[m.currentIndex];
-                const targetWp = m.waypoints[m.targetIndex];
+                const fromWp = m.waypoints[m.currentIndex];
+                const toWp = m.waypoints[m.targetIndex];
 
-                const segDist = Math.hypot(targetWp.x - currentWp.x, targetWp.y - currentWp.y, targetWp.z - currentWp.z) || 1;
+                const segDist = Math.hypot(toWp.x - fromWp.x, toWp.y - fromWp.y, toWp.z - fromWp.z) || 1;
                 m.progress += m.speed / segDist;
 
                 if (m.progress >= 1.0) {
@@ -3730,12 +3961,12 @@
                   }
                 }
 
-                const fromWp = m.waypoints[m.currentIndex];
-                const toWp = m.waypoints[m.targetIndex];
+                const curFrom = m.waypoints[m.currentIndex];
+                const curTo = m.waypoints[m.targetIndex];
 
-                const interpX = fromWp.x + (toWp.x - fromWp.x) * m.progress;
-                const interpY = fromWp.y + (toWp.y - fromWp.y) * m.progress - 0.1;
-                const interpZ = fromWp.z + (toWp.z - fromWp.z) * m.progress;
+                const interpX = curFrom.x + (curTo.x - curFrom.x) * m.progress;
+                const interpY = curFrom.y + (curTo.y - curFrom.y) * m.progress - 0.1;
+                const interpZ = curFrom.z + (curTo.z - curFrom.z) * m.progress;
 
                 stepX = interpX - m.mesh.position.x;
                 stepY = interpY - m.mesh.position.y;
@@ -3761,13 +3992,22 @@
               }
             }
 
-            if (!isRolling && !isFallingDown) {
-              const pX = Math.abs(m.mesh.position.x - cubePos.x);
-              const pZ = Math.abs(m.mesh.position.z - cubePos.z);
-              const moverSurfaceY = m.mesh.position.y + 0.1;
-              const pY = Math.abs(moverSurfaceY - cubePos.y);
+            // 動く床の上に乗っているときの追従と落下防止
+            const moverSurfaceY = m.mesh.position.y + 0.1;
+            const dx = Math.abs(m.mesh.position.x - cubePos.x);
+            const dz = Math.abs(m.mesh.position.z - cubePos.z);
+            const dy = moverSurfaceY - cubePos.y;
 
-              if (pX <= 0.85 && pZ <= 0.85 && pY <= 0.75) {
+            if (dx <= 0.85 && dz <= 0.85) {
+              // 上から乗った・飛び乗った際の着地判定
+              if (isFallingDown && dy <= 0.3 && dy >= -0.85) {
+                isFallingDown = false;
+                fallVelocity = 0;
+                cubePos.y = moverSurfaceY;
+                pivot.position.y = cubePos.y;
+              }
+
+              if (!isRolling && !isFallingDown && Math.abs(dy) <= 0.75) {
                 cubePos.x += stepX;
                 cubePos.y += stepY;
                 cubePos.z += stepZ;
@@ -3778,6 +4018,15 @@
               }
             }
           });
+
+          if (isFallingDown) {
+            fallVelocity += 0.03;
+            cubePos.y -= fallVelocity;
+            pivot.position.y = cubePos.y;
+            syncMyVersusPosition();
+
+            if (cubePos.y <= -10) respawnPlayer();
+          }
 
           processInput();
         }
