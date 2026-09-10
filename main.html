@@ -29,6 +29,7 @@
     .p-goal { background: #eab308; color: #000; }
     .p-start { background: #06b6d4; color: #000; }
     .p-mover { background: #a855f7; color: #fff; }
+    .p-solid-mover { background: #7c3aed; color: #fff; border: 1px dashed #c4b5fd; }
     .p-path-mover { background: #6366f1; color: #fff; }
     .p-warp { background: #14b8a6; color: #fff; }
     .p-checkpoint { background: #ec4899; color: #fff; }
@@ -279,6 +280,7 @@
       <button class="palette-btn p-floor active" data-type="1">薄い床</button>
       <button class="palette-btn p-full" data-type="5">直方体</button>
       <button class="palette-btn p-mover" data-type="4">動く床</button>
+      <button class="palette-btn p-solid-mover" data-type="14">動く直方体</button>
       <button class="palette-btn p-path-mover" data-type="8">動く床(ルート)</button>
       <button class="palette-btn p-warp" data-type="9">ワープ床</button>
       <button class="palette-btn p-switch" data-type="10">スイッチ</button>
@@ -324,7 +326,7 @@
 
   <!-- 各種編集モーダル -->
   <div id="editor-modal" class="modal-dialog hidden">
-    <h3 style="margin: 0;">動く床の設定</h3>
+    <h3 style="margin: 0;" id="modal-mover-title">動く床の設定</h3>
     <label>進行方向:
       <select id="modal-dir">
         <option value="UP">↑ (奥へ移動)</option><option value="DOWN">↓ (手前へ移動)</option><option value="LEFT">← (左へ移動)</option><option value="RIGHT">→ (右へ移動)</option><option value="Y_UP">▲ (上へ上昇)</option><option value="Y_DOWN">▼ (下へ下降)</option>
@@ -1845,6 +1847,7 @@
     const matGoal = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
     const matStart = new THREE.MeshLambertMaterial({ color: 0x06b6d4 });
     const matMover = new THREE.MeshLambertMaterial({ color: 0xa855f7 });
+    const matSolidMover = new THREE.MeshLambertMaterial({ color: 0x7c3aed });
     const matPathMover = new THREE.MeshLambertMaterial({ color: 0x6366f1 });
     const matFallFloor = new THREE.MeshLambertMaterial({ color: 0xf97316 });
 
@@ -2254,7 +2257,7 @@
 
         const data = {
           type,
-          moverConfig: moverConfig || (type === 4 ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null),
+          moverConfig: moverConfig || ((type === 4 || type === 14) ? { dir: 'RIGHT', dist: 3, speed: 0.035 } : null),
           pathConfig: pCfg,
           warpLetter: wLet,
           gimmickConfig: gCfg,
@@ -2265,7 +2268,7 @@
 
         if (editorMeshMap.has(key)) editorGroup.remove(editorMeshMap.get(key));
 
-        let isSolid = (type === 5 || (type === 13 && gCfg && gCfg.shape === 5));
+        let isSolid = (type === 5 || type === 14 || (type === 13 && gCfg && gCfg.shape === 5));
         let geo = isSolid ? fullBlockGeo : thinTileGeo;
         let m = matFloor.clone();
         let isMultiMat = false;
@@ -2290,6 +2293,7 @@
         else if (type === 2) m = matGoal.clone();
         else if (type === 3) m = matStart.clone();
         else if (type === 4) m = matMover.clone();
+        else if (type === 14) m = matSolidMover.clone();
         else if (type === 8) m = matPathMover.clone();
         else if (type === 7) m = matFallFloor.clone();
         else if (type === 6) { m = createCheckpointMaterials(cNum, gCfg?.showLabel !== false); isMultiMat = true; }
@@ -2374,8 +2378,8 @@
         if (val.type === 3) spawn = { x, y, z };
         if (val.type === 2) hasGoal = true;
 
-        if (val.type === 4) {
-          movers.push({ x, y, z, ...val.moverConfig });
+        if (val.type === 4 || val.type === 14) {
+          movers.push({ x, y, z, type: val.type, isSolid: (val.type === 14), ...val.moverConfig });
         } else if (val.type === 8 || val.type === 12) {
           const mData = {
             x, y, z,
@@ -2406,7 +2410,7 @@
       };
     }
 
-    // 動く床（通常）設定
+    // 動く床・動く直方体設定
     let editingMoverKey = null;
     const modal = document.getElementById('editor-modal');
     const modalDistNum = document.getElementById('modal-dist-num');
@@ -2418,6 +2422,7 @@
       editingMoverKey = key;
       const b = editorBlocks.get(key);
       if (b && b.moverConfig) {
+        document.getElementById('modal-mover-title').textContent = (b.type === 14) ? "動く直方体の設定" : "動く床の設定";
         document.getElementById('modal-dir').value = b.moverConfig.dir;
         modalDistNum.value = b.moverConfig.dist || 3;
         const scale = speedValToScale(b.moverConfig.speed);
@@ -2702,13 +2707,13 @@
       const b = editorBlocks.get(editingAppearKey);
       const cfg = b?.gimmickConfig || {};
 
-      if (shape === 6) { // セーブ
+      if (shape === 6) {
         appearExtraOptions.innerHTML = `
           <label>セーブ番号:
             <input type="number" id="input-appear-cp" min="1" max="99" value="${cfg.cpIndex || 1}" style="width: 80px;">
           </label>
         `;
-      } else if (shape === 9) { // ワープ
+      } else if (shape === 9) {
         appearExtraOptions.innerHTML = `
           <label>ワープ文字:
             <select id="select-appear-warp" style="width: 100px; text-align:center;"></select>
@@ -2921,14 +2926,13 @@
       if (selectedPalette === 99 && grabbedBlockData && dragPreviewMesh) {
         const tile = getRaycastGridTile(e);
         if (tile) {
-          const isSolid = (grabbedBlockData.type === 5 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig?.shape === 5));
+          const isSolid = (grabbedBlockData.type === 5 || grabbedBlockData.type === 14 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig?.shape === 5));
           dragPreviewMesh.position.set(tile.tx, currentLayer + (isSolid ? 0.7 : 0.1), tile.tz);
           dragPreviewMesh.visible = true;
         } else { dragPreviewMesh.visible = false; }
         return;
       }
 
-      // ワープ床(Type 9)と吹き飛ばし(Type 11)はドラッグでの連続設置をブロック
       if (isLeftDown && !isDrawingRouteMode && selectedPalette !== 99 && selectedPalette !== 9 && selectedPalette !== 11 && !e.target.closest('#editor-ui-container, .modal-dialog')) {
         handleEditorClick(e, true);
       }
@@ -3015,7 +3019,7 @@
       const key = tile.key;
       if (editorBlocks.has(key)) {
         const b = editorBlocks.get(key);
-        if (b.type === 4) openMoverModal(key);
+        if (b.type === 4 || b.type === 14) openMoverModal(key);
         else if (b.type === 8) openPathMoverModal(key);
         else if (b.type === 9) openWarpModal(key);
         else if (b.type === 6) openCpModal(key);
@@ -3037,7 +3041,7 @@
           grabbedBlockData = JSON.parse(JSON.stringify(editorBlocks.get(key)));
           const origMesh = editorMeshMap.get(key);
           if (origMesh) origMesh.visible = false;
-          const isSolid = (grabbedBlockData.type === 5 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig?.shape === 5));
+          const isSolid = (grabbedBlockData.type === 5 || grabbedBlockData.type === 14 || (grabbedBlockData.type === 13 && grabbedBlockData.gimmickConfig?.shape === 5));
           const geo = isSolid ? fullBlockGeo : thinTileGeo;
           const mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, wireframe: true });
           dragPreviewMesh = new THREE.Mesh(geo, mat);
@@ -3077,7 +3081,7 @@
         return;
       }
 
-      if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) openMoverModal(key);
+      if ((selectedPalette === 4 || selectedPalette === 14) && editorBlocks.has(key) && (editorBlocks.get(key).type === 4 || editorBlocks.get(key).type === 14)) openMoverModal(key);
       else if (selectedPalette === 8 && editorBlocks.has(key) && editorBlocks.get(key).type === 8) enterRouteDrawingMode(key);
       else if (selectedPalette === 9 && editorBlocks.has(key) && editorBlocks.get(key).type === 9) openWarpModal(key);
       else if (selectedPalette === 10 && editorBlocks.has(key) && editorBlocks.get(key).type === 10) openSwitchModal(key);
@@ -3087,7 +3091,8 @@
       else {
         pushEditorHistory();
         setEditorTile(tx, currentLayer, tz, selectedPalette, null, null, false, inputBlockColor.value);
-        if (selectedPalette === 8) enterRouteDrawingMode(key);
+        if (selectedPalette === 4 || selectedPalette === 14) openMoverModal(key);
+        else if (selectedPalette === 8) enterRouteDrawingMode(key);
         else if (selectedPalette === 9) openWarpModal(key);
         else if (selectedPalette === 10) openSwitchModal(key);
         else if (selectedPalette === 12) openSwitchFloorModal(key);
@@ -3116,7 +3121,8 @@
           if (m.isPathMover) {
             setEditorTile(m.x, m.y, m.z, m.type || 8, null, null, true, null, { waypoints: m.waypoints || [{ x: m.x, y: m.y, z: m.z }], speed: m.speed, segmentSpeeds: m.segmentSpeeds }, null, m.gimmickConfig);
           } else {
-            setEditorTile(m.x, m.y, m.z, 4, { dir: m.dir, dist: m.dist, speed: m.speed }, null, true);
+            const mType = (m.type === 14 || m.isSolid) ? 14 : 4;
+            setEditorTile(m.x, m.y, m.z, mType, { dir: m.dir, dist: m.dist, speed: m.speed }, null, true);
           }
         });
       }
@@ -3171,6 +3177,19 @@
       }
     }
 
+    function updateBlastMeshVisual(gimmick, isON) {
+      if (!gimmick.parentMesh) return;
+      const dirIndexMap = { RIGHT: 0, LEFT: 1, DOWN: 4, UP: 5 };
+      const faceIdx = dirIndexMap[gimmick.config.dir];
+      if (faceIdx !== undefined && Array.isArray(gimmick.parentMesh.material)) {
+        if (isON) {
+          gimmick.parentMesh.material[faceIdx] = createBlastFaceMaterial(gimmick.config.dir, gimmick.config.group);
+        } else {
+          gimmick.parentMesh.material[faceIdx] = new THREE.MeshLambertMaterial({ color: gimmick.parentSolid.color || 0x475569 });
+        }
+      }
+    }
+
     function buildPlayStage(stage) {
       while (tilesGroup.children.length > 0) tilesGroup.remove(tilesGroup.children[0]);
       activeMovers = [];
@@ -3215,7 +3234,10 @@
         }
 
         if (b.blastConfig) {
-          activeGimmicks.push({ type: 11, x: b.x, y: b.y, z: b.z, config: b.blastConfig, parentSolid: b });
+          const baseColor = b.color || 0x475569;
+          const fMat = new THREE.MeshLambertMaterial({ color: baseColor });
+          mesh.material = [fMat.clone(), fMat.clone(), fMat.clone(), fMat.clone(), fMat.clone(), fMat.clone()];
+          activeGimmicks.push({ type: 11, x: b.x, y: b.y, z: b.z, config: b.blastConfig, parentSolid: b, parentMesh: mesh });
         }
       });
 
@@ -3236,6 +3258,7 @@
             const moverObj = {
               isPathMover: true,
               isSwitchFloor: isSwFloor,
+              isSolid: false,
               gimmickConfig: m.gimmickConfig,
               waypoints: waypoints,
               segmentSpeeds: m.segmentSpeeds || [],
@@ -3250,8 +3273,10 @@
             activeMovers.push(moverObj);
             if (isSwFloor) activeGimmicks.push(moverObj);
           } else {
-            const mesh = new THREE.Mesh(thinTileGeo, matMover);
-            mesh.position.set(m.x, m.y - 0.1, m.z);
+            const isSolid = (m.type === 14 || m.isSolid);
+            const mesh = new THREE.Mesh(isSolid ? fullBlockGeo : thinTileGeo, isSolid ? matSolidMover : matMover);
+            const yOffset = isSolid ? 0.5 : -0.1;
+            mesh.position.set(m.x, m.y + yOffset, m.z);
             mesh.receiveShadow = true;
             tilesGroup.add(mesh);
 
@@ -3265,6 +3290,7 @@
 
             activeMovers.push({
               isPathMover: false,
+              isSolid: isSolid,
               originX: m.x, originY: m.y, originZ: m.z,
               vecX, vecY, vecZ, dist: m.dist, speed: m.speed,
               mesh: mesh, currentOffset: 0, direction: 1,
@@ -3310,13 +3336,25 @@
     }
 
     function isSolidAt(x, z, yLevel) {
-      return activeStage.blocks.some(b => {
+      const isStaticSolid = activeStage.blocks.some(b => {
         if (b.x === x && b.z === z && b.y === yLevel) {
           if (b.type === 5) return true;
           if (b.type === 13 && b.gimmickConfig?.shape === 5 && switchStates[b.gimmickConfig.group]) return true;
         }
         return false;
       });
+      if (isStaticSolid) return true;
+
+      const isDynamicSolid = activeMovers.some(m => {
+        if (m.isSolid) {
+          const dx = Math.abs(m.mesh.position.x - x);
+          const dz = Math.abs(m.mesh.position.z - z);
+          const dy = Math.abs((m.mesh.position.y - 0.5) - yLevel);
+          if (dx <= 0.65 && dz <= 0.65 && dy <= 0.65) return true;
+        }
+        return false;
+      });
+      return isDynamicSolid;
     }
 
     function getAllSurfacesAt(x, z) {
@@ -3340,7 +3378,8 @@
         const dx = Math.abs(m.mesh.position.x - x);
         const dz = Math.abs(m.mesh.position.z - z);
         if (dx <= 0.85 && dz <= 0.85) {
-          surfaces.push({ type: m.isPathMover ? (m.isSwitchFloor ? 12 : 8) : 4, mover: m, surfaceY: m.mesh.position.y + 0.1 });
+          const surfY = m.isSolid ? (m.mesh.position.y + 0.5) : (m.mesh.position.y + 0.1);
+          surfaces.push({ type: m.isSolid ? 14 : (m.isPathMover ? (m.isSwitchFloor ? 12 : 8) : 4), mover: m, surfaceY: surfY });
         }
       });
       return surfaces.sort((a, b) => b.surfaceY - a.surfaceY);
@@ -3436,12 +3475,17 @@
           g.mesh.material = createSwitchMaterials(group, next, g.config.showLabel);
         } else if (g.type === 13 && g.config.group === group) {
           g.mesh.visible = next;
+        } else if (g.type === 11 && g.config.group === group) {
+          updateBlastMeshVisual(g, next);
         }
       });
+
+      checkBlastCollision();
     }
 
     // プレイヤーが吹き飛ばし面の正面にいるかチェック
     function checkBlastCollision() {
+      if (isFallingDown) return;
       const curLvlY = Math.round(cubePos.y);
       const px = Math.round(cubePos.x);
       const pz = Math.round(cubePos.z);
@@ -3450,19 +3494,28 @@
         if (g.type === 11 && switchStates[g.config.group] && g.y === curLvlY) {
           let triggerX = g.x;
           let triggerZ = g.z;
-          let bdx = 0;
-          let bdz = 0;
+          let pushDx = 0;
+          let pushDz = 0;
 
-          if (g.config.dir === 'UP') { triggerZ = g.z - 1; bdz = -g.config.power; }
-          else if (g.config.dir === 'DOWN') { triggerZ = g.z + 1; bdz = g.config.power; }
-          else if (g.config.dir === 'LEFT') { triggerX = g.x - 1; bdx = -g.config.power; }
-          else if (g.config.dir === 'RIGHT') { triggerX = g.x + 1; bdx = g.config.power; }
+          if (g.config.dir === 'UP') { triggerZ = g.z - 1; pushDz = -g.config.power; }
+          else if (g.config.dir === 'DOWN') { triggerZ = g.z + 1; pushDz = g.config.power; }
+          else if (g.config.dir === 'LEFT') { triggerX = g.x - 1; pushDx = -g.config.power; }
+          else if (g.config.dir === 'RIGHT') { triggerX = g.x + 1; pushDx = g.config.power; }
 
           if (px === triggerX && pz === triggerZ) {
-            cubePos.x += bdx;
-            cubePos.z += bdz;
+            cubePos.x += pushDx;
+            cubePos.z += pushDz;
             pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
             syncMyVersusPosition();
+
+            const landingSurf = getTopSurfaceAt(cubePos.x, cubePos.z, cubePos.y);
+            if (!landingSurf) {
+              isFallingDown = true;
+              fallVelocity = 0.08;
+            } else {
+              cubePos.y = landingSurf.surfaceY;
+              pivot.position.y = cubePos.y;
+            }
           }
         }
       });
@@ -3498,8 +3551,8 @@
         if (isPaused) { requestAnimationFrame(animateRoll); return; }
         currentAngle += rollSpeed;
 
-        if ((surface.type === 4 || surface.type === 8 || surface.type === 12) && surface.mover) {
-          const liveMoverY = surface.mover.mesh.position.y + 0.1;
+        if ((surface.type === 4 || surface.type === 8 || surface.type === 12 || surface.type === 14) && surface.mover) {
+          const liveMoverY = surface.mover.isSolid ? (surface.mover.mesh.position.y + 0.5) : (surface.mover.mesh.position.y + 0.1);
           const liveDy = liveMoverY - startY;
           if (liveDy > 0.15) pivot.position.y = startY + liveDy;
         }
@@ -3509,10 +3562,10 @@
           requestAnimationFrame(animateRoll);
         } else {
           cubePos.x = tx; cubePos.z = tz;
-          if ((surface.type === 4 || surface.type === 8 || surface.type === 12) && surface.mover) {
+          if ((surface.type === 4 || surface.type === 8 || surface.type === 12 || surface.type === 14) && surface.mover) {
             cubePos.x = surface.mover.mesh.position.x;
             cubePos.z = surface.mover.mesh.position.z;
-            cubePos.y = surface.mover.mesh.position.y + 0.1;
+            cubePos.y = surface.mover.isSolid ? (surface.mover.mesh.position.y + 0.5) : (surface.mover.mesh.position.y + 0.1);
           } else {
             cubePos.y = targetY;
           }
@@ -3529,10 +3582,8 @@
             else triggerSwitchGroup(cfg.group);
           }
 
-          // 吹き飛ばし面の作動判定
           checkBlastCollision();
 
-          // ワープ処理 (通常ワープ床 または 出現したワープ床)
           let warpLet = surface.blockRef?.warpLetter;
           if (surface.type === 13 && surface.blockRef?.gimmickConfig?.shape === 9) {
             warpLet = surface.blockRef.gimmickConfig.warpLetter;
@@ -3563,7 +3614,6 @@
             }
           }
 
-          // セーブ地点 (通常セーブ または 出現したセーブ)
           if (surface.type === 6 || (surface.type === 13 && surface.blockRef?.gimmickConfig?.shape === 6)) {
             currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
             const idx = surface.type === 6 ? (surface.blockRef.cpIndex || 1) : (surface.blockRef.gimmickConfig.cpIndex || 1);
@@ -3660,7 +3710,7 @@
             }
           });
 
-          // 動く床の更新
+          // 動く床・動く直方体の更新
           activeMovers.forEach(m => {
             let stepX = 0, stepY = 0, stepZ = 0;
 
@@ -3715,7 +3765,7 @@
             }
 
             // 乗車判定
-            const moverSurfaceY = m.mesh.position.y + 0.1;
+            const moverSurfaceY = m.isSolid ? (m.mesh.position.y + 0.5) : (m.mesh.position.y + 0.1);
             const dx = Math.abs(m.mesh.position.x - cubePos.x);
             const dz = Math.abs(m.mesh.position.z - cubePos.z);
             const dy = moverSurfaceY - cubePos.y;
