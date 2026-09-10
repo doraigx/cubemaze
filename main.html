@@ -5,172 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Cube Roll Game (完全版)</title>
   <style>
-    * {
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-
-    body {
-      margin: 0;
-      overflow: hidden;
-      background-color: #111118;
-      font-family: 'Segoe UI', Meiryo, sans-serif;
-      touch-action: manipulation;
-    }
-
-    canvas {
-      pointer-events: auto;
-      -webkit-touch-callout: none;
-    }
-
-    .screen {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: rgba(15, 15, 22, 0.92);
-      color: #ffffff;
-      z-index: 10;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    h1 {
-      font-size: 2.8rem;
-      letter-spacing: 0.15rem;
-      margin-bottom: 1.5rem;
-      text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-    }
-
-    .btn-group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      min-width: 260px;
-    }
-
-    button, select, input {
-      padding: 8px 14px;
-      font-size: 0.9rem;
-      font-weight: bold;
-      color: #fff;
-      background-color: #334155;
-      border: 1px solid #475569;
-      border-radius: 6px;
-      cursor: pointer;
-      box-sizing: border-box;
-      transition: all 0.15s ease;
-      -webkit-tap-highlight-color: transparent;
-      position: relative;
-    }
-
-    button:hover {
-      background-color: #475569;
-      transform: translateY(-1px);
-    }
-
-    input[type="text"], input[type="number"] {
-      cursor: text;
-      background-color: #1e293b;
-      border: 1px solid #38bdf8;
-      outline: none;
-      text-align: center;
-      font-size: 1rem;
-      -webkit-user-select: text;
-      user-select: text;
-    }
-
-    input[type="color"] {
-      padding: 2px 4px;
-      width: 38px;
-      height: 32px;
-      cursor: pointer;
-      background-color: #1e293b;
-      border: 1px solid #475569;
-      border-radius: 6px;
-    }
-
-    input[type="range"] {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 8px;
-      background: #334155;
-      border-radius: 4px;
-      outline: none;
-      padding: 0;
-    }
-
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #38bdf8;
-      cursor: pointer;
-    }
-
-    #user-bar {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      z-index: 15;
-      background: rgba(15, 23, 42, 0.85);
-      padding: 6px 12px;
-      border-radius: 8px;
-      border: 1px solid #334155;
-      font-size: 13px;
-      color: #cbd5e1;
-    }
-
-    #editor-ui-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      box-sizing: border-box;
-      padding: 12px;
-    }
-
-    .editor-bar {
-      display: flex;
-      gap: 8px;
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(4px);
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid #334155;
-      pointer-events: auto;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .palette-btn {
-      border: 2px solid transparent;
-      border-radius: 4px;
-    }
-    .palette-btn.active {
-      border-color: #38bdf8;
-      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
-    }
+    * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    body { margin: 0; overflow: hidden; background-color: #111118; font-family: 'Segoe UI', Meiryo, sans-serif; touch-action: manipulation; }
+    canvas { pointer-events: auto; -webkit-touch-callout: none; }
+    .screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(15, 15, 22, 0.92); color: #ffffff; z-index: 10; }
+    .hidden { display: none !important; }
+    h1 { font-size: 2.8rem; letter-spacing: 0.15rem; margin-bottom: 1.5rem; text-shadow: 0 0 10px rgba(255, 255, 255, 0.2); }
+    .btn-group { display: flex; flex-direction: column; gap: 12px; min-width: 260px; }
+    button, select, input { padding: 8px 14px; font-size: 0.9rem; font-weight: bold; color: #fff; background-color: #334155; border: 1px solid #475569; border-radius: 6px; cursor: pointer; box-sizing: border-box; transition: all 0.15s ease; -webkit-tap-highlight-color: transparent; position: relative; }
+    button:hover { background-color: #475569; transform: translateY(-1px); }
+    input[type="text"], input[type="number"] { cursor: text; background-color: #1e293b; border: 1px solid #38bdf8; outline: none; text-align: center; font-size: 1rem; -webkit-user-select: text; user-select: text; }
+    input[type="color"] { padding: 2px 4px; width: 38px; height: 32px; cursor: pointer; background-color: #1e293b; border: 1px solid #475569; border-radius: 6px; }
+    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; background: #334155; border-radius: 4px; outline: none; padding: 0; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #38bdf8; cursor: pointer; }
+    #user-bar { position: absolute; top: 12px; right: 12px; display: flex; align-items: center; gap: 10px; z-index: 15; background: rgba(15, 23, 42, 0.85); padding: 6px 12px; border-radius: 8px; border: 1px solid #334155; font-size: 13px; color: #cbd5e1; }
+    #editor-ui-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; padding: 12px; }
+    .editor-bar { display: flex; gap: 8px; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(4px); padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; pointer-events: auto; align-items: center; flex-wrap: wrap; }
+    .palette-btn { border: 2px solid transparent; border-radius: 4px; }
+    .palette-btn.active { border-color: #38bdf8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
     .p-empty { background: #334155; }
     .p-floor { background: #64748b; }
     .p-full { background: #475569; border: 1px dashed #94a3b8; }
@@ -187,217 +39,32 @@
     .p-appear { background: #059669; color: #fff; }
     .p-grab { background: #475569; border: 1px solid #38bdf8; color: #38bdf8; }
 
-    .modal-dialog {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #1e293b;
-      border: 2px solid #38bdf8;
-      padding: 20px;
-      border-radius: 8px;
-      color: #fff;
-      z-index: 25;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-      max-height: 85vh;
-      overflow-y: auto;
-      min-width: 340px;
-    }
-
-    .list-container {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 260px;
-      overflow-y: auto;
-      background: #0f172a;
-      padding: 8px;
-      border-radius: 6px;
-    }
-
-    .list-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 10px;
-      background: #1e293b;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-
-    #editor-info {
-      font-size: 12px;
-      color: #94a3b8;
-      line-height: 1.4;
-    }
-
-    .hud-control-btn {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      z-index: 15;
-    }
-
-    #hud-top-left {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      z-index: 15;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      pointer-events: auto;
-    }
-
-    #btn-bgm-trigger {
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      padding: 6px 14px;
-      font-size: 12px;
-      border-radius: 20px;
-      backdrop-filter: blur(4px);
-    }
-
-    #hud-timer-card {
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      padding: 6px 14px;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: bold;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      backdrop-filter: blur(4px);
-    }
-
-    #modal-bgm-picker {
-      z-index: 30;
-      min-width: 280px;
-    }
-
-    #dpad {
-      position: absolute;
-      z-index: 10;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      gap: 5px;
-      touch-action: none;
-    }
-
-    .dpad-btn {
-      background: rgba(30, 41, 59, 0.65);
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
-      color: #fff;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-    }
-
-    .dpad-btn:active, .dpad-btn.active {
-      background: rgba(56, 189, 248, 0.5);
-      transform: scale(0.92);
-    }
-
-    .route-step-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: #334155;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-size: 12px;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 4px;
-    }
+    .modal-dialog { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e293b; border: 2px solid #38bdf8; padding: 20px; border-radius: 8px; color: #fff; z-index: 25; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); max-height: 85vh; overflow-y: auto; min-width: 340px; }
+    .list-container { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; background: #0f172a; padding: 8px; border-radius: 6px; }
+    .list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #1e293b; border-radius: 4px; font-size: 13px; }
+    #editor-info { font-size: 12px; color: #94a3b8; line-height: 1.4; }
+    .hud-control-btn { position: absolute; top: 15px; right: 15px; z-index: 15; }
+    #hud-top-left { position: absolute; top: 15px; left: 15px; z-index: 15; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
+    #btn-bgm-trigger { background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.4); padding: 6px 14px; font-size: 12px; border-radius: 20px; backdrop-filter: blur(4px); }
+    #hud-timer-card { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4); padding: 6px 14px; border-radius: 12px; font-size: 13px; font-weight: bold; color: #ffffff; display: flex; flex-direction: column; gap: 2px; backdrop-filter: blur(4px); }
+    #modal-bgm-picker { z-index: 30; min-width: 280px; }
+    #dpad { position: absolute; z-index: 10; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 5px; touch-action: none; }
+    .dpad-btn { background: rgba(30, 41, 59, 0.65); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff; backdrop-filter: blur(4px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); }
+    .dpad-btn:active, .dpad-btn.active { background: rgba(56, 189, 248, 0.5); transform: scale(0.92); }
+    .route-step-pill { display: inline-flex; align-items: center; gap: 4px; background: #334155; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
     .status-online { background-color: #10b981; }
     .status-offline { background-color: #64748b; }
-
-    .chat-bubble-wrap {
-      display: flex;
-      flex-direction: column;
-      max-width: 80%;
-    }
-    .chat-bubble-wrap.me {
-      align-self: flex-end;
-      align-items: flex-end;
-    }
-    .chat-bubble-wrap.other {
-      align-self: flex-start;
-      align-items: flex-start;
-    }
-
-    .chat-bubble {
-      padding: 6px 10px;
-      border-radius: 6px;
-      word-break: break-all;
-      font-size: 12px;
-    }
-    .chat-bubble-me {
-      background: #0284c7;
-      color: #fff;
-    }
-    .chat-bubble-other {
-      background: #334155;
-      color: #fff;
-    }
-    .chat-time {
-      font-size: 9px;
-      color: #94a3b8;
-      margin-top: 2px;
-      padding: 0 2px;
-    }
-
-    .badge-pill {
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      background: #ef4444;
-      color: #fff;
-      border-radius: 10px;
-      padding: 1px 6px;
-      font-size: 10px;
-      font-weight: bold;
-      border: 1px solid #fff;
-    }
-
-    #vs-countdown-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(15, 23, 42, 0.85);
-      z-index: 50;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: #fff;
-      pointer-events: auto;
-    }
-    #vs-countdown-number {
-      font-size: 6rem;
-      font-weight: 900;
-      color: #facc15;
-      text-shadow: 0 0 20px rgba(250, 204, 21, 0.8);
-      margin: 10px 0;
-    }
+    .chat-bubble-wrap { display: flex; flex-direction: column; max-width: 80%; }
+    .chat-bubble-wrap.me { align-self: flex-end; align-items: flex-end; }
+    .chat-bubble-wrap.other { align-self: flex-start; align-items: flex-start; }
+    .chat-bubble { padding: 6px 10px; border-radius: 6px; word-break: break-all; font-size: 12px; }
+    .chat-bubble-me { background: #0284c7; color: #fff; }
+    .chat-bubble-other { background: #334155; color: #fff; }
+    .chat-time { font-size: 9px; color: #94a3b8; margin-top: 2px; padding: 0 2px; }
+    .badge-pill { position: absolute; top: -5px; right: -5px; background: #ef4444; color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: bold; border: 1px solid #fff; }
+    #vs-countdown-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; pointer-events: auto; }
+    #vs-countdown-number { font-size: 6rem; font-weight: 900; color: #facc15; text-shadow: 0 0 20px rgba(250, 204, 21, 0.8); margin: 10px 0; }
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -412,14 +79,12 @@
     <button id="btn-auth" style="padding: 4px 10px; font-size: 11px; background: #0284c7;">Googleログイン</button>
   </div>
 
-  <!-- 対戦開始カウントダウンオーバーレイ -->
   <div id="vs-countdown-overlay" class="hidden">
     <h2 style="margin: 0; letter-spacing: 2px;">MATCH STARTING IN</h2>
     <div id="vs-countdown-number">10</div>
     <div id="vs-countdown-stage" style="color: #38bdf8; font-size: 1.2rem;">コース読込完了</div>
   </div>
 
-  <!-- 1. スタート画面 -->
   <div id="screen-title" class="screen">
     <h1>CUBE EDGE</h1>
     <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; align-items: center;">
@@ -431,7 +96,6 @@
     </div>
   </div>
 
-  <!-- 2. モード選択画面 -->
   <div id="screen-modes" class="screen hidden">
     <h1>MODE SELECT</h1>
     <div class="btn-group">
@@ -447,33 +111,21 @@
     </div>
   </div>
 
-  <!-- フレンドモーダル -->
   <div id="modal-friends" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">フレンドメニュー</h3>
-    <div style="font-size: 12px; color: #94a3b8;">
-      あなたのフレンドID: <strong id="lbl-my-friend-id" style="color:#38bdf8; font-size:14px;">--------</strong>
-    </div>
-
+    <div style="font-size: 12px; color: #94a3b8;">あなたのフレンドID: <strong id="lbl-my-friend-id" style="color:#38bdf8; font-size:14px;">--------</strong></div>
     <div style="display: flex; gap: 6px;">
       <input type="text" id="input-search-friend-id" placeholder="8桁のフレンドID" maxlength="8" style="flex:1;">
       <button id="btn-send-friend-req" style="background:#059669; padding: 4px 10px; font-size: 12px;">申請送る</button>
     </div>
-
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
       <span style="font-size:12px; font-weight:bold; color:#cbd5e1;">フレンド一覧</span>
-      <button id="btn-open-friend-requests" style="font-size:11px; padding:3px 8px; background:#475569;">
-        申請一覧 (<span id="req-count-badge">0</span>)
-      </button>
+      <button id="btn-open-friend-requests" style="font-size:11px; padding:3px 8px; background:#475569;">申請一覧 (<span id="req-count-badge">0</span>)</button>
     </div>
-
-    <div id="friends-list-container" class="list-container">
-      <div style="color:#64748b; font-size:12px; text-align:center;">フレンド読込中...</div>
-    </div>
-
+    <div id="friends-list-container" class="list-container"><div style="color:#64748b; font-size:12px; text-align:center;">フレンド読込中...</div></div>
     <button id="btn-close-friends" style="align-self: flex-end;">閉じる</button>
   </div>
 
-  <!-- フレンドチャットモーダル -->
   <div id="modal-friend-chat" class="modal-dialog hidden" style="min-width: 340px;">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <h3 style="margin: 0;" id="chat-friend-name-title">チャット</h3>
@@ -489,48 +141,35 @@
     <button id="btn-close-friend-chat" style="align-self: flex-end;">閉じる</button>
   </div>
 
-  <!-- フレンド申請一覧モーダル -->
   <div id="modal-friend-requests" class="modal-dialog hidden" style="min-width: 320px;">
     <h3 style="margin: 0;">フレンド申請一覧</h3>
-    <div id="friend-requests-container" class="list-container">
-      <div style="color:#64748b; font-size:12px; text-align:center;">届いている申請はありません</div>
-    </div>
+    <div id="friend-requests-container" class="list-container"><div style="color:#64748b; font-size:12px; text-align:center;">届いている申請はありません</div></div>
     <button id="btn-close-friend-requests" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- 対戦メニューモーダル -->
   <div id="modal-versus-menu" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">オンライン対戦</h3>
     <div style="font-size: 12px; color: #94a3b8;">タイムの速いプレイヤーが勝利します！</div>
-
     <div class="btn-group" style="width: 100%;">
       <button id="btn-vs-random" style="background: #10b981;">🎲 ランダムマッチ (公開コース)</button>
       <button id="btn-vs-custom" style="background: #8b5cf6;">🗺️ コース指定マッチ (公開 / 下書き)</button>
       <button id="btn-vs-records" style="background: #3b82f6;">📜 対戦戦績 (履歴)</button>
     </div>
-
     <button id="btn-close-versus-menu" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- 対戦戦績モーダル -->
   <div id="modal-vs-records" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">対戦戦績・履歴</h3>
-    <div id="vs-records-container" class="list-container" style="max-height: 260px;">
-      <div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>
-    </div>
+    <div id="vs-records-container" class="list-container" style="max-height: 260px;"><div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div></div>
     <button id="btn-close-vs-records" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- ステージクリア履歴モーダル -->
   <div id="modal-stage-history" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;" id="stage-history-title">ステージクリア履歴 (ランキング)</h3>
-    <div id="stage-history-container" class="list-container" style="max-height: 260px;">
-      <div style="color:#64748b; font-size:12px; text-align:center;">クリア履歴を読み込み中...</div>
-    </div>
+    <div id="stage-history-container" class="list-container" style="max-height: 260px;"><div style="color:#64748b; font-size:12px; text-align:center;">クリア履歴を読み込み中...</div></div>
     <button id="btn-close-stage-history" style="align-self: flex-end;">閉じる</button>
   </div>
 
-  <!-- コース指定マッチのコース選択モーダル -->
   <div id="modal-vs-pick-stage" class="modal-dialog hidden" style="min-width: 360px;">
     <h3 style="margin: 0;">対戦コースを選択</h3>
     <div style="display:flex; gap:8px; margin-bottom:8px;">
@@ -538,23 +177,17 @@
       <button id="tab-vs-pick-my" style="background:#334155; flex:1; font-size:12px;">自分の下書き</button>
     </div>
     <button id="btn-vs-pick-random-pub" style="background:#10b981; width:100%; margin-bottom:6px; font-size:12px;">🎲 公開コースからランダムに決定</button>
-    <div id="vs-pick-stages-container" class="list-container" style="max-height: 220px;">
-      <div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div>
-    </div>
+    <div id="vs-pick-stages-container" class="list-container" style="max-height: 220px;"><div style="color:#64748b; font-size:12px; text-align:center;">読み込み中...</div></div>
     <button id="btn-close-vs-pick" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- 対戦相手招待モーダル -->
   <div id="modal-vs-invite" class="modal-dialog hidden" style="min-width: 340px;">
     <h3 style="margin: 0;">対戦相手を選択 (オンラインのみ)</h3>
     <div style="font-size:12px; color:#94a3b8;" id="vs-invite-stage-name-lbl">コース: 選択中</div>
-    <div id="vs-online-friends-container" class="list-container">
-      <div style="color:#64748b; font-size:12px; text-align:center;">オンラインのフレンドがいません</div>
-    </div>
+    <div id="vs-online-friends-container" class="list-container"><div style="color:#64748b; font-size:12px; text-align:center;">オンラインのフレンドがいません</div></div>
     <button id="btn-close-vs-invite" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- 届いた対戦招待モーダル -->
   <div id="modal-incoming-vs" class="modal-dialog hidden" style="min-width: 300px; text-align:center;">
     <h3 style="margin: 0;">対戦の申し込み！</h3>
     <p id="incoming-vs-text" style="font-size: 14px; margin: 10px 0;"></p>
@@ -564,14 +197,11 @@
     </div>
   </div>
 
-  <!-- オプション画面 -->
   <div id="modal-options" class="modal-dialog hidden">
     <h3 style="margin: 0;">オプション設定</h3>
     <label style="font-size: 13px;">D-PADの配置位置:
       <select id="opt-dpad-pos" style="width: 100%; margin-top: 4px;">
-        <option value="left">画面の左下</option>
-        <option value="right">画面の右下</option>
-        <option value="center">画面の中央下</option>
+        <option value="left">画面の左下</option><option value="right">画面の右下</option><option value="center">画面の中央下</option>
       </select>
     </label>
     <label style="font-size: 13px;">下端からの余白:
@@ -591,34 +221,27 @@
     </div>
   </div>
 
-  <!-- 3. ステージ選択画面 -->
   <div id="screen-stages" class="screen hidden">
     <h1>STAGE SELECT</h1>
     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
       <button id="tab-official" style="background:#0284c7;">基礎ステージ</button>
       <button id="tab-custom" style="background:#334155;">カスタムステージ</button>
     </div>
-
     <div id="stage-list-official" class="btn-group" style="width: 280px;">
       <button class="btn-official-stage" data-stage="1">ステージ 1 (基本クライム)</button>
       <button class="btn-official-stage" data-stage="2">ステージ 2 (動く床)</button>
     </div>
-
     <div id="stage-list-custom" class="hidden" style="display: flex; flex-direction: column; gap: 10px; width: 320px;">
       <button id="btn-random-stage" style="background:#10b981;">ランダムでプレイ</button>
       <div style="display: flex; gap: 6px;">
         <input type="text" id="input-search-id" placeholder="ステージID (6桁)" style="flex:1;">
         <button id="btn-search-stage" style="background:#0284c7;">検索</button>
       </div>
-      <div id="online-stages-container" class="list-container" style="max-height: 220px;">
-        <div style="color:#64748b; font-size:12px; text-align:center;">オンラインステージ読込中...</div>
-      </div>
+      <div id="online-stages-container" class="list-container" style="max-height: 220px;"><div style="color:#64748b; font-size:12px; text-align:center;">オンラインステージ読込中...</div></div>
     </div>
-
     <button id="btn-back-to-modes" style="margin-top: 15px; width: 280px;">モード画面にもどる</button>
   </div>
 
-  <!-- 4. エディタ前スロット管理モーダル -->
   <div id="modal-editor-slots" class="modal-dialog hidden">
     <h3 style="margin: 0;">エディタースロット (クラウド保存)</h3>
     <div style="font-size: 12px; color: #94a3b8;">作成・編集するステージを選んでください</div>
@@ -626,13 +249,10 @@
       <input type="text" id="input-new-slot-name" placeholder="新しいステージ名" style="flex:1;">
       <button id="btn-create-new-slot" style="background:#059669;">新規作成</button>
     </div>
-    <div id="editor-slots-container" class="list-container">
-      <div style="color:#64748b; font-size:12px; text-align:center;">スロット読込中...</div>
-    </div>
+    <div id="editor-slots-container" class="list-container"><div style="color:#64748b; font-size:12px; text-align:center;">スロット読込中...</div></div>
     <button id="btn-close-editor-slots" style="align-self: flex-end;">戻る</button>
   </div>
 
-  <!-- 5. ステージエディタUI -->
   <div id="editor-ui-container" class="hidden">
     <div class="editor-bar">
       <span style="font-weight: bold; color: #ffffff;">ステージ名:</span>
@@ -640,10 +260,7 @@
 
       <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">サイズ:</span>
       <select id="select-grid-size">
-        <option value="16">16 × 16</option>
-        <option value="32" selected>32 × 32</option>
-        <option value="48">48 × 48</option>
-        <option value="64">64 × 64</option>
+        <option value="16">16 × 16</option><option value="32" selected>32 × 32</option><option value="48">48 × 48</option><option value="64">64 × 64</option>
       </select>
 
       <span style="font-weight: bold; color: #ffffff; margin-left: 6px;">階層(Y):</span>
@@ -681,51 +298,39 @@
 
     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
       <div id="editor-info" class="editor-bar">
-        左ドラッグ: 配置 / 削除 | 右クリック: 各ブロックの属性・速度・グループ編集<br>
-        「🖐️ 移動」: ブロックを掴んで移動 | 右ドラッグ: 視点平行移動
+        左ドラッグ: 配置 / 削除 | 右クリック: 属性・速度・グループ設定<br>
+        「吹き飛ばし」: 直方体を選択して面(側面)に装着設定
       </div>
       <div class="editor-bar">
         <span id="route-editing-status" style="font-size:12px; font-weight:bold; color:#facc15; display:none;">✍️ ルート描画中 (グリッドをクリックで経由地追加)</span>
         <button id="btn-finish-route-edit" style="background:#0284c7; display:none; padding:4px 10px; font-size:12px;">描画完了</button>
-
         <button id="btn-toggle-autosave" style="background:#059669; font-size:11px; padding:4px 8px;">自動同期: ON</button>
         <span id="autosave-status" style="font-size:11px; color:#10b981; margin-right:4px;">同期済み</span>
-
         <button id="btn-export-json" style="background:#0284c7;">JSON書き出し</button>
         <button id="btn-import-json-trigger" style="background:#0284c7;">JSON読込</button>
         <input type="file" id="file-import-json" accept=".json" style="display:none;">
-
         <button id="btn-save-current-slot" style="background:#059669;">手動上書き保存</button>
         <button id="btn-online-publish" style="background:#e11d48;">ネットに投稿</button>
-
         <span style="font-weight:bold; font-size:12px; margin-left:4px; color:#ffffff;">テスト開始:</span>
         <select id="select-test-spawn" style="background:#1e293b; border:1px solid #38bdf8;">
           <option value="default">スタート地点(S)</option>
         </select>
         <button id="btn-test-custom" style="background:#2563eb;">テストプレイ</button>
-
         <button id="btn-clear-editor" style="background:#dc2626;">全消去</button>
         <button id="btn-editor-back">スロット選択へ戻る</button>
       </div>
     </div>
   </div>
 
-  <!-- 動く床設定ポップアップ (速度1〜100、高さ調整等) -->
+  <!-- 各種編集モーダル -->
   <div id="editor-modal" class="modal-dialog hidden">
     <h3 style="margin: 0;">動く床の設定</h3>
     <label>進行方向:
       <select id="modal-dir">
-        <option value="UP">↑ (奥へ移動)</option>
-        <option value="DOWN">↓ (手前へ移動)</option>
-        <option value="LEFT">← (左へ移動)</option>
-        <option value="RIGHT">→ (右へ移動)</option>
-        <option value="Y_UP">▲ (上へ上昇)</option>
-        <option value="Y_DOWN">▼ (下へ下降)</option>
+        <option value="UP">↑ (奥へ移動)</option><option value="DOWN">↓ (手前へ移動)</option><option value="LEFT">← (左へ移動)</option><option value="RIGHT">→ (右へ移動)</option><option value="Y_UP">▲ (上へ上昇)</option><option value="Y_DOWN">▼ (下へ下降)</option>
       </select>
     </label>
-    <label>往復距離:
-      <input type="number" id="modal-dist-num" min="1" max="30" value="3" style="width: 80px;">
-    </label>
+    <label>往復距離: <input type="number" id="modal-dist-num" min="1" max="30" value="3" style="width: 80px;"></label>
     <label>速度 (1〜100):
       <div style="display:flex; align-items:center; gap:8px;">
         <input type="range" id="modal-speed-range" min="1" max="100" value="25" style="flex:1;">
@@ -733,20 +338,14 @@
       </div>
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-      <button id="modal-save" style="background: #0284c7;">決定</button>
-      <button id="modal-cancel">閉じる</button>
+      <button id="modal-save" style="background: #0284c7;">決定</button><button id="modal-cancel">閉じる</button>
     </div>
   </div>
 
-  <!-- ルート移動床設定モーダル (地点別個別速度設定対応) -->
   <div id="modal-path-mover" class="modal-dialog hidden" style="min-width: 420px;">
     <h3 style="margin: 0;">動く床（ルート指定）の詳細設定</h3>
-    <div style="font-size: 12px; color: #94a3b8;">
-      エディター上で直接グリッドをクリックして経由地を追加できます。<br>
-      各区間（地点間）ごとに個別の速度シークバー（1〜100）を設定可能です。
-    </div>
-    <div id="path-steps-list" style="display: flex; flex-direction: column; gap: 6px; background: #0f172a; padding: 10px; border-radius: 6px; max-height: 180px; overflow-y: auto;">
-    </div>
+    <div style="font-size: 12px; color: #94a3b8;">各区間ごとに個別の速度シークバー（1〜100）を設定可能です。</div>
+    <div id="path-steps-list" style="display: flex; flex-direction: column; gap: 6px; background: #0f172a; padding: 10px; border-radius: 6px; max-height: 180px; overflow-y: auto;"></div>
     <div style="display: flex; gap: 6px; flex-wrap: wrap;">
       <button id="btn-draw-grid-route" style="background:#0284c7; padding: 4px 8px; font-size: 12px;">✍️ グリッド直接描き</button>
       <button id="btn-pop-step" style="background:#dc2626; padding: 4px 8px; font-size: 12px;">末尾削除</button>
@@ -759,12 +358,10 @@
       </div>
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-      <button id="modal-path-save" style="background: #0284c7;">決定</button>
-      <button id="modal-path-cancel">閉じる</button>
+      <button id="modal-path-save" style="background: #0284c7;">決定</button><button id="modal-path-cancel">閉じる</button>
     </div>
   </div>
 
-  <!-- 区間速度専用シークバーポップアップ -->
   <div id="modal-segment-speed" class="modal-dialog hidden" style="min-width: 280px; z-index: 35;">
     <h3 style="margin: 0; font-size: 1.1rem;" id="lbl-segment-speed-title">区間速度設定</h3>
     <label style="font-size: 13px;">この区間の速度 (1〜100):
@@ -779,12 +376,9 @@
     </div>
   </div>
 
-  <!-- スイッチ編集モーダル -->
   <div id="modal-switch" class="modal-dialog hidden" style="min-width: 320px;">
     <h3 style="margin: 0;">スイッチの設定</h3>
-    <label>スイッチグループ:
-      <select id="select-switch-group" style="width: 100%; margin-top: 4px;"></select>
-    </label>
+    <label>スイッチグループ: <select id="select-switch-group" style="width: 100%; margin-top: 4px;"></select></label>
     <label>動作タイプ:
       <select id="select-switch-mode" style="width: 100%; margin-top: 4px;">
         <option value="TOGGLE">踏むたびにON/OFF切り替え</option>
@@ -793,46 +387,42 @@
     </label>
     <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
       <input type="checkbox" id="chk-switch-show-label" checked style="width:16px; height:16px;">
-      プレイ中スイッチにグループ文字(A,B...)を表示
+      プレイ中スイッチにグループ文字を表示
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-      <button id="btn-save-switch" style="background: #0284c7;">決定</button>
-      <button id="btn-cancel-switch">閉じる</button>
+      <button id="btn-save-switch" style="background: #0284c7;">決定</button><button id="btn-cancel-switch">閉じる</button>
     </div>
   </div>
 
-  <!-- 吹き飛ばしギミック設定モーダル -->
-  <div id="modal-blast" class="modal-dialog hidden" style="min-width: 320px;">
+  <!-- 吹き飛ばし設定（直方体の側面に設定） -->
+  <div id="modal-blast" class="modal-dialog hidden" style="min-width: 340px;">
     <h3 style="margin: 0;">吹き飛ばし面の設定</h3>
     <div style="font-size: 12px; color: #94a3b8;">
-      作動すると指定された面からプレイヤーを吹き飛ばします。<br>プレイ中は不可視となり1マスにはカウントされません。
+      直方体の側面に取り付けられ、作動するとその面が赤くなりプレイヤーを突き飛ばします。<br>
+      プレイ中はスイッチ作動時のみ突風が出現し、マスとしてはカウントされません。
     </div>
-    <label>連動スイッチグループ:
-      <select id="select-blast-group" style="width: 100%; margin-top: 4px;"></select>
-    </label>
-    <label>吹き飛ばし方向 (面の向き):
+    <label>連動スイッチグループ: <select id="select-blast-group" style="width: 100%; margin-top: 4px;"></select></label>
+    <label>装着する側面:
       <select id="select-blast-dir" style="width: 100%; margin-top: 4px;">
-        <option value="UP">奥方向へ吹き飛ばす</option>
-        <option value="DOWN">手前方向へ吹き飛ばす</option>
-        <option value="LEFT">左方向へ吹き飛ばす</option>
-        <option value="RIGHT">右方向へ吹き飛ばす</option>
+        <option value="UP">奥の面 (North)</option>
+        <option value="DOWN">手前の面 (South)</option>
+        <option value="LEFT">左の面 (West)</option>
+        <option value="RIGHT">右の面 (East)</option>
       </select>
     </label>
     <label>吹き飛ばし距離 (マス):
       <input type="number" id="input-blast-power" min="1" max="10" value="2" style="width: 80px;">
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-      <button id="btn-save-blast" style="background: #0284c7;">決定</button>
+      <button id="btn-remove-blast" style="background: #dc2626;">側面を解除</button>
+      <button id="btn-save-blast" style="background: #0284c7;">装着決定</button>
       <button id="btn-cancel-blast">閉じる</button>
     </div>
   </div>
 
-  <!-- スイッチ床設定モーダル -->
   <div id="modal-switch-floor" class="modal-dialog hidden" style="min-width: 380px;">
     <h3 style="margin: 0;">スイッチ床の設定</h3>
-    <label>連動スイッチグループ:
-      <select id="select-swfloor-group" style="width: 100%; margin-top: 4px;"></select>
-    </label>
+    <label>連動スイッチグループ: <select id="select-swfloor-group" style="width: 100%; margin-top: 4px;"></select></label>
     <label>動作モード:
       <select id="select-swfloor-mode" style="width: 100%; margin-top: 4px;">
         <option value="MOVE_ON">スイッチONで動く (OFF時は停止固定)</option>
@@ -843,9 +433,6 @@
       <input type="checkbox" id="chk-swfloor-show-label" checked style="width:16px; height:16px;">
       プレイ中床の上にグループ文字を表示
     </label>
-    <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">
-      ※動き方は「動く床(ルート)」同様、エディタ上でグリッド直接描きが可能です。
-    </div>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
       <button id="btn-swfloor-edit-route" style="background:#8b5cf6;">経路を編集</button>
       <button id="btn-save-swfloor" style="background: #0284c7;">決定</button>
@@ -853,21 +440,22 @@
     </div>
   </div>
 
-  <!-- 出現ブロック設定モーダル -->
-  <div id="modal-appear" class="modal-dialog hidden" style="min-width: 300px;">
+  <!-- 出現床（薄い床・直方体・セーブ・ワープ対応） -->
+  <div id="modal-appear" class="modal-dialog hidden" style="min-width: 320px;">
     <h3 style="margin: 0;">出現ブロックの設定</h3>
-    <label>連動スイッチグループ:
-      <select id="select-appear-group" style="width: 100%; margin-top: 4px;"></select>
-    </label>
-    <label>ブロック形状:
+    <label>連動スイッチグループ: <select id="select-appear-group" style="width: 100%; margin-top: 4px;"></select></label>
+    <label>出現オブジェクトの形状:
       <select id="select-appear-shape" style="width: 100%; margin-top: 4px;">
         <option value="1">薄い床</option>
         <option value="5">直方体</option>
+        <option value="6">セーブ地点</option>
+        <option value="9">ワープ床</option>
       </select>
     </label>
+    <div id="appear-extra-options" style="display: flex; flex-direction: column; gap: 6px;"></div>
     <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
       <input type="checkbox" id="chk-appear-show-label" checked style="width:16px; height:16px;">
-      プレイ中出現ブロックにグループ文字を表示
+      文字・数字をプレイ中に表示
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
       <button id="btn-save-appear" style="background: #0284c7;">決定</button>
@@ -875,12 +463,13 @@
     </div>
   </div>
 
-  <!-- ワープ床設定モーダル -->
   <div id="modal-warp" class="modal-dialog hidden" style="min-width: 300px;">
     <h3 style="margin: 0;">ワープ床の設定</h3>
-    <div style="font-size: 12px; color: #94a3b8;">同じ文字（例: AとA）同士が双方向でワープします。<br>各文字はステージ内に最大2マスまでです。</div>
-    <label>ワープ文字:
-      <select id="select-warp-letter" style="width: 100px; font-size: 1.1rem; text-align:center;"></select>
+    <div style="font-size: 12px; color: #94a3b8;">同じ文字同士がワープします (最大2マス)。</div>
+    <label>ワープ文字: <select id="select-warp-letter" style="width: 100px; font-size: 1.1rem; text-align:center;"></select></label>
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+      <input type="checkbox" id="chk-warp-show-label" checked style="width:16px; height:16px;">
+      プレイ中英字を表示
     </label>
     <div id="warp-pair-status" style="font-size: 11px; color: #38bdf8;"></div>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
@@ -889,12 +478,12 @@
     </div>
   </div>
 
-  <!-- セーブ地点設定ポップアップ -->
   <div id="modal-checkpoint" class="modal-dialog hidden">
     <h3 style="margin: 0;">セーブ地点の設定</h3>
-    <div style="font-size: 12px; color: #94a3b8;" id="cp-max-desc">置いた数以上の数字は設定できません。重複時は自動で入れ替わります。</div>
-    <label>セーブ番号:
-      <input type="number" id="cp-number-input" min="1" max="1" value="1" style="width: 80px;">
+    <label>セーブ番号: <input type="number" id="cp-number-input" min="1" max="1" value="1" style="width: 80px;"></label>
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+      <input type="checkbox" id="chk-cp-show-label" checked style="width:16px; height:16px;">
+      プレイ中数字を表示
     </label>
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
       <button id="cp-modal-save" style="background: #0284c7;">決定</button>
@@ -902,7 +491,6 @@
     </div>
   </div>
 
-  <!-- ポーズモーダル -->
   <div id="modal-pause" class="modal-dialog hidden" style="min-width: 300px; text-align: center;">
     <h3 style="margin: 0 0 4px 0;">一時停止 (PAUSE)</h3>
     <div id="pause-stage-info" style="background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 11px; color: #94a3b8; text-align: left; line-height: 1.4;">
@@ -921,7 +509,6 @@
     </div>
   </div>
 
-  <!-- HUD 左上コンテナ -->
   <div id="hud-top-left" class="hidden">
     <button id="btn-bgm-trigger">▶️ BGM: 停止中</button>
     <div id="hud-timer-card">
@@ -930,7 +517,6 @@
     </div>
   </div>
 
-  <!-- BGM ピッカー (シークバー1〜100) -->
   <div id="modal-bgm-picker" class="modal-dialog hidden">
     <h3 style="margin: 0; font-size: 1.1rem;">BGM 選択</h3>
     <div class="list-container">
@@ -960,7 +546,6 @@
 
   <button id="hud-pause-btn" class="hud-control-btn hidden" style="background: rgba(15, 23, 42, 0.85); border: 1px solid #38bdf8;">⏸ 一時停止</button>
 
-  <!-- 6. モバイル専用 D-PAD -->
   <div id="dpad" class="hidden">
     <div></div><div class="dpad-btn" id="dpad-up">▲</div><div></div>
     <div class="dpad-btn" id="dpad-left">◀</div><div></div><div class="dpad-btn" id="dpad-right">▶</div>
@@ -1114,7 +699,6 @@
       btnBgmTrigger.textContent = `▶️ BGM: ${title}`;
       modalBgmPicker.classList.add('hidden');
     }
-
     function stopBGM() {
       currentAudio.pause();
       currentAudio.currentTime = 0;
@@ -1261,7 +845,6 @@
     const friendsListContainer = document.getElementById('friends-list-container');
     const friendRequestsContainer = document.getElementById('friend-requests-container');
     const reqCountBadge = document.getElementById('req-count-badge');
-
     const modalFriendChat = document.getElementById('modal-friend-chat');
     const chatFriendNameTitle = document.getElementById('chat-friend-name-title');
     const chatMessagesContainer = document.getElementById('chat-messages-container');
@@ -1308,10 +891,7 @@
         if (snap.empty) { alert("ユーザーが見つかりませんでした。"); return; }
         const targetUid = snap.docs[0].id;
         await db.collection("users").doc(targetUid).collection("friend_requests").doc(currentUser.uid).set({
-          senderUid: currentUser.uid,
-          senderName: currentUsername,
-          senderFriendId: myFriendId,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          senderUid: currentUser.uid, senderName: currentUsername, senderFriendId: myFriendId, createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         alert("フレンド申請を送信しました！");
         document.getElementById('input-search-friend-id').value = '';
@@ -1679,26 +1259,15 @@
       vsOpponentId = friend.friendId;
 
       const roomRef = await db.collection("versus_rooms").add({
-        hostUid: currentUser.uid,
-        hostName: currentUsername,
-        hostFriendId: myFriendId,
-        guestUid: friend.uid,
-        guestName: friend.name,
-        guestFriendId: friend.friendId,
-        stageData: vsStageData,
-        stageId: vsStagePickedId || 'custom',
-        status: "WAITING",
-        hostLastActive: Date.now(),
-        guestLastActive: Date.now(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        hostUid: currentUser.uid, hostName: currentUsername, hostFriendId: myFriendId,
+        guestUid: friend.uid, guestName: friend.name, guestFriendId: friend.friendId,
+        stageData: vsStageData, stageId: vsStagePickedId || 'custom', status: "WAITING",
+        hostLastActive: Date.now(), guestLastActive: Date.now(), createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
       vsRoomId = roomRef.id;
       await db.collection("users").doc(friend.uid).collection("versus_invites").doc(vsRoomId).set({
-        roomId: vsRoomId,
-        senderName: currentUsername,
-        senderFriendId: myFriendId,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        roomId: vsRoomId, senderName: currentUsername, senderFriendId: myFriendId, createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       listenVersusRoom(vsRoomId, true);
     }
@@ -1726,9 +1295,7 @@
       await currentIncomingInviteDoc.ref.delete();
       const startTimestamp = Date.now() + 10000;
       await db.collection("versus_rooms").doc(vsRoomId).update({
-        status: "COUNTDOWN",
-        startTime: startTimestamp,
-        guestLastActive: Date.now()
+        status: "COUNTDOWN", startTime: startTimestamp, guestLastActive: Date.now()
       });
       listenVersusRoom(vsRoomId, false);
     };
@@ -1762,11 +1329,9 @@
         const room = doc.data();
 
         if (isHost) {
-          vsOpponentName = room.guestName;
-          vsOpponentId = room.guestFriendId || '--------';
+          vsOpponentName = room.guestName; vsOpponentId = room.guestFriendId || '--------';
         } else {
-          vsOpponentName = room.hostName;
-          vsOpponentId = room.hostFriendId || '--------';
+          vsOpponentName = room.hostName; vsOpponentId = room.hostFriendId || '--------';
         }
 
         if (room.status === "COUNTDOWN" && !isVersusMatch && room.startTime) {
@@ -1785,7 +1350,6 @@
             handleVersusForfeitWin("相手が対戦から退出または2分以上無操作のため、あなたの不戦勝です！");
             return;
           }
-
           if (oppLastActive && (Date.now() - oppLastActive > 120000)) {
             handleVersusForfeitWin("相手が2分以上操作しなかったため、あなたの不戦勝です！");
             return;
@@ -1807,12 +1371,8 @@
       if (!currentUser || !db) return;
       try {
         await db.collection("users").doc(currentUser.uid).collection("match_history").add({
-          result: result,
-          stageName: activeStage?.name || "対戦コース",
-          stageId: vsStagePickedId || 'custom',
-          opponentName: vsOpponentName,
-          opponentFriendId: vsOpponentId,
-          time: clearTime,
+          result, stageName: activeStage?.name || "対戦コース", stageId: vsStagePickedId || 'custom',
+          opponentName: vsOpponentName, opponentFriendId: vsOpponentId, time: clearTime,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch(e) { console.warn("戦績保存エラー:", e.message); }
@@ -1848,10 +1408,7 @@
       if (!opponentMesh) {
         const oppGeo = new THREE.BoxGeometry(1, 1, 1);
         const oppMat = new THREE.MeshStandardMaterial({
-          color: 0xef4444,
-          transparent: true,
-          opacity: 0.55,
-          roughness: 0.2
+          color: 0xef4444, transparent: true, opacity: 0.55, roughness: 0.2
         });
         opponentMesh = new THREE.Mesh(oppGeo, oppMat);
         scene.add(opponentMesh);
@@ -1872,18 +1429,14 @@
       }).catch(() => {});
     }
 
-    // ==========================================
-    // JSON ローカル書き出し & 読み込み
-    // ==========================================
+    // JSON入出力
     document.getElementById('btn-export-json').onclick = () => {
       const data = exportStageData();
       const jsonStr = JSON.stringify(data, null, 2);
       const blob = new Blob([jsonStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `${data.name || "stage"}.json`;
-      a.click();
+      a.href = url; a.download = `${data.name || "stage"}.json`; a.click();
       URL.revokeObjectURL(url);
     };
 
@@ -1989,9 +1542,8 @@
     document.getElementById('btn-create-new-slot').onclick = async () => {
       const name = inputNewSlotName.value.trim() || `ステージ_${new Date().toLocaleDateString()}`;
       const defaultStage = {
-        name: name, size: 32, spawn: { x: 0, y: 0, z: 0 },
-        blocks: [{ x: 0, y: 0, z: 0, type: 3 }, { x: 1, y: 0, z: 0, type: 2 }],
-        movers: []
+        name, size: 32, spawn: { x: 0, y: 0, z: 0 },
+        blocks: [{ x: 0, y: 0, z: 0, type: 3 }, { x: 1, y: 0, z: 0, type: 2 }], movers: []
       };
       try {
         const ref = await db.collection("users").doc(currentUser.uid).collection("custom_stages").add({
@@ -2085,9 +1637,7 @@
     let isTestPlay = false;
     let isPaused = false;
     let passedCheckpoints = new Map();
-
-    // スイッチとギミックのステート管理
-    let switchStates = {}; // 'A': true/false
+    let switchStates = {};
 
     let playStartTime = 0;
     let playElapsedTime = 0;
@@ -2118,7 +1668,6 @@
     }
 
     const isMobileDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
     const screenTitle = document.getElementById('screen-title');
     const screenModes = document.getElementById('screen-modes');
     const screenStages = document.getElementById('screen-stages');
@@ -2192,8 +1741,7 @@
       const sortedKeys = Array.from(passedCheckpoints.keys()).sort((a, b) => a - b);
       sortedKeys.forEach(idx => {
         const opt = document.createElement('option');
-        opt.value = idx;
-        opt.textContent = `セーブポイント ${idx}`;
+        opt.value = idx; opt.textContent = `セーブポイント ${idx}`;
         selectPauseCp.appendChild(opt);
       });
       selectPauseCp.value = (sortedKeys.length > 0) ? sortedKeys[sortedKeys.length - 1] : 'start';
@@ -2216,9 +1764,7 @@
     };
 
     document.getElementById('btn-pause-quit').onclick = async () => {
-      isPaused = false;
-      timerRunning = false;
-      modalPause.classList.add('hidden');
+      isPaused = false; timerRunning = false; modalPause.classList.add('hidden');
       if (isVersusMatch) {
         if (vsRoomId && db && currentUser) await db.collection("versus_rooms").doc(vsRoomId).update({ forfeitUid: currentUser.uid });
         recordMatchHistory('LOSE', Math.round(playElapsedTime));
@@ -2301,7 +1847,11 @@
     const matPathMover = new THREE.MeshLambertMaterial({ color: 0x6366f1 });
     const matFallFloor = new THREE.MeshLambertMaterial({ color: 0xf97316 });
 
-    function createCheckpointMaterials(number = 1) {
+    function createCheckpointMaterials(number = 1, showLabel = true) {
+      if (!showLabel) {
+        const sideMat = new THREE.MeshLambertMaterial({ color: 0xec4899 });
+        return [sideMat, sideMat, sideMat, sideMat, sideMat, sideMat];
+      }
       const cv = document.createElement('canvas');
       cv.width = 128; cv.height = 128;
       const ctx = cv.getContext('2d');
@@ -2315,9 +1865,13 @@
       return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
     }
 
-    function createWarpMaterials(letter = 'A') {
+    function createWarpMaterials(letter = 'A', showLabel = true) {
       const charCode = letter.charCodeAt(0) - 65;
       const hexColor = WARP_COLORS[Math.max(0, Math.min(25, charCode))] || '#14b8a6';
+      if (!showLabel) {
+        const sideMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(hexColor) });
+        return [sideMat, sideMat, sideMat, sideMat, sideMat, sideMat];
+      }
       const cv = document.createElement('canvas');
       cv.width = 128; cv.height = 128;
       const ctx = cv.getContext('2d');
@@ -2338,22 +1892,31 @@
       ctx.fillStyle = isON ? '#10b981' : '#f59e0b';
       ctx.fillRect(0, 0, 128, 128);
       ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(4, 4, 120, 120);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '900 36px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 36px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(isON ? 'ON' : 'OFF', 64, 40);
-
       if (showLabel) {
         ctx.font = 'bold 44px sans-serif';
         ctx.fillText(`[${group}]`, 64, 88);
       }
-
       const tex = new THREE.CanvasTexture(cv);
       const topMat = new THREE.MeshLambertMaterial({ map: tex });
       const sideMat = new THREE.MeshLambertMaterial({ color: isON ? 0x10b981 : 0xf59e0b });
       return [sideMat, sideMat, topMat, sideMat, sideMat, sideMat];
+    }
+
+    // 吹き飛ばし面用テクスチャ
+    function createBlastFaceMaterial(dir, group) {
+      const cv = document.createElement('canvas');
+      cv.width = 128; cv.height = 128;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#dc2626'; ctx.fillRect(0, 0, 128, 128);
+      ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(4, 4, 120, 120);
+      ctx.fillStyle = '#ffffff'; ctx.font = '900 36px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(`BLAST`, 64, 40);
+      ctx.font = 'bold 48px sans-serif';
+      ctx.fillText(`[${group}]`, 64, 88);
+      const tex = new THREE.CanvasTexture(cv);
+      return new THREE.MeshLambertMaterial({ map: tex });
     }
 
     function createLabeledMaterial(group = 'A', showLabel = true, bgColor = '#8b5cf6') {
@@ -2596,7 +2159,7 @@
           const [x, y, z] = item.key.split(',').map(Number);
           const mesh = editorMeshMap.get(item.key);
           if (mesh) {
-            mesh.material = createCheckpointMaterials(correctNum);
+            mesh.material = createCheckpointMaterials(correctNum, item.val.gimmickConfig?.showLabel !== false);
             const isCur = (y === currentLayer);
             mesh.material.forEach(m => { m.transparent = true; m.opacity = isCur ? 1.0 : 0.35; });
           }
@@ -2679,7 +2242,7 @@
           if (type === 10) gCfg = { group: 'A', mode: 'TOGGLE', showLabel: true };
           else if (type === 11) gCfg = { group: 'A', dir: 'UP', power: 2 };
           else if (type === 12) gCfg = { group: 'A', mode: 'MOVE_ON', showLabel: true };
-          else if (type === 13) gCfg = { group: 'A', shape: 1, showLabel: true };
+          else if (type === 13) gCfg = { group: 'A', shape: 1, showLabel: true, warpLetter: 'A', cpIndex: 1 };
         }
 
         const data = {
@@ -2695,26 +2258,47 @@
 
         if (editorMeshMap.has(key)) editorGroup.remove(editorMeshMap.get(key));
 
-        let geo = (type === 5 || (type === 13 && gCfg && gCfg.shape === 5)) ? fullBlockGeo : thinTileGeo;
+        let isSolid = (type === 5 || (type === 13 && gCfg && gCfg.shape === 5));
+        let geo = isSolid ? fullBlockGeo : thinTileGeo;
         let m = matFloor.clone();
         let isMultiMat = false;
 
         if (type === 1) m = new THREE.MeshLambertMaterial({ color: color || 0x64748b });
-        else if (type === 5) m = new THREE.MeshLambertMaterial({ color: color || 0x475569 });
+        else if (type === 5) {
+          const baseColor = color || 0x475569;
+          if (data.blastConfig) {
+            // 直方体の側面に吹き飛ばし装着時、エディタ上で指定面を赤くする
+            // BoxGeometry faces: [right(+x), left(-x), top(+y), bottom(-y), front(+z), back(-z)]
+            const fMat = new THREE.MeshLambertMaterial({ color: baseColor });
+            const blastFace = createBlastFaceMaterial(data.blastConfig.dir, data.blastConfig.group);
+            const mats = [fMat.clone(), fMat.clone(), fMat.clone(), fMat.clone(), fMat.clone(), fMat.clone()];
+            if (data.blastConfig.dir === 'RIGHT') mats[0] = blastFace;
+            else if (data.blastConfig.dir === 'LEFT') mats[1] = blastFace;
+            else if (data.blastConfig.dir === 'DOWN') mats[4] = blastFace;
+            else if (data.blastConfig.dir === 'UP') mats[5] = blastFace;
+            m = mats;
+            isMultiMat = true;
+          } else {
+            m = new THREE.MeshLambertMaterial({ color: baseColor });
+          }
+        }
         else if (type === 2) m = matGoal.clone();
         else if (type === 3) m = matStart.clone();
         else if (type === 4) m = matMover.clone();
         else if (type === 8) m = matPathMover.clone();
         else if (type === 7) m = matFallFloor.clone();
-        else if (type === 6) { m = createCheckpointMaterials(cNum); isMultiMat = true; }
-        else if (type === 9) { m = createWarpMaterials(wLet); isMultiMat = true; }
+        else if (type === 6) { m = createCheckpointMaterials(cNum, gCfg?.showLabel !== false); isMultiMat = true; }
+        else if (type === 9) { m = createWarpMaterials(wLet, gCfg?.showLabel !== false); isMultiMat = true; }
         else if (type === 10) { m = createSwitchMaterials(gCfg.group, false, gCfg.showLabel); isMultiMat = true; }
-        else if (type === 11) { m = createLabeledMaterial(`⚡${gCfg.group}`, true, '#dc2626'); isMultiMat = true; }
         else if (type === 12) { m = createLabeledMaterial(`🔄${gCfg.group}`, gCfg.showLabel, '#8b5cf6'); isMultiMat = true; }
-        else if (type === 13) { m = createLabeledMaterial(`✨${gCfg.group}`, gCfg.showLabel, '#059669'); isMultiMat = true; }
+        else if (type === 13) {
+          if (gCfg.shape === 6) { m = createCheckpointMaterials(gCfg.cpIndex || 1, gCfg.showLabel); isMultiMat = true; }
+          else if (gCfg.shape === 9) { m = createWarpMaterials(gCfg.warpLetter || 'A', gCfg.showLabel); isMultiMat = true; }
+          else { m = createLabeledMaterial(`✨${gCfg.group}`, gCfg.showLabel, '#059669'); isMultiMat = true; }
+        }
 
         const mesh = new THREE.Mesh(geo, m);
-        const yOffset = (type === 5 || (type === 13 && gCfg && gCfg.shape === 5)) ? 0.5 : -0.1;
+        const yOffset = isSolid ? 0.5 : -0.1;
         mesh.position.set(x, y + yOffset, z);
 
         const isCurrent = (y === currentLayer);
@@ -2786,7 +2370,7 @@
 
         if (val.type === 4) movers.push({ x, y, z, ...val.moverConfig });
         else if (val.type === 8 || val.type === 12) movers.push({ x, y, z, type: val.type, isPathMover: true, ...val.pathConfig, gimmickConfig: val.gimmickConfig });
-        else blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex, color: val.color, warpLetter: val.warpLetter, gimmickConfig: val.gimmickConfig });
+        else blocks.push({ x, y, z, type: val.type, cpIndex: val.cpIndex, color: val.color, warpLetter: val.warpLetter, gimmickConfig: val.gimmickConfig, blastConfig: val.blastConfig });
       });
 
       return {
@@ -3002,32 +2586,45 @@
     };
     document.getElementById('btn-cancel-switch').onclick = () => modalSwitch.classList.add('hidden');
 
-    // 吹き飛ばし設定モーダル
-    let editingBlastKey = null;
+    // 吹き飛ばし設定（直方体の側面）
+    let editingBlastSolidKey = null;
     const modalBlast = document.getElementById('modal-blast');
     const selectBlastGroup = document.getElementById('select-blast-group');
     const selectBlastDir = document.getElementById('select-blast-dir');
     const inputBlastPower = document.getElementById('input-blast-power');
 
-    function openBlastModal(key) {
-      editingBlastKey = key;
-      const b = editorBlocks.get(key);
-      if (b && b.gimmickConfig) {
-        selectBlastGroup.value = b.gimmickConfig.group || 'A';
-        selectBlastDir.value = b.gimmickConfig.dir || 'UP';
-        inputBlastPower.value = b.gimmickConfig.power || 2;
+    function openBlastModal(solidKey) {
+      editingBlastSolidKey = solidKey;
+      const b = editorBlocks.get(solidKey);
+      if (b && b.type === 5) {
+        const cfg = b.blastConfig || { group: 'A', dir: 'UP', power: 2 };
+        selectBlastGroup.value = cfg.group;
+        selectBlastDir.value = cfg.dir;
+        inputBlastPower.value = cfg.power;
         modalBlast.classList.remove('hidden');
       }
     }
     document.getElementById('btn-save-blast').onclick = () => {
-      if (editingBlastKey && editorBlocks.has(editingBlastKey)) {
+      if (editingBlastSolidKey && editorBlocks.has(editingBlastSolidKey)) {
         pushEditorHistory();
-        const b = editorBlocks.get(editingBlastKey);
-        b.gimmickConfig.group = selectBlastGroup.value;
-        b.gimmickConfig.dir = selectBlastDir.value;
-        b.gimmickConfig.power = parseInt(inputBlastPower.value, 10) || 2;
-        const [x, y, z] = editingBlastKey.split(',').map(Number);
-        setEditorTile(x, y, z, 11, null, null, false, null, null, null, b.gimmickConfig);
+        const b = editorBlocks.get(editingBlastSolidKey);
+        b.blastConfig = {
+          group: selectBlastGroup.value,
+          dir: selectBlastDir.value,
+          power: parseInt(inputBlastPower.value, 10) || 2
+        };
+        const [x, y, z] = editingBlastSolidKey.split(',').map(Number);
+        setEditorTile(x, y, z, 5, null, null, false, b.color, null, null, null);
+      }
+      modalBlast.classList.add('hidden');
+    };
+    document.getElementById('btn-remove-blast').onclick = () => {
+      if (editingBlastSolidKey && editorBlocks.has(editingBlastSolidKey)) {
+        pushEditorHistory();
+        const b = editorBlocks.get(editingBlastSolidKey);
+        delete b.blastConfig;
+        const [x, y, z] = editingBlastSolidKey.split(',').map(Number);
+        setEditorTile(x, y, z, 5, null, null, false, b.color, null, null, null);
       }
       modalBlast.classList.add('hidden');
     };
@@ -3073,7 +2670,32 @@
     const modalAppear = document.getElementById('modal-appear');
     const selectAppearGroup = document.getElementById('select-appear-group');
     const selectAppearShape = document.getElementById('select-appear-shape');
+    const appearExtraOptions = document.getElementById('appear-extra-options');
     const chkAppearShowLabel = document.getElementById('chk-appear-show-label');
+
+    function renderAppearExtraOptions() {
+      appearExtraOptions.innerHTML = '';
+      const shape = parseInt(selectAppearShape.value, 10);
+      const b = editorBlocks.get(editingAppearKey);
+      const cfg = b?.gimmickConfig || {};
+
+      if (shape === 6) { // セーブ
+        appearExtraOptions.innerHTML = `
+          <label>セーブ番号:
+            <input type="number" id="input-appear-cp" min="1" max="99" value="${cfg.cpIndex || 1}" style="width: 80px;">
+          </label>
+        `;
+      } else if (shape === 9) { // ワープ
+        appearExtraOptions.innerHTML = `
+          <label>ワープ文字:
+            <select id="select-appear-warp" style="width: 100px; text-align:center;"></select>
+          </label>
+        `;
+        populateLetterSelect('select-appear-warp');
+        document.getElementById('select-appear-warp').value = cfg.warpLetter || 'A';
+      }
+    }
+    selectAppearShape.onchange = renderAppearExtraOptions;
 
     function openAppearModal(key) {
       editingAppearKey = key;
@@ -3082,6 +2704,7 @@
         selectAppearGroup.value = b.gimmickConfig.group || 'A';
         selectAppearShape.value = b.gimmickConfig.shape || 1;
         chkAppearShowLabel.checked = b.gimmickConfig.showLabel !== false;
+        renderAppearExtraOptions();
         modalAppear.classList.remove('hidden');
       }
     }
@@ -3092,6 +2715,13 @@
         b.gimmickConfig.group = selectAppearGroup.value;
         b.gimmickConfig.shape = parseInt(selectAppearShape.value, 10) || 1;
         b.gimmickConfig.showLabel = chkAppearShowLabel.checked;
+
+        if (b.gimmickConfig.shape === 6) {
+          b.gimmickConfig.cpIndex = parseInt(document.getElementById('input-appear-cp').value, 10) || 1;
+        } else if (b.gimmickConfig.shape === 9) {
+          b.gimmickConfig.warpLetter = document.getElementById('select-appear-warp').value;
+        }
+
         const [x, y, z] = editingAppearKey.split(',').map(Number);
         setEditorTile(x, y, z, 13, null, null, false, null, null, null, b.gimmickConfig);
       }
@@ -3104,12 +2734,14 @@
     const modalWarp = document.getElementById('modal-warp');
     const warpPairStatus = document.getElementById('warp-pair-status');
     const selectWarpLetter = document.getElementById('select-warp-letter');
+    const chkWarpShowLabel = document.getElementById('chk-warp-show-label');
 
     function openWarpModal(key) {
       editingWarpKey = key;
       const b = editorBlocks.get(key);
       if (b) {
         selectWarpLetter.value = b.warpLetter || 'A';
+        chkWarpShowLabel.checked = b.gimmickConfig?.showLabel !== false;
         updateWarpLetterCountDisplay();
         modalWarp.classList.remove('hidden');
       }
@@ -3133,7 +2765,7 @@
         if (count >= 2) { alert(`文字「${letter}」のワープ床は既に2マス置かれています。`); return; }
         pushEditorHistory();
         const [x, y, z] = editingWarpKey.split(',').map(Number);
-        setEditorTile(x, y, z, 9, null, null, false, null, null, letter);
+        setEditorTile(x, y, z, 9, null, null, false, null, null, letter, { showLabel: chkWarpShowLabel.checked });
       }
       modalWarp.classList.add('hidden');
     };
@@ -3143,6 +2775,7 @@
     let editingCpKey = null;
     const modalCp = document.getElementById('modal-checkpoint');
     const inputCpNumber = document.getElementById('cp-number-input');
+    const chkCpShowLabel = document.getElementById('chk-cp-show-label');
 
     function openCpModal(key) {
       editingCpKey = key;
@@ -3152,6 +2785,7 @@
         inputCpNumber.max = maxCp;
         inputCpNumber.min = 1;
         inputCpNumber.value = b.cpIndex || 1;
+        chkCpShowLabel.checked = b.gimmickConfig?.showLabel !== false;
         document.getElementById('cp-max-desc').textContent = `置いた数 (${maxCp}個) 以上の数字は設定できません。重複時は自動で入れ替わります。`;
         modalCp.classList.remove('hidden');
       }
@@ -3165,6 +2799,8 @@
         if (isNaN(targetNum) || targetNum < 1) targetNum = 1;
         if (targetNum > maxCp) targetNum = maxCp;
         const oldNum = curBlock.cpIndex;
+        const showL = chkCpShowLabel.checked;
+
         if (targetNum !== oldNum) {
           editorBlocks.forEach((otherBlock, otherKey) => {
             if (otherKey !== editingCpKey && otherBlock.type === 6 && otherBlock.cpIndex === targetNum) {
@@ -3172,21 +2808,27 @@
               const [ox, oy, oz] = otherKey.split(',').map(Number);
               const otherMesh = editorMeshMap.get(otherKey);
               if (otherMesh) {
-                otherMesh.material = createCheckpointMaterials(oldNum);
+                otherMesh.material = createCheckpointMaterials(oldNum, otherBlock.gimmickConfig?.showLabel !== false);
                 const isCur = (oy === currentLayer);
                 otherMesh.material.forEach(m => { m.transparent = true; m.opacity = isCur ? 1.0 : 0.35; });
               }
             }
           });
+
           curBlock.cpIndex = targetNum;
+          curBlock.gimmickConfig = { showLabel: showL };
           const [cx, cy, cz] = editingCpKey.split(',').map(Number);
           const curMesh = editorMeshMap.get(editingCpKey);
           if (curMesh) {
-            curMesh.material = createCheckpointMaterials(targetNum);
+            curMesh.material = createCheckpointMaterials(targetNum, showL);
             const isCur = (cy === currentLayer);
             curMesh.material.forEach(m => { m.transparent = true; m.opacity = isCur ? 1.0 : 0.35; });
           }
           triggerAutoSave();
+        } else {
+          curBlock.gimmickConfig = { showLabel: showL };
+          const [cx, cy, cz] = editingCpKey.split(',').map(Number);
+          setEditorTile(cx, cy, cz, 6, null, targetNum, false, null, null, null, curBlock.gimmickConfig);
         }
       }
       modalCp.classList.add('hidden');
@@ -3248,8 +2890,8 @@
         return;
       }
 
-      // ワープ床(Type 9)はドラッグでの連続設置をブロック
-      if (isLeftDown && !isDrawingRouteMode && selectedPalette !== 99 && selectedPalette !== 9 && !e.target.closest('#editor-ui-container, .modal-dialog')) {
+      // ワープ床(Type 9)と吹き飛ばし(Type 11)はドラッグでの連続設置をブロック
+      if (isLeftDown && !isDrawingRouteMode && selectedPalette !== 99 && selectedPalette !== 9 && selectedPalette !== 11 && !e.target.closest('#editor-ui-container, .modal-dialog')) {
         handleEditorClick(e, true);
       }
 
@@ -3340,7 +2982,7 @@
         else if (b.type === 9) openWarpModal(key);
         else if (b.type === 6) openCpModal(key);
         else if (b.type === 10) openSwitchModal(key);
-        else if (b.type === 11) openBlastModal(key);
+        else if (b.type === 5) openBlastModal(key); // 直方体の右クリックで吹き飛ばし設定
         else if (b.type === 12) openSwitchFloorModal(key);
         else if (b.type === 13) openAppearModal(key);
       }
@@ -3386,14 +3028,23 @@
         return;
       }
 
-      // ワープ床(Type 9)はドラッグ設置防止
-      if (selectedPalette === 9 && isDragging) return;
+      // ワープ床(Type 9)と吹き飛ばし(Type 11)はドラッグ設置防止
+      if ((selectedPalette === 9 || selectedPalette === 11) && isDragging) return;
+
+      if (selectedPalette === 11) {
+        // 吹き飛ばしパレット選択時は、クリックしたマスが直方体(Type 5)ならその面に設定
+        if (editorBlocks.has(key) && editorBlocks.get(key).type === 5) {
+          openBlastModal(key);
+        } else {
+          alert("「吹き飛ばし」は直方体（壁）の側面に装着するギミックです。直方体の上をクリックしてください。");
+        }
+        return;
+      }
 
       if (selectedPalette === 4 && editorBlocks.has(key) && editorBlocks.get(key).type === 4) openMoverModal(key);
       else if (selectedPalette === 8 && editorBlocks.has(key) && editorBlocks.get(key).type === 8) enterRouteDrawingMode(key);
       else if (selectedPalette === 9 && editorBlocks.has(key) && editorBlocks.get(key).type === 9) openWarpModal(key);
       else if (selectedPalette === 10 && editorBlocks.has(key) && editorBlocks.get(key).type === 10) openSwitchModal(key);
-      else if (selectedPalette === 11 && editorBlocks.has(key) && editorBlocks.get(key).type === 11) openBlastModal(key);
       else if (selectedPalette === 12 && editorBlocks.has(key) && editorBlocks.get(key).type === 12) openSwitchFloorModal(key);
       else if (selectedPalette === 13 && editorBlocks.has(key) && editorBlocks.get(key).type === 13) openAppearModal(key);
       else if (selectedPalette === 6 && editorBlocks.has(key) && editorBlocks.get(key).type === 6) openCpModal(key);
@@ -3403,7 +3054,6 @@
         if (selectedPalette === 8) enterRouteDrawingMode(key);
         else if (selectedPalette === 9) openWarpModal(key);
         else if (selectedPalette === 10) openSwitchModal(key);
-        else if (selectedPalette === 11) openBlastModal(key);
         else if (selectedPalette === 12) openSwitchFloorModal(key);
         else if (selectedPalette === 13) openAppearModal(key);
       }
@@ -3417,7 +3067,14 @@
       document.getElementById('select-grid-size').value = gridSize;
       buildEditorGrid();
 
-      stage.blocks.forEach(b => setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex, true, b.color, null, b.warpLetter, b.gimmickConfig));
+      stage.blocks.forEach(b => {
+        setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex, true, b.color, null, b.warpLetter, b.gimmickConfig);
+        if (b.blastConfig) {
+          const eb = editorBlocks.get(`${b.x},${b.y},${b.z}`);
+          if (eb) eb.blastConfig = b.blastConfig;
+          setEditorTile(b.x, b.y, b.z, b.type, null, b.cpIndex, true, b.color, null, b.warpLetter, b.gimmickConfig);
+        }
+      });
       if (stage.movers) {
         stage.movers.forEach(m => {
           if (m.isPathMover) {
@@ -3485,11 +3142,6 @@
       activeGimmicks = [];
 
       stage.blocks.forEach(b => {
-        if (b.type === 11) {
-          activeGimmicks.push({ type: 11, x: b.x, y: b.y, z: b.z, config: b.gimmickConfig });
-          return;
-        }
-
         const isSolid = (b.type === 5 || (b.type === 13 && b.gimmickConfig?.shape === 5));
         let geo = isSolid ? fullBlockGeo : thinTileGeo;
         let m = matFloor;
@@ -3499,10 +3151,15 @@
         else if (b.type === 2) m = matGoal;
         else if (b.type === 3) m = matStart;
         else if (b.type === 7) m = matFallFloor.clone();
-        else if (b.type === 6) m = createCheckpointMaterials(b.cpIndex || 1);
-        else if (b.type === 9) m = createWarpMaterials(b.warpLetter || 'A');
+        else if (b.type === 6) m = createCheckpointMaterials(b.cpIndex || 1, b.gimmickConfig?.showLabel !== false);
+        else if (b.type === 9) m = createWarpMaterials(b.warpLetter || 'A', b.gimmickConfig?.showLabel !== false);
         else if (b.type === 10) m = createSwitchMaterials(b.gimmickConfig.group, false, b.gimmickConfig.showLabel);
-        else if (b.type === 13) m = createLabeledMaterial(b.gimmickConfig.group, b.gimmickConfig.showLabel, '#059669');
+        else if (b.type === 13) {
+          const cfg = b.gimmickConfig;
+          if (cfg.shape === 6) m = createCheckpointMaterials(cfg.cpIndex || 1, cfg.showLabel);
+          else if (cfg.shape === 9) m = createWarpMaterials(cfg.warpLetter || 'A', cfg.showLabel);
+          else m = createLabeledMaterial(cfg.group, cfg.showLabel, '#059669');
+        }
 
         const mesh = new THREE.Mesh(geo, m);
         const yOffset = isSolid ? 0.5 : -0.1;
@@ -3519,6 +3176,10 @@
           activeFallingFloors.push({ x: b.x, y: b.y, z: b.z, mesh, state: 'IDLE', timer: 0, fallVelocity: 0, initialY: b.y - 0.1 });
         } else if (b.type === 10 || b.type === 13) {
           activeGimmicks.push({ type: b.type, x: b.x, y: b.y, z: b.z, config: b.gimmickConfig, mesh: mesh });
+        }
+
+        if (b.blastConfig) {
+          activeGimmicks.push({ type: 11, x: b.x, y: b.y, z: b.z, config: b.blastConfig, parentSolid: b });
         }
       });
 
@@ -3626,7 +3287,6 @@
       const surfaces = [];
       activeStage.blocks.forEach(b => {
         if (b.x === x && b.z === z) {
-          if (b.type === 11) return;
           if (b.type === 7) {
             const ff = activeFallingFloors.find(f => f.x === b.x && f.y === b.y && f.z === b.z);
             if (ff && (ff.state === 'FALLING' || ff.state === 'GONE')) return;
@@ -3744,6 +3404,34 @@
       });
     }
 
+    // プレイヤーが吹き飛ばし面の正面にいるかチェック
+    function checkBlastCollision() {
+      const curLvlY = Math.round(cubePos.y);
+      const px = Math.round(cubePos.x);
+      const pz = Math.round(cubePos.z);
+
+      activeGimmicks.forEach(g => {
+        if (g.type === 11 && switchStates[g.config.group] && g.y === curLvlY) {
+          let triggerX = g.x;
+          let triggerZ = g.z;
+          let bdx = 0;
+          let bdz = 0;
+
+          if (g.config.dir === 'UP') { triggerZ = g.z - 1; bdz = -g.config.power; }
+          else if (g.config.dir === 'DOWN') { triggerZ = g.z + 1; bdz = g.config.power; }
+          else if (g.config.dir === 'LEFT') { triggerX = g.x - 1; bdx = -g.config.power; }
+          else if (g.config.dir === 'RIGHT') { triggerX = g.x + 1; bdx = g.config.power; }
+
+          if (px === triggerX && pz === triggerZ) {
+            cubePos.x += bdx;
+            cubePos.z += bdz;
+            pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
+            syncMyVersusPosition();
+          }
+        }
+      });
+    }
+
     function roll(dx, dz) {
       isRolling = true;
       const currentX = Math.round(cubePos.x);
@@ -3805,24 +3493,19 @@
             else triggerSwitchGroup(cfg.group);
           }
 
-          const curLvlY = Math.round(cubePos.y);
-          const activeBlast = activeGimmicks.find(g => g.type === 11 && switchStates[g.config.group] && g.x === Math.round(cubePos.x) && g.z === Math.round(cubePos.z) && g.y === curLvlY);
-          if (activeBlast) {
-            let bdx = 0, bdz = 0;
-            if (activeBlast.config.dir === 'UP') bdz = -activeBlast.config.power;
-            else if (activeBlast.config.dir === 'DOWN') bdz = activeBlast.config.power;
-            else if (activeBlast.config.dir === 'LEFT') bdx = -activeBlast.config.power;
-            else if (activeBlast.config.dir === 'RIGHT') bdx = activeBlast.config.power;
+          // 吹き飛ばし面の作動判定
+          checkBlastCollision();
 
-            cubePos.x += bdx;
-            cubePos.z += bdz;
-            pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
-            syncMyVersusPosition();
+          // ワープ処理 (通常ワープ床 または 出現したワープ床)
+          let warpLet = surface.blockRef?.warpLetter;
+          if (surface.type === 13 && surface.blockRef?.gimmickConfig?.shape === 9) {
+            warpLet = surface.blockRef.gimmickConfig.warpLetter;
           }
-
-          if (surface.type === 9 && surface.blockRef?.warpLetter) {
-            const letter = surface.blockRef.warpLetter;
-            const targetPartner = activeStage.blocks.find(b => b.type === 9 && b.warpLetter === letter && !(b.x === tx && b.z === tz && b.y === Math.round(targetY)));
+          if (warpLet) {
+            const targetPartner = activeStage.blocks.find(b => {
+              const bLet = (b.type === 9) ? b.warpLetter : (b.type === 13 && b.gimmickConfig?.shape === 9 ? b.gimmickConfig.warpLetter : null);
+              return bLet === warpLet && !(b.x === tx && b.z === tz && b.y === Math.round(targetY));
+            });
             if (targetPartner) {
               cubePos.x = targetPartner.x; cubePos.y = targetPartner.y; cubePos.z = targetPartner.z;
               pivot.position.set(cubePos.x, cubePos.y, cubePos.z);
@@ -3830,9 +3513,10 @@
             }
           }
 
-          if (surface.type === 6) {
+          // セーブ地点 (通常セーブ または 出現したセーブ)
+          if (surface.type === 6 || (surface.type === 13 && surface.blockRef?.gimmickConfig?.shape === 6)) {
             currentCheckpoint = { x: cubePos.x, y: cubePos.y, z: cubePos.z };
-            const idx = (surface.blockRef && surface.blockRef.cpIndex) || 1;
+            const idx = surface.type === 6 ? (surface.blockRef.cpIndex || 1) : (surface.blockRef.gimmickConfig.cpIndex || 1);
             passedCheckpoints.set(idx, { x: cubePos.x, y: cubePos.y, z: cubePos.z });
           }
 
@@ -3926,6 +3610,7 @@
             }
           });
 
+          // 動く床の更新
           activeMovers.forEach(m => {
             let stepX = 0, stepY = 0, stepZ = 0;
 
@@ -3979,6 +3664,7 @@
               }
             }
 
+            // 乗車判定
             const moverSurfaceY = m.mesh.position.y + 0.1;
             const dx = Math.abs(m.mesh.position.x - cubePos.x);
             const dz = Math.abs(m.mesh.position.z - cubePos.z);
@@ -3993,8 +3679,7 @@
               }
               if (!isRolling && !isFallingDown && Math.abs(dy) <= 0.75) {
                 cubePos.x += stepX; cubePos.y += stepY; cubePos.z += stepZ;
-                pivot.position.x = cubePos.x; pivot.position.y = cubePos.y;
-                pivot.position.z = cubePos.z;
+                pivot.position.x = cubePos.x; pivot.position.y = cubePos.y; pivot.position.z = cubePos.z;
                 syncMyVersusPosition();
               }
             }
